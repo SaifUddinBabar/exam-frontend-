@@ -47,9 +47,7 @@ function Builder() {
 
     const res = await fetch(`${API}/api/exams/create`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         title: examData.title,
         duration: examData.duration,
@@ -86,82 +84,132 @@ function Builder() {
   };
 
   return (
-    <div style={{ padding: 20, maxWidth: 900, margin: "auto" }}>
+    <div style={{
+      padding: 20,
+      maxWidth: 1000,
+      margin: "auto",
+      fontFamily: "Poppins, sans-serif"
+    }}>
 
-      <h1>🎓 Teacher Dashboard</h1>
+      <h1 style={{ marginBottom: 20 }}>🎓 Teacher Dashboard</h1>
 
-      {/* CREATE */}
+      {/* CREATE CARD */}
       <div style={{
         padding: 20,
-        background: "#f1f5f9",
-        borderRadius: 12
+        background: "#f8fafc",
+        borderRadius: 16,
+        boxShadow: "0 10px 30px rgba(0,0,0,0.08)"
       }}>
         <input
           name="title"
-          placeholder="Exam Title"
+          placeholder="📘 Exam Title"
           onChange={handleExamChange}
           style={{
             width: "100%",
-            padding: 12,
-            marginBottom: 10,
-            borderRadius: 8
+            padding: 14,
+            marginBottom: 12,
+            borderRadius: 10,
+            border: "1px solid #ddd"
           }}
         />
 
-        <select
-          onChange={(e) => setChapter(e.target.value)}
-          style={{ padding: 10, borderRadius: 8 }}
-        >
-          <option value="">Select Chapter</option>
-          <option value="Web & HTML">Web</option>
-          <option value="Programming & Language">Programming</option>
-        </select>
-
-        <button
-          onClick={createExam}
-          style={{
-            marginTop: 15,
-            padding: 12,
-            background: "#6366f1",
-            color: "white",
-            borderRadius: 10,
-            border: "none",
-            cursor: "pointer"
-          }}
-        >
-          🚀 Create Exam
-        </button>
-      </div>
-
-      {/* QUESTIONS */}
-      <div style={{ marginTop: 20 }}>
-        {questions.map((q) => (
-          <div
-            key={q._id}
-            onClick={() => toggleSelect(q._id)}
+        <div style={{ display: "flex", gap: 10 }}>
+          <select
+            onChange={(e) => setChapter(e.target.value)}
             style={{
-              padding: 10,
-              marginTop: 8,
-              borderRadius: 8,
-              cursor: "pointer",
-              background: selected.includes(q._id)
-                ? "#dbeafe"
-                : "#f8fafc"
+              padding: 12,
+              borderRadius: 10,
+              border: "1px solid #ddd"
             }}
           >
-            {q.question}
-          </div>
-        ))}
+            <option value="">Select Chapter</option>
+            <option value="Web & HTML">Web</option>
+            <option value="Programming & Language">Programming</option>
+          </select>
+
+          <button
+            onClick={createExam}
+            style={{
+              padding: "12px 18px",
+              background: "linear-gradient(135deg,#6366f1,#4f46e5)",
+              color: "white",
+              borderRadius: 12,
+              border: "none",
+              cursor: "pointer",
+              fontWeight: "bold",
+              transition: "0.2s"
+            }}
+            onMouseEnter={(e) => {
+              e.target.style.transform = "scale(1.05)";
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.transform = "scale(1)";
+            }}
+          >
+            🚀 Create Exam
+          </button>
+        </div>
+      </div>
+
+      {/* QUESTIONS GRID */}
+      <div style={{ marginTop: 30 }}>
+        <h3>🧠 Select Questions</h3>
+
+        <div style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
+          gap: 15,
+          marginTop: 10
+        }}>
+          {questions.map((q, index) => {
+            const isSelected = selected.includes(q._id);
+
+            return (
+              <div
+                key={q._id}
+                onClick={() => toggleSelect(q._id)}
+                style={{
+                  padding: 15,
+                  borderRadius: 14,
+                  cursor: "pointer",
+                  border: "2px solid",
+                  borderColor: isSelected ? "#22c55e" : "#e5e7eb",
+                  background: isSelected ? "#dcfce7" : "white",
+                  boxShadow: isSelected
+                    ? "0 8px 20px rgba(34,197,94,0.3)"
+                    : "0 5px 10px rgba(0,0,0,0.05)",
+                  transition: "0.2s"
+                }}
+              >
+                <div style={{ fontSize: 12, color: "#64748b" }}>
+                  Question #{index + 1}
+                </div>
+
+                <div style={{ marginTop: 5 }}>
+                  {q.question}
+                </div>
+
+                <div style={{
+                  marginTop: 10,
+                  fontSize: 12,
+                  color: isSelected ? "#16a34a" : "#64748b"
+                }}>
+                  {isSelected ? "✅ Selected" : "Click to select"}
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
 
       {/* LINK */}
       {examCode && (
         <div style={{
-          marginTop: 20,
-          padding: 15,
+          marginTop: 25,
+          padding: 20,
           background: "#111827",
           color: "white",
-          borderRadius: 10
+          borderRadius: 14
         }}>
           <p>{window.location.origin}/exam/{examCode}</p>
 
@@ -169,8 +217,8 @@ function Builder() {
             onClick={copyLink}
             style={{
               marginTop: 10,
-              padding: 8,
-              borderRadius: 6,
+              padding: 10,
+              borderRadius: 8,
               cursor: "pointer"
             }}
           >
@@ -179,7 +227,7 @@ function Builder() {
         </div>
       )}
 
-      {/* ================= CLEAN RANKING ================= */}
+      {/* RANKING */}
       {examCode && (
         <div style={{
           marginTop: 30,
@@ -188,10 +236,7 @@ function Builder() {
           borderRadius: 16,
           color: "white"
         }}>
-
-          <h2 style={{ textAlign: "center", marginBottom: 20 }}>
-            🏆 Live Ranking
-          </h2>
+          <h2 style={{ textAlign: "center" }}>🏆 Live Ranking</h2>
 
           {ranking.map((item, index) => (
             <div
@@ -199,7 +244,7 @@ function Builder() {
               style={{
                 display: "flex",
                 justifyContent: "space-between",
-                padding: "12px 16px",
+                padding: 12,
                 marginTop: 8,
                 borderRadius: 8,
                 background:
@@ -209,19 +254,16 @@ function Builder() {
                     ? "#334155"
                     : index === 2
                     ? "#1e293b"
-                    : "#020617",
-                fontWeight: index === 0 ? "bold" : "normal"
+                    : "#020617"
               }}
             >
               <span>
                 {index === 0 && "👑 "}
                 #{index + 1} — {item.name || "Anonymous"}
               </span>
-
               <span>{item.score}</span>
             </div>
           ))}
-
         </div>
       )}
 
