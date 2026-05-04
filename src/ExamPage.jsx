@@ -13,23 +13,56 @@ function ExamPage() {
   const [name, setName] = useState("");
   const [roll, setRoll] = useState("");
   const [current, setCurrent] = useState(0);
+  const [timeLeft, setTimeLeft] = useState(600); // 🔥 10 min default
 
   // ================= LOAD EXAM =================
   useEffect(() => {
     fetch(`${API}/api/exams/${code}`)
       .then(res => res.json())
-      .then(data => setExam(data));
+      .then(data => {
+        setExam(data);
+        if (data.duration) {
+          setTimeLeft(data.duration * 60);
+        }
+      });
   }, [code]);
 
-  // ================= BLOCK CLOSE =================
+  // ================= TIMER =================
   useEffect(() => {
-    const block = (e) => {
-      e.preventDefault();
-      e.returnValue = "";
+    if (timeLeft <= 0) {
+      submitExam();
+      return;
+    }
+
+    const timer = setInterval(() => {
+      setTimeLeft(prev => prev - 1);
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [timeLeft]);
+
+  const formatTime = () => {
+    const min = Math.floor(timeLeft / 60);
+    const sec = timeLeft % 60;
+    return `${min}:${sec.toString().padStart(2, "0")}`;
+  };
+
+  // ================= FULLSCREEN =================
+  useEffect(() => {
+    document.documentElement.requestFullscreen?.();
+  }, []);
+
+  // ================= TAB SWITCH DETECT =================
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.hidden) {
+        alert("⚠️ Don't switch tabs!");
+      }
     };
 
-    window.addEventListener("beforeunload", block);
-    return () => window.removeEventListener("beforeunload", block);
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () =>
+      document.removeEventListener("visibilitychange", handleVisibility);
   }, []);
 
   // ================= BLOCK BACK =================
@@ -51,8 +84,6 @@ function ExamPage() {
 
   // ================= SUBMIT =================
   const submitExam = async () => {
-    if (!window.confirm("Submit exam?")) return;
-
     const res = await fetch(`${API}/api/exams/submit`, {
       method: "POST",
       headers: {
@@ -67,76 +98,26 @@ function ExamPage() {
     });
 
     const data = await res.json();
-
     setScore(data.score);
     setReviewData(data);
   };
 
-  // ================= LOCK + REVIEW =================
+  // ================= REVIEW =================
   if (score !== null && reviewData) {
     return (
-      <div style={{
-        minHeight: "100vh",
-        padding: 20,
-        background: "#0f172a",
-        color: "white"
-      }}>
-        <h1>✅ Exam Submitted</h1>
-        <h2>🎯 Score: {score} / {reviewData.questions.length}</h2>
-
-        <p style={{ color: "#f87171" }}>
-          🚫 You cannot leave this page
-        </p>
-
-        <h3 style={{ marginTop: 20 }}>📊 Review</h3>
-
-        {reviewData.questions.map((q, index) => {
-          const userAns = reviewData.answers[q._id];
-          const correct = q.correctAnswer;
-
-          return (
-            <div key={index} style={{
-              marginBottom: 20,
-              padding: 15,
-              background: "#1e293b",
-              borderRadius: 10
-            }}>
-              <p>Q{index + 1}: {q.question}</p>
-
-              {q.options.map((opt, i) => {
-                let bg = "#334155";
-
-                if (opt === correct) bg = "#16a34a"; // correct
-                if (opt === userAns && opt !== correct) bg = "#dc2626"; // wrong
-
-                return (
-                  <div key={i} style={{
-                    marginTop: 8,
-                    padding: 8,
-                    borderRadius: 6,
-                    background: bg
-                  }}>
-                    {opt}
-                  </div>
-                );
-              })}
-            </div>
-          );
-        })}
+      <div style={{ padding: 20 }}>
+        <h1>✅ Submitted</h1>
+        <h2>Score: {score}</h2>
       </div>
     );
   }
 
-  // ================= LOADING =================
-  if (!exam || !exam.questions)
-    return <h2 style={{ textAlign: "center" }}>Loading...</h2>;
+  if (!exam) return <h2>Loading...</h2>;
 
   const q = exam.questions[current];
-  const progress = Math.round(
-    (Object.keys(answers).length / exam.questions.length) * 100
-  );
+  const progress =
+    (Object.keys(answers).length / exam.questions.length) * 100;
 
-  // ================= UI =================
   return (
     <div style={{ padding: 20, maxWidth: 800, margin: "auto" }}>
 
@@ -145,65 +126,25 @@ function ExamPage() {
         position: "sticky",
         top: 0,
         background: "#0f172a",
-        padding: 10,
-        borderRadius: 10,
-        marginBottom: 20,
-        color: "white"
+        color: "white",
+        padding: 15,
+        borderRadius: 10
       }}>
         <h2>{exam.title}</h2>
 
-        <div style={{
-          height: 8,
-          background: "#334155",
-          borderRadius: 10
-        }}>
+        <h3>⏱️ {formatTime()}</h3>
+
+        <div style={{ height: 8, background: "#333", borderRadius: 10 }}>
           <div style={{
             width: `${progress}%`,
             background: "#22c55e",
             height: "100%"
           }} />
         </div>
-
-        <p>{progress}% Completed</p>
-      </div>
-
-      {/* USER INFO */}
-      <div style={{ marginBottom: 20 }}>
-        <input placeholder="Name" onChange={e => setName(e.target.value)} />
-        <input placeholder="Roll" onChange={e => setRoll(e.target.value)} />
-      </div>
-
-      {/* QUESTION NAV */}
-      <div style={{ marginBottom: 20 }}>
-        {exam.questions.map((_, i) => (
-          <button
-            key={i}
-            onClick={() => setCurrent(i)}
-            style={{
-              margin: 4,
-              padding: "6px 12px",
-              borderRadius: 6,
-              border: "none",
-              background:
-                answers[exam.questions[i]._id]
-                  ? "#22c55e"
-                  : i === current
-                  ? "#3b82f6"
-                  : "#94a3b8",
-              color: "white"
-            }}
-          >
-            {i + 1}
-          </button>
-        ))}
       </div>
 
       {/* QUESTION */}
-      <div style={{
-        padding: 20,
-        borderRadius: 10,
-        background: "#f1f5f9"
-      }}>
+      <div style={{ marginTop: 20 }}>
         <h3>Q{current + 1}: {q.question}</h3>
 
         {q.options.map((opt, i) => (
@@ -211,13 +152,14 @@ function ExamPage() {
             key={i}
             onClick={() => selectAnswer(q._id, opt)}
             style={{
-              padding: 10,
+              padding: 12,
               marginTop: 10,
-              borderRadius: 8,
+              borderRadius: 10,
               cursor: "pointer",
               background:
-                answers[q._id] === opt ? "#3b82f6" : "#e2e8f0",
-              color: answers[q._id] === opt ? "white" : "black"
+                answers[q._id] === opt ? "#3b82f6" : "#eee",
+              color:
+                answers[q._id] === opt ? "white" : "black"
             }}
           >
             {opt}
@@ -227,36 +169,24 @@ function ExamPage() {
 
       {/* NAV */}
       <div style={{ marginTop: 20 }}>
-        <button onClick={() => setCurrent(prev => Math.max(prev - 1, 0))}>
-          ⬅ Prev
+        <button onClick={() => setCurrent(c => Math.max(c - 1, 0))}>
+          Prev
         </button>
-
         <button
           onClick={() =>
-            setCurrent(prev =>
-              Math.min(prev + 1, exam.questions.length - 1)
+            setCurrent(c =>
+              Math.min(c + 1, exam.questions.length - 1)
             )
           }
-          style={{ marginLeft: 10 }}
         >
-          Next ➡
+          Next
         </button>
       </div>
 
       {/* SUBMIT */}
-      <div style={{ marginTop: 20 }}>
-        <button
-          onClick={submitExam}
-          style={{
-            padding: "10px 20px",
-            background: "#16a34a",
-            color: "white",
-            borderRadius: 8
-          }}
-        >
-          🚀 Submit Exam
-        </button>
-      </div>
+      <button onClick={submitExam} style={{ marginTop: 20 }}>
+        Submit
+      </button>
     </div>
   );
 }
