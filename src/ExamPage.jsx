@@ -14,11 +14,35 @@ function ExamPage() {
   const [roll, setRoll] = useState("");
   const [current, setCurrent] = useState(0);
 
+  // 🔥 Load exam
   useEffect(() => {
     fetch(`${API}/api/exams/${code}`)
       .then(res => res.json())
       .then(data => setExam(data));
   }, [code]);
+
+  // 🔥 BLOCK PAGE CLOSE
+  useEffect(() => {
+    const block = (e) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+
+    window.addEventListener("beforeunload", block);
+    return () => window.removeEventListener("beforeunload", block);
+  }, []);
+
+  // 🔥 BLOCK BACK BUTTON
+  useEffect(() => {
+    window.history.pushState(null, "", window.location.href);
+
+    const handlePop = () => {
+      window.history.pushState(null, "", window.location.href);
+    };
+
+    window.addEventListener("popstate", handlePop);
+    return () => window.removeEventListener("popstate", handlePop);
+  }, []);
 
   const selectAnswer = (qid, option) => {
     setAnswers({ ...answers, [qid]: option });
@@ -45,10 +69,36 @@ function ExamPage() {
     setReviewData(data);
   };
 
-  if (!exam || !exam.questions) return <h2 style={{textAlign:"center"}}>Loading...</h2>;
+  // 🔥 LOCK SCREEN AFTER SUBMIT
+  if (score !== null) {
+    return (
+      <div style={{
+        height: "100vh",
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        flexDirection: "column",
+        background: "#0f172a",
+        color: "white"
+      }}>
+        <h1>✅ Exam Submitted</h1>
+        <p>Your response has been recorded</p>
+
+        <h2>🎯 Score: {score}</h2>
+
+        <p>🚫 You cannot leave this page</p>
+        <p>📊 Teacher will review your result</p>
+      </div>
+    );
+  }
+
+  if (!exam || !exam.questions)
+    return <h2 style={{ textAlign: "center" }}>Loading...</h2>;
 
   const q = exam.questions[current];
-  const progress = Math.round((Object.keys(answers).length / exam.questions.length) * 100);
+  const progress = Math.round(
+    (Object.keys(answers).length / exam.questions.length) * 100
+  );
 
   return (
     <div style={{ padding: 20, maxWidth: 800, margin: "auto" }}>
@@ -65,12 +115,10 @@ function ExamPage() {
       }}>
         <h2>{exam.title}</h2>
 
-        {/* Progress */}
         <div style={{
           height: 8,
           background: "#334155",
-          borderRadius: 10,
-          overflow: "hidden"
+          borderRadius: 10
         }}>
           <div style={{
             width: `${progress}%`,
@@ -105,8 +153,7 @@ function ExamPage() {
                   : i === current
                   ? "#3b82f6"
                   : "#94a3b8",
-              color: "white",
-              cursor: "pointer"
+              color: "white"
             }}
           >
             {i + 1}
@@ -118,8 +165,7 @@ function ExamPage() {
       <div style={{
         padding: 20,
         borderRadius: 10,
-        background: "#f1f5f9",
-        boxShadow: "0 5px 15px rgba(0,0,0,0.1)"
+        background: "#f1f5f9"
       }}>
         <h3>Q{current + 1}: {q.question}</h3>
 
@@ -133,14 +179,8 @@ function ExamPage() {
               borderRadius: 8,
               cursor: "pointer",
               background:
-                answers[q._id] === opt
-                  ? "#3b82f6"
-                  : "#e2e8f0",
-              color:
-                answers[q._id] === opt
-                  ? "white"
-                  : "black",
-              transition: "0.2s"
+                answers[q._id] === opt ? "#3b82f6" : "#e2e8f0",
+              color: answers[q._id] === opt ? "white" : "black"
             }}
           >
             {opt}
@@ -148,14 +188,18 @@ function ExamPage() {
         ))}
       </div>
 
-      {/* NAV BUTTON */}
+      {/* NAV */}
       <div style={{ marginTop: 20 }}>
         <button onClick={() => setCurrent(prev => Math.max(prev - 1, 0))}>
           ⬅ Prev
         </button>
 
         <button
-          onClick={() => setCurrent(prev => Math.min(prev + 1, exam.questions.length - 1))}
+          onClick={() =>
+            setCurrent(prev =>
+              Math.min(prev + 1, exam.questions.length - 1)
+            )
+          }
           style={{ marginLeft: 10 }}
         >
           Next ➡
@@ -170,53 +214,12 @@ function ExamPage() {
             padding: "10px 20px",
             background: "#16a34a",
             color: "white",
-            border: "none",
-            borderRadius: 8,
-            cursor: "pointer"
+            borderRadius: 8
           }}
         >
           🚀 Submit Exam
         </button>
       </div>
-
-      {/* SCORE */}
-      {score !== null && (
-        <h2 style={{ marginTop: 20 }}>
-          🎯 Score: {score} / {exam.questions.length}
-        </h2>
-      )}
-
-      {/* REVIEW */}
-      {reviewData && (
-        <div style={{ marginTop: 30 }}>
-          <h2>📊 Review</h2>
-
-          {reviewData.questions.map((q, index) => {
-            const userAns = reviewData.answers[q._id];
-            const correct = q.correctAnswer;
-
-            return (
-              <div key={index} style={{ marginBottom: 15 }}>
-                <p>Q{index + 1}: {q.question}</p>
-
-                {q.options.map((opt, i) => {
-                  let color = "";
-
-                  if (opt === correct) color = "green";
-                  if (opt === userAns && opt !== correct) color = "red";
-
-                  return (
-                    <div key={i} style={{ color }}>
-                      {opt}
-                    </div>
-                  );
-                })}
-              </div>
-            );
-          })}
-        </div>
-      )}
-
     </div>
   );
 }
