@@ -15,7 +15,9 @@ function Builder() {
 
   const [examCode, setExamCode] = useState("");
   const [ranking, setRanking] = useState([]);
+  const [copied, setCopied] = useState(false); // 🔥 new
 
+  // ================= LOAD SAVED CODE =================
   useEffect(() => {
     const savedCode = localStorage.getItem("examCode");
     if (savedCode) {
@@ -23,6 +25,7 @@ function Builder() {
     }
   }, []);
 
+  // ================= LOAD QUESTIONS =================
   useEffect(() => {
     if (!chapter) return;
 
@@ -44,6 +47,7 @@ function Builder() {
     setExamData({ ...examData, [e.target.name]: e.target.value });
   };
 
+  // ================= CREATE EXAM =================
   const createExam = async () => {
     try {
       const res = await fetch(`${API}/api/exams/create`, {
@@ -63,17 +67,21 @@ function Builder() {
       setExamCode(data.examCode);
       localStorage.setItem("examCode", data.examCode);
 
-      alert(`Exam Created!
-
-Code: ${data.examCode}
-
-Student Link:
-${window.location.origin}/exam/${data.examCode}`);
     } catch (err) {
       console.error(err);
     }
   };
 
+  // ================= COPY LINK =================
+  const copyLink = () => {
+    const link = `${window.location.origin}/exam/${examCode}`;
+    navigator.clipboard.writeText(link);
+
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  // ================= RANKING =================
   useEffect(() => {
     if (!examCode) return;
 
@@ -89,17 +97,26 @@ ${window.location.origin}/exam/${data.examCode}`);
     return () => clearInterval(interval);
   }, [examCode]);
 
+  // ================= UI =================
   return (
     <div style={{ padding: 20 }}>
       <h2>📊 Teacher Dashboard</h2>
 
-      <input name="title" placeholder="Exam Title" onChange={handleExamChange} />
+      <input
+        name="title"
+        placeholder="Exam Title"
+        onChange={handleExamChange}
+      />
+
+      <br /><br />
 
       <select onChange={(e) => setChapter(e.target.value)}>
         <option value="">Select Chapter</option>
         <option value="Web & HTML">Web</option>
         <option value="Programming & Language">Programming</option>
       </select>
+
+      <h3>📚 Questions</h3>
 
       {questions.map((q) => (
         <div key={q._id}>
@@ -110,11 +127,61 @@ ${window.location.origin}/exam/${data.examCode}`);
         </div>
       ))}
 
+      <br />
+
       <button onClick={createExam}>🚀 Create Exam</button>
 
+      {/* 🔥 EXAM LINK UI */}
       {examCode && (
-        <div>
+        <div
+          style={{
+            marginTop: 20,
+            padding: 15,
+            background: "#1e293b",
+            color: "white",
+            borderRadius: 10
+          }}
+        >
+          <h3>🎯 Exam Link</h3>
+
+          <p>Code: <strong>{examCode}</strong></p>
+
+          <div style={{ display: "flex", gap: 10 }}>
+            <input
+              value={`${window.location.origin}/exam/${examCode}`}
+              readOnly
+              style={{
+                flex: 1,
+                padding: 10,
+                borderRadius: 6,
+                border: "none"
+              }}
+            />
+
+            <button
+              onClick={copyLink}
+              style={{
+                padding: "10px 15px",
+                background: "#22c55e",
+                border: "none",
+                color: "white",
+                borderRadius: 6,
+                cursor: "pointer"
+              }}
+            >
+              {copied ? "Copied ✅" : "Copy"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 🔥 RANKING */}
+      {examCode && (
+        <div style={{ marginTop: 30 }}>
           <h2>🏆 Ranking</h2>
+
+          {ranking.length === 0 && <p>No submissions yet...</p>}
+
           {ranking.map((item, index) => (
             <div key={index}>
               #{index + 1} — {item.name} ({item.score})
