@@ -14,14 +14,14 @@ function ExamPage() {
   const [roll, setRoll] = useState("");
   const [current, setCurrent] = useState(0);
 
-  // 🔥 Load exam
+  // ================= LOAD EXAM =================
   useEffect(() => {
     fetch(`${API}/api/exams/${code}`)
       .then(res => res.json())
       .then(data => setExam(data));
   }, [code]);
 
-  // 🔥 BLOCK PAGE CLOSE
+  // ================= BLOCK CLOSE =================
   useEffect(() => {
     const block = (e) => {
       e.preventDefault();
@@ -32,7 +32,7 @@ function ExamPage() {
     return () => window.removeEventListener("beforeunload", block);
   }, []);
 
-  // 🔥 BLOCK BACK BUTTON
+  // ================= BLOCK BACK =================
   useEffect(() => {
     window.history.pushState(null, "", window.location.href);
 
@@ -44,10 +44,12 @@ function ExamPage() {
     return () => window.removeEventListener("popstate", handlePop);
   }, []);
 
+  // ================= SELECT =================
   const selectAnswer = (qid, option) => {
     setAnswers({ ...answers, [qid]: option });
   };
 
+  // ================= SUBMIT =================
   const submitExam = async () => {
     if (!window.confirm("Submit exam?")) return;
 
@@ -65,33 +67,67 @@ function ExamPage() {
     });
 
     const data = await res.json();
+
     setScore(data.score);
     setReviewData(data);
   };
 
-  // 🔥 LOCK SCREEN AFTER SUBMIT
-  if (score !== null) {
+  // ================= LOCK + REVIEW =================
+  if (score !== null && reviewData) {
     return (
       <div style={{
-        height: "100vh",
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-        flexDirection: "column",
+        minHeight: "100vh",
+        padding: 20,
         background: "#0f172a",
         color: "white"
       }}>
         <h1>✅ Exam Submitted</h1>
-        <p>Your response has been recorded</p>
+        <h2>🎯 Score: {score} / {reviewData.questions.length}</h2>
 
-        <h2>🎯 Score: {score}</h2>
+        <p style={{ color: "#f87171" }}>
+          🚫 You cannot leave this page
+        </p>
 
-        <p>🚫 You cannot leave this page</p>
-        <p>📊 Teacher will review your result</p>
+        <h3 style={{ marginTop: 20 }}>📊 Review</h3>
+
+        {reviewData.questions.map((q, index) => {
+          const userAns = reviewData.answers[q._id];
+          const correct = q.correctAnswer;
+
+          return (
+            <div key={index} style={{
+              marginBottom: 20,
+              padding: 15,
+              background: "#1e293b",
+              borderRadius: 10
+            }}>
+              <p>Q{index + 1}: {q.question}</p>
+
+              {q.options.map((opt, i) => {
+                let bg = "#334155";
+
+                if (opt === correct) bg = "#16a34a"; // correct
+                if (opt === userAns && opt !== correct) bg = "#dc2626"; // wrong
+
+                return (
+                  <div key={i} style={{
+                    marginTop: 8,
+                    padding: 8,
+                    borderRadius: 6,
+                    background: bg
+                  }}>
+                    {opt}
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })}
       </div>
     );
   }
 
+  // ================= LOADING =================
   if (!exam || !exam.questions)
     return <h2 style={{ textAlign: "center" }}>Loading...</h2>;
 
@@ -100,6 +136,7 @@ function ExamPage() {
     (Object.keys(answers).length / exam.questions.length) * 100
   );
 
+  // ================= UI =================
   return (
     <div style={{ padding: 20, maxWidth: 800, margin: "auto" }}>
 
