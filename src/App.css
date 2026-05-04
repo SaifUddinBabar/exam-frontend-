@@ -1,0 +1,73 @@
+body {
+  font-family: Arial, sans-serif;
+  background: #0f172a;
+  color: white;
+}
+
+.container {
+  max-width: 900px;
+  margin: auto;
+  padding: 20px;
+}
+
+.card {
+  background: #1e293b;
+  padding: 15px;
+  border-radius: 10px;
+  margin-bottom: 10px;
+  transition: 0.3s;
+  border: 1px solid transparent;
+}
+
+.card:hover {
+  border: 1px solid #3b82f6;
+  transform: scale(1.01);
+}
+
+.selected {
+  border: 2px solid #22c55e;
+  background: #022c22;
+}
+
+.btn {
+  padding: 8px 15px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  background: #3b82f6;
+  color: white;
+  margin-top: 5px;
+}
+
+.btn:hover {
+  background: #2563eb;
+}
+
+.input {
+  padding: 8px;
+  margin: 5px 0;
+  width: 100%;
+  border-radius: 6px;
+  border: none;
+}
+
+.select {
+  padding: 8px;
+  border-radius: 6px;
+  margin-bottom: 15px;
+}
+
+.title {
+  font-size: 22px;
+  margin-bottom: 10px;
+}
+.filterBox {
+  background: #1e293b;
+  padding: 15px;
+  border-radius: 10px;
+  margin-bottom: 20px;
+}
+
+.section {
+  margin-top: 30px;
+}
