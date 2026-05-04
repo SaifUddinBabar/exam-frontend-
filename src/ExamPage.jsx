@@ -261,25 +261,86 @@ function ExamPage() {
       </div>
 
       {/* NAV */}
-      <div style={{ marginTop: 20 }}>
-        <button
-          disabled={current === 0}
-          onClick={() => setCurrent(prev => Math.max(prev - 1, 0))}
-        >
-          ⬅ Prev
-        </button>
+     {/* NAV */}
+<div style={{ marginTop: 20 }}>
 
-        <button
-          onClick={() =>
-            setCurrent(prev =>
-              Math.min(prev + 1, exam.questions.length - 1)
-            )
-          }
-          style={{ marginLeft: 10 }}
-        >
-          Next ➡
-        </button>
-      </div>
+  <div style={{
+    display: "flex",
+    gap: 12,
+    marginTop: 5
+  }}>
+
+    {/* PREVIOUS */}
+    <button
+      disabled={current === 0}
+      onClick={() => setCurrent(prev => Math.max(prev - 1, 0))}
+      onMouseEnter={(e) => {
+        if (current !== 0) {
+          e.target.style.transform = "scale(1.05)";
+          e.target.style.background = "#4f46e5";
+        }
+      }}
+      onMouseLeave={(e) => {
+        e.target.style.transform = "scale(1)";
+        e.target.style.background =
+          current === 0 ? "#cbd5f5" : "#6366f1";
+      }}
+      onMouseDown={(e) => e.target.style.transform = "scale(0.95)"}
+      onMouseUp={(e) => e.target.style.transform = "scale(1.05)"}
+      style={{
+        flex: 1,
+        padding: "14px",
+        borderRadius: 14,
+        border: "none",
+        background: current === 0 ? "#cbd5f5" : "#6366f1",
+        color: "white",
+        fontSize: 16,
+        fontWeight: "bold",
+        cursor: current === 0 ? "not-allowed" : "pointer",
+        transition: "all 0.2s ease",
+        boxShadow: "0 6px 15px rgba(0,0,0,0.15)"
+      }}
+    >
+      ⬅ Previous
+    </button>
+
+    {/* NEXT */}
+    <button
+      onClick={() =>
+        setCurrent(prev =>
+          Math.min(prev + 1, exam.questions.length - 1)
+        )
+      }
+      onMouseEnter={(e) => {
+        e.target.style.transform = "scale(1.05)";
+        e.target.style.background = "#16a34a";
+      }}
+      onMouseLeave={(e) => {
+        e.target.style.transform = "scale(1)";
+        e.target.style.background = "#22c55e";
+      }}
+      onMouseDown={(e) => e.target.style.transform = "scale(0.95)"}
+      onMouseUp={(e) => e.target.style.transform = "scale(1.05)"}
+      style={{
+        flex: 1,
+        padding: "14px",
+        borderRadius: 14,
+        border: "none",
+        background: "#22c55e",
+        color: "white",
+        fontSize: 16,
+        fontWeight: "bold",
+        cursor: "pointer",
+        transition: "all 0.2s ease",
+        boxShadow: "0 6px 15px rgba(0,0,0,0.15)"
+      }}
+    >
+      Next ➡
+    </button>
+
+  </div>
+
+</div>
 
       {/* SUBMIT */}
       <div style={{ marginTop: 20 }}>
