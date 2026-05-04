@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 const API = import.meta.env.VITE_API_URL;
 
@@ -15,6 +15,9 @@ function Builder() {
 
   const [examCode, setExamCode] = useState("");
   const [ranking, setRanking] = useState([]);
+
+  // 🔥 NEW: scroll ref
+  const linkRef = useRef(null);
 
   useEffect(() => {
     const savedCode = localStorage.getItem("examCode");
@@ -41,13 +44,16 @@ function Builder() {
     setExamData({ ...examData, [e.target.name]: e.target.value });
   };
 
+  // 🔥 UPDATED CREATE EXAM
   const createExam = async () => {
     if (!examData.title) return alert("Enter title");
     if (selected.length === 0) return alert("Select questions");
 
     const res = await fetch(`${API}/api/exams/create`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json"
+      },
       body: JSON.stringify({
         title: examData.title,
         duration: examData.duration,
@@ -56,8 +62,20 @@ function Builder() {
     });
 
     const data = await res.json();
+
     setExamCode(data.examCode);
     localStorage.setItem("examCode", data.examCode);
+
+    // ✅ SUCCESS FEEDBACK
+    alert("✅ Exam Created Successfully!");
+
+    // ✅ AUTO SCROLL
+    setTimeout(() => {
+      linkRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "center"
+      });
+    }, 300);
   };
 
   // ================= RANKING =================
@@ -93,12 +111,11 @@ function Builder() {
 
       <h1 style={{ marginBottom: 20 }}>🎓 Teacher Dashboard</h1>
 
-      {/* CREATE CARD */}
+      {/* CREATE */}
       <div style={{
         padding: 20,
         background: "#f8fafc",
-        borderRadius: 16,
-        boxShadow: "0 10px 30px rgba(0,0,0,0.08)"
+        borderRadius: 16
       }}>
         <input
           name="title"
@@ -108,19 +125,14 @@ function Builder() {
             width: "100%",
             padding: 14,
             marginBottom: 12,
-            borderRadius: 10,
-            border: "1px solid #ddd"
+            borderRadius: 10
           }}
         />
 
         <div style={{ display: "flex", gap: 10 }}>
           <select
             onChange={(e) => setChapter(e.target.value)}
-            style={{
-              padding: 12,
-              borderRadius: 10,
-              border: "1px solid #ddd"
-            }}
+            style={{ padding: 12, borderRadius: 10 }}
           >
             <option value="">Select Chapter</option>
             <option value="Web & HTML">Web</option>
@@ -135,15 +147,7 @@ function Builder() {
               color: "white",
               borderRadius: 12,
               border: "none",
-              cursor: "pointer",
-              fontWeight: "bold",
-              transition: "0.2s"
-            }}
-            onMouseEnter={(e) => {
-              e.target.style.transform = "scale(1.05)";
-            }}
-            onMouseLeave={(e) => {
-              e.target.style.transform = "scale(1)";
+              cursor: "pointer"
             }}
           >
             🚀 Create Exam
@@ -151,15 +155,14 @@ function Builder() {
         </div>
       </div>
 
-      {/* QUESTIONS GRID */}
+      {/* QUESTIONS */}
       <div style={{ marginTop: 30 }}>
         <h3>🧠 Select Questions</h3>
 
         <div style={{
           display: "grid",
           gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
-          gap: 15,
-          marginTop: 10
+          gap: 15
         }}>
           {questions.map((q, index) => {
             const isSelected = selected.includes(q._id);
@@ -174,25 +177,18 @@ function Builder() {
                   cursor: "pointer",
                   border: "2px solid",
                   borderColor: isSelected ? "#22c55e" : "#e5e7eb",
-                  background: isSelected ? "#dcfce7" : "white",
-                  boxShadow: isSelected
-                    ? "0 8px 20px rgba(34,197,94,0.3)"
-                    : "0 5px 10px rgba(0,0,0,0.05)",
-                  transition: "0.2s"
+                  background: isSelected ? "#dcfce7" : "white"
                 }}
               >
-                <div style={{ fontSize: 12, color: "#64748b" }}>
+                <div style={{ fontSize: 12 }}>
                   Question #{index + 1}
                 </div>
 
-                <div style={{ marginTop: 5 }}>
-                  {q.question}
-                </div>
+                <div>{q.question}</div>
 
                 <div style={{
-                  marginTop: 10,
-                  fontSize: 12,
-                  color: isSelected ? "#16a34a" : "#64748b"
+                  marginTop: 8,
+                  fontSize: 12
                 }}>
                   {isSelected ? "✅ Selected" : "Click to select"}
                 </div>
@@ -202,15 +198,18 @@ function Builder() {
         </div>
       </div>
 
-      {/* LINK */}
+      {/* LINK (SCROLL TARGET) */}
       {examCode && (
-        <div style={{
-          marginTop: 25,
-          padding: 20,
-          background: "#111827",
-          color: "white",
-          borderRadius: 14
-        }}>
+        <div
+          ref={linkRef}
+          style={{
+            marginTop: 25,
+            padding: 20,
+            background: "#111827",
+            color: "white",
+            borderRadius: 14
+          }}
+        >
           <p>{window.location.origin}/exam/{examCode}</p>
 
           <button
@@ -218,8 +217,7 @@ function Builder() {
             style={{
               marginTop: 10,
               padding: 10,
-              borderRadius: 8,
-              cursor: "pointer"
+              borderRadius: 8
             }}
           >
             📋 Copy Link
@@ -250,10 +248,6 @@ function Builder() {
                 background:
                   index === 0
                     ? "#22c55e"
-                    : index === 1
-                    ? "#334155"
-                    : index === 2
-                    ? "#1e293b"
                     : "#020617"
               }}
             >
