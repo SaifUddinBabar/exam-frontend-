@@ -21,7 +21,6 @@ function Builder() {
     if (savedCode) setExamCode(savedCode);
   }, []);
 
-  // ================= FETCH QUESTIONS =================
   useEffect(() => {
     if (!chapter) return;
 
@@ -42,16 +41,13 @@ function Builder() {
     setExamData({ ...examData, [e.target.name]: e.target.value });
   };
 
-  // ================= CREATE EXAM =================
   const createExam = async () => {
     if (!examData.title) return alert("Enter title");
     if (selected.length === 0) return alert("Select questions");
 
     const res = await fetch(`${API}/api/exams/create`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         title: examData.title,
         duration: examData.duration,
@@ -60,7 +56,6 @@ function Builder() {
     });
 
     const data = await res.json();
-
     setExamCode(data.examCode);
     localStorage.setItem("examCode", data.examCode);
   };
@@ -88,25 +83,21 @@ function Builder() {
     alert("Copied!");
   };
 
+  const top3 = ranking.slice(0, 3);
+  const rest = ranking.slice(3);
+
   return (
     <div style={{ padding: 20, maxWidth: 900, margin: "auto" }}>
 
       <h1>🎓 Teacher Dashboard</h1>
 
-      {/* ================= CREATE CARD ================= */}
-      <div style={{
-        padding: 20,
-        background: "#f1f5f9",
-        borderRadius: 12,
-        marginBottom: 20
-      }}>
-        <h2>Create Exam</h2>
-
+      {/* CREATE */}
+      <div style={{ padding: 20, background: "#f1f5f9", borderRadius: 12 }}>
         <input
           name="title"
           placeholder="Exam Title"
           onChange={handleExamChange}
-          style={{ width: "100%", padding: 12, marginBottom: 10 }}
+          style={{ width: "100%", padding: 12 }}
         />
 
         <select onChange={(e) => setChapter(e.target.value)}>
@@ -115,99 +106,108 @@ function Builder() {
           <option value="Programming & Language">Programming</option>
         </select>
 
-        <button
-          onClick={createExam}
-          style={{
-            marginTop: 15,
-            padding: 12,
-            background: "#6366f1",
-            color: "white",
-            borderRadius: 10
-          }}
-        >
-          🚀 Create Exam
-        </button>
+        <button onClick={createExam}>🚀 Create Exam</button>
       </div>
 
-      {/* ================= QUESTIONS ================= */}
-      <div style={{
-        padding: 20,
-        background: "#fff",
-        borderRadius: 12
-      }}>
-        <h3>Select Questions</h3>
-
+      {/* QUESTIONS */}
+      <div style={{ marginTop: 20 }}>
         {questions.map((q) => (
-          <div
-            key={q._id}
-            onClick={() => toggleSelect(q._id)}
-            style={{
-              padding: 12,
-              marginTop: 10,
-              borderRadius: 10,
-              cursor: "pointer",
-              border: "2px solid",
-              borderColor: selected.includes(q._id)
-                ? "#22c55e"
-                : "#ddd",
-              background: selected.includes(q._id)
-                ? "#dcfce7"
-                : "white"
-            }}
-          >
+          <div key={q._id} onClick={() => toggleSelect(q._id)}>
             {q.question}
           </div>
         ))}
       </div>
 
-      {/* ================= LINK ================= */}
+      {/* LINK */}
       {examCode && (
-        <div style={{
-          marginTop: 20,
-          padding: 20,
-          background: "#111",
-          color: "white",
-          borderRadius: 10
-        }}>
-          <h3>📎 Exam Link</h3>
-
+        <div style={{ marginTop: 20 }}>
           <p>{window.location.origin}/exam/{examCode}</p>
-
-          <button onClick={copyLink}>
-            📋 Copy Link
-          </button>
+          <button onClick={copyLink}>Copy</button>
         </div>
       )}
 
-      {/* ================= RANKING ================= */}
+      {/* ================= PREMIUM RANKING ================= */}
       {examCode && (
         <div style={{
-          marginTop: 20,
+          marginTop: 30,
           padding: 20,
-          background: "#0f172a",
-          color: "white",
-          borderRadius: 10
+          background: "#065f46",
+          borderRadius: 15,
+          color: "white"
         }}>
-          <h2>🏆 Live Ranking</h2>
 
-          {ranking.length === 0 && <p>No submissions yet</p>}
+          <h2 style={{ textAlign: "center" }}>🏆 Live Ranking</h2>
 
-          {ranking.map((item, index) => (
-            <div
-              key={index}
-              style={{
-                padding: 12,
-                marginTop: 10,
+          {/* TOP 3 */}
+          <div style={{
+            display: "flex",
+            justifyContent: "space-around",
+            marginTop: 30
+          }}>
+
+            {top3[1] && (
+              <div style={{ textAlign: "center" }}>
+                <div style={{
+                  width: 70,
+                  height: 70,
+                  borderRadius: "50%",
+                  background: "#fff",
+                  border: "4px solid silver"
+                }} />
+                <p>{top3[1].name}</p>
+                <p>{top3[1].score}</p>
+              </div>
+            )}
+
+            {top3[0] && (
+              <div style={{ textAlign: "center" }}>
+                <div style={{
+                  width: 90,
+                  height: 90,
+                  borderRadius: "50%",
+                  background: "#fff",
+                  border: "5px solid gold"
+                }} />
+                <h3>👑 {top3[0].name}</h3>
+                <p>{top3[0].score}</p>
+              </div>
+            )}
+
+            {top3[2] && (
+              <div style={{ textAlign: "center" }}>
+                <div style={{
+                  width: 70,
+                  height: 70,
+                  borderRadius: "50%",
+                  background: "#fff",
+                  border: "4px solid bronze"
+                }} />
+                <p>{top3[2].name}</p>
+                <p>{top3[2].score}</p>
+              </div>
+            )}
+          </div>
+
+          {/* LIST */}
+          <div style={{ marginTop: 30 }}>
+            {rest.map((item, index) => (
+              <div key={index} style={{
+                padding: 10,
+                marginTop: 8,
                 borderRadius: 8,
-                background:
-                  index === 0 ? "#16a34a" : "#1e293b"
-              }}
-            >
-              #{index + 1} — {item.name} | {item.score}
-            </div>
-          ))}
+                background: "#064e3b",
+                display: "flex",
+                justifyContent: "space-between"
+              }}>
+                <span>#{index + 4} {item.name}</span>
+                <span>{item.score}</span>
+              </div>
+            ))}
+          </div>
+
         </div>
       )}
+
     </div>
   );
 }
