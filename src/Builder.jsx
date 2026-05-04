@@ -47,7 +47,9 @@ function Builder() {
 
     const res = await fetch(`${API}/api/exams/create`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json"
+      },
       body: JSON.stringify({
         title: examData.title,
         duration: examData.duration,
@@ -83,36 +85,70 @@ function Builder() {
     alert("Copied!");
   };
 
-  const top3 = ranking.slice(0, 3);
-  const rest = ranking.slice(3);
-
   return (
     <div style={{ padding: 20, maxWidth: 900, margin: "auto" }}>
 
       <h1>🎓 Teacher Dashboard</h1>
 
       {/* CREATE */}
-      <div style={{ padding: 20, background: "#f1f5f9", borderRadius: 12 }}>
+      <div style={{
+        padding: 20,
+        background: "#f1f5f9",
+        borderRadius: 12
+      }}>
         <input
           name="title"
           placeholder="Exam Title"
           onChange={handleExamChange}
-          style={{ width: "100%", padding: 12 }}
+          style={{
+            width: "100%",
+            padding: 12,
+            marginBottom: 10,
+            borderRadius: 8
+          }}
         />
 
-        <select onChange={(e) => setChapter(e.target.value)}>
+        <select
+          onChange={(e) => setChapter(e.target.value)}
+          style={{ padding: 10, borderRadius: 8 }}
+        >
           <option value="">Select Chapter</option>
           <option value="Web & HTML">Web</option>
           <option value="Programming & Language">Programming</option>
         </select>
 
-        <button onClick={createExam}>🚀 Create Exam</button>
+        <button
+          onClick={createExam}
+          style={{
+            marginTop: 15,
+            padding: 12,
+            background: "#6366f1",
+            color: "white",
+            borderRadius: 10,
+            border: "none",
+            cursor: "pointer"
+          }}
+        >
+          🚀 Create Exam
+        </button>
       </div>
 
       {/* QUESTIONS */}
       <div style={{ marginTop: 20 }}>
         {questions.map((q) => (
-          <div key={q._id} onClick={() => toggleSelect(q._id)}>
+          <div
+            key={q._id}
+            onClick={() => toggleSelect(q._id)}
+            style={{
+              padding: 10,
+              marginTop: 8,
+              borderRadius: 8,
+              cursor: "pointer",
+              background: selected.includes(q._id)
+                ? "#dbeafe"
+                : "#f8fafc"
+            }}
+          >
             {q.question}
           </div>
         ))}
@@ -120,90 +156,71 @@ function Builder() {
 
       {/* LINK */}
       {examCode && (
-        <div style={{ marginTop: 20 }}>
+        <div style={{
+          marginTop: 20,
+          padding: 15,
+          background: "#111827",
+          color: "white",
+          borderRadius: 10
+        }}>
           <p>{window.location.origin}/exam/{examCode}</p>
-          <button onClick={copyLink}>Copy</button>
+
+          <button
+            onClick={copyLink}
+            style={{
+              marginTop: 10,
+              padding: 8,
+              borderRadius: 6,
+              cursor: "pointer"
+            }}
+          >
+            📋 Copy Link
+          </button>
         </div>
       )}
 
-      {/* ================= PREMIUM RANKING ================= */}
+      {/* ================= CLEAN RANKING ================= */}
       {examCode && (
         <div style={{
           marginTop: 30,
-          padding: 20,
-          background: "#065f46",
-          borderRadius: 15,
+          padding: 25,
+          background: "#0f172a",
+          borderRadius: 16,
           color: "white"
         }}>
 
-          <h2 style={{ textAlign: "center" }}>🏆 Live Ranking</h2>
+          <h2 style={{ textAlign: "center", marginBottom: 20 }}>
+            🏆 Live Ranking
+          </h2>
 
-          {/* TOP 3 */}
-          <div style={{
-            display: "flex",
-            justifyContent: "space-around",
-            marginTop: 30
-          }}>
-
-            {top3[1] && (
-              <div style={{ textAlign: "center" }}>
-                <div style={{
-                  width: 70,
-                  height: 70,
-                  borderRadius: "50%",
-                  background: "#fff",
-                  border: "4px solid silver"
-                }} />
-                <p>{top3[1].name}</p>
-                <p>{top3[1].score}</p>
-              </div>
-            )}
-
-            {top3[0] && (
-              <div style={{ textAlign: "center" }}>
-                <div style={{
-                  width: 90,
-                  height: 90,
-                  borderRadius: "50%",
-                  background: "#fff",
-                  border: "5px solid gold"
-                }} />
-                <h3>👑 {top3[0].name}</h3>
-                <p>{top3[0].score}</p>
-              </div>
-            )}
-
-            {top3[2] && (
-              <div style={{ textAlign: "center" }}>
-                <div style={{
-                  width: 70,
-                  height: 70,
-                  borderRadius: "50%",
-                  background: "#fff",
-                  border: "4px solid bronze"
-                }} />
-                <p>{top3[2].name}</p>
-                <p>{top3[2].score}</p>
-              </div>
-            )}
-          </div>
-
-          {/* LIST */}
-          <div style={{ marginTop: 30 }}>
-            {rest.map((item, index) => (
-              <div key={index} style={{
-                padding: 10,
+          {ranking.map((item, index) => (
+            <div
+              key={index}
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                padding: "12px 16px",
                 marginTop: 8,
                 borderRadius: 8,
-                background: "#064e3b",
-                display: "flex",
-                justifyContent: "space-between"
-              }}>
-                <span>#{index + 4} {item.name}</span>
-                <span>{item.score}</span>
-              </div>
-            ))}
-          </div>
+                background:
+                  index === 0
+                    ? "#22c55e"
+                    : index === 1
+                    ? "#334155"
+                    : index === 2
+                    ? "#1e293b"
+                    : "#020617",
+                fontWeight: index === 0 ? "bold" : "normal"
+              }}
+            >
+              <span>
+                {index === 0 && "👑 "}
+                #{index + 1} — {item.name || "Anonymous"}
+              </span>
+
+              <span>{item.score}</span>
+            </div>
+          ))}
 
         </div>
       )}
