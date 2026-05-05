@@ -15,15 +15,17 @@ function Builder() {
 
   const [examCode, setExamCode] = useState("");
   const [ranking, setRanking] = useState([]);
+  const [stats, setStats] = useState(null);
 
-  // 🔥 NEW: scroll ref
   const linkRef = useRef(null);
 
+  // ================= LOAD SAVED =================
   useEffect(() => {
     const savedCode = localStorage.getItem("examCode");
     if (savedCode) setExamCode(savedCode);
   }, []);
 
+  // ================= LOAD QUESTIONS =================
   useEffect(() => {
     if (!chapter) return;
 
@@ -32,6 +34,14 @@ function Builder() {
       .then(data => setQuestions(data));
   }, [chapter, limit]);
 
+  // ================= LOAD STATS =================
+  useEffect(() => {
+    fetch(`${API}/api/exams/stats`)
+      .then(res => res.json())
+      .then(data => setStats(data));
+  }, []);
+
+  // ================= SELECT =================
   const toggleSelect = (id) => {
     if (selected.includes(id)) {
       setSelected(selected.filter(q => q !== id));
@@ -44,7 +54,7 @@ function Builder() {
     setExamData({ ...examData, [e.target.name]: e.target.value });
   };
 
-  // 🔥 UPDATED CREATE EXAM
+  // ================= CREATE EXAM =================
   const createExam = async () => {
     if (!examData.title) return alert("Enter title");
     if (selected.length === 0) return alert("Select questions");
@@ -66,15 +76,10 @@ function Builder() {
     setExamCode(data.examCode);
     localStorage.setItem("examCode", data.examCode);
 
-    // ✅ SUCCESS FEEDBACK
-    alert("✅ Exam Created Successfully!");
+    alert("✅ Exam Created!");
 
-    // ✅ AUTO SCROLL
     setTimeout(() => {
-      linkRef.current?.scrollIntoView({
-        behavior: "smooth",
-        block: "center"
-      });
+      linkRef.current?.scrollIntoView({ behavior: "smooth" });
     }, 300);
   };
 
@@ -94,6 +99,7 @@ function Builder() {
     return () => clearInterval(interval);
   }, [examCode]);
 
+  // ================= COPY =================
   const copyLink = () => {
     navigator.clipboard.writeText(
       `${window.location.origin}/exam/${examCode}`
@@ -101,57 +107,56 @@ function Builder() {
     alert("Copied!");
   };
 
+  // ================= CLEAR DATA =================
+  const clearOldData = async () => {
+    if (!confirm("Delete old data?")) return;
+
+    const res = await fetch(`${API}/api/exams/clear-old`, {
+      method: "DELETE"
+    });
+
+    const data = await res.json();
+
+    alert(`Deleted ${data.examsDeleted} exams & ${data.submissionsDeleted} submissions`);
+    window.location.reload();
+  };
+
   return (
     <div style={{
       padding: 20,
-      maxWidth: 1000,
+      maxWidth: 1100,
       margin: "auto",
       fontFamily: "Poppins, sans-serif"
     }}>
 
-      <h1 style={{ marginBottom: 20 }}>🎓 Teacher Dashboard</h1>
+      <h1>🎓 Teacher Dashboard</h1>
 
       {/* CREATE */}
       <div style={{
         padding: 20,
-        background: "#f8fafc",
+        background: "#f1f5f9",
         borderRadius: 16
       }}>
         <input
           name="title"
-          placeholder="📘 Exam Title"
+          placeholder="Exam Title"
           onChange={handleExamChange}
           style={{
             width: "100%",
             padding: 14,
-            marginBottom: 12,
+            marginBottom: 10,
             borderRadius: 10
           }}
         />
 
         <div style={{ display: "flex", gap: 10 }}>
-          <select
-            onChange={(e) => setChapter(e.target.value)}
-            style={{ padding: 12, borderRadius: 10 }}
-          >
+          <select onChange={(e) => setChapter(e.target.value)}>
             <option value="">Select Chapter</option>
             <option value="Web & HTML">Web</option>
             <option value="Programming & Language">Programming</option>
           </select>
 
-          <button
-            onClick={createExam}
-            style={{
-              padding: "12px 18px",
-              background: "linear-gradient(135deg,#6366f1,#4f46e5)",
-              color: "white",
-              borderRadius: 12,
-              border: "none",
-              cursor: "pointer"
-            }}
-          >
-            🚀 Create Exam
-          </button>
+          <button onClick={createExam}>🚀 Create Exam</button>
         </div>
       </div>
 
@@ -161,8 +166,8 @@ function Builder() {
 
         <div style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
-          gap: 15
+          gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
+          gap: 12
         }}>
           {questions.map((q, index) => {
             const isSelected = selected.includes(q._id);
@@ -172,56 +177,35 @@ function Builder() {
                 key={q._id}
                 onClick={() => toggleSelect(q._id)}
                 style={{
-                  padding: 15,
-                  borderRadius: 14,
+                  padding: 14,
+                  borderRadius: 12,
                   cursor: "pointer",
-                  border: "2px solid",
-                  borderColor: isSelected ? "#22c55e" : "#e5e7eb",
+                  border: isSelected ? "2px solid green" : "1px solid #ddd",
                   background: isSelected ? "#dcfce7" : "white"
                 }}
               >
-                <div style={{ fontSize: 12 }}>
-                  Question #{index + 1}
-                </div>
-
-                <div>{q.question}</div>
-
-                <div style={{
-                  marginTop: 8,
-                  fontSize: 12
-                }}>
+                <small>Q{index + 1}</small>
+                <p>{q.question}</p>
+                <small>
                   {isSelected ? "✅ Selected" : "Click to select"}
-                </div>
+                </small>
               </div>
             );
           })}
         </div>
       </div>
 
-      {/* LINK (SCROLL TARGET) */}
+      {/* LINK */}
       {examCode && (
-        <div
-          ref={linkRef}
-          style={{
-            marginTop: 25,
-            padding: 20,
-            background: "#111827",
-            color: "white",
-            borderRadius: 14
-          }}
-        >
+        <div ref={linkRef} style={{
+          marginTop: 20,
+          padding: 20,
+          background: "#111827",
+          color: "white",
+          borderRadius: 12
+        }}>
           <p>{window.location.origin}/exam/{examCode}</p>
-
-          <button
-            onClick={copyLink}
-            style={{
-              marginTop: 10,
-              padding: 10,
-              borderRadius: 8
-            }}
-          >
-            📋 Copy Link
-          </button>
+          <button onClick={copyLink}>📋 Copy</button>
         </div>
       )}
 
@@ -229,37 +213,54 @@ function Builder() {
       {examCode && (
         <div style={{
           marginTop: 30,
-          padding: 25,
+          padding: 20,
           background: "#0f172a",
-          borderRadius: 16,
-          color: "white"
+          color: "white",
+          borderRadius: 12
         }}>
-          <h2 style={{ textAlign: "center" }}>🏆 Live Ranking</h2>
+          <h2>🏆 Live Ranking</h2>
 
           {ranking.map((item, index) => (
-            <div
-              key={index}
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                padding: 12,
-                marginTop: 8,
-                borderRadius: 8,
-                background:
-                  index === 0
-                    ? "#22c55e"
-                    : "#020617"
-              }}
-            >
+            <div key={index} style={{
+              display: "flex",
+              justifyContent: "space-between",
+              padding: 10,
+              marginTop: 6,
+              background: index === 0 ? "#22c55e" : "#020617",
+              borderRadius: 8
+            }}>
               <span>
                 {index === 0 && "👑 "}
-                #{index + 1} — {item.name || "Anonymous"}
+                #{index + 1} {item.name}
               </span>
               <span>{item.score}</span>
             </div>
           ))}
         </div>
       )}
+
+      {/* STATS */}
+      <div style={{
+        marginTop: 30,
+        padding: 20,
+        background: "#020617",
+        color: "white",
+        borderRadius: 12
+      }}>
+        <h2>📊 DB Stats</h2>
+
+        {stats && (
+          <>
+            <p>Exams: {stats.examCount}</p>
+            <p>Submissions: {stats.submissionCount}</p>
+            <p>Questions: {stats.questionCount}</p>
+          </>
+        )}
+
+        <button onClick={clearOldData}>
+          🧹 Clear Old Data
+        </button>
+      </div>
 
     </div>
   );
