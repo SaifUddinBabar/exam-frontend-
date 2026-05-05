@@ -16,6 +16,7 @@ function Builder() {
   const [examCode, setExamCode] = useState("");
   const [ranking, setRanking] = useState([]);
   const [stats, setStats] = useState(null);
+  const [loadingClear, setLoadingClear] = useState(false);
 
   const linkRef = useRef(null);
 
@@ -35,10 +36,15 @@ function Builder() {
   }, [chapter, limit]);
 
   // ================= LOAD STATS =================
-  useEffect(() => {
+  const fetchStats = () => {
     fetch(`${API}/api/exams/stats`)
       .then(res => res.json())
-      .then(data => setStats(data));
+      .then(data => setStats(data))
+      .catch(() => console.log("Stats error"));
+  };
+
+  useEffect(() => {
+    fetchStats();
   }, []);
 
   // ================= SELECT =================
@@ -111,14 +117,25 @@ function Builder() {
   const clearOldData = async () => {
     if (!confirm("Delete old data?")) return;
 
-    const res = await fetch(`${API}/api/exams/clear-old`, {
-      method: "DELETE"
-    });
+    try {
+      setLoadingClear(true);
 
-    const data = await res.json();
+      const res = await fetch(`${API}/api/exams/clear-old`, {
+        method: "DELETE"
+      });
 
-    alert(`Deleted ${data.examsDeleted} exams & ${data.submissionsDeleted} submissions`);
-    window.location.reload();
+      const data = await res.json();
+
+      alert(`✅ Deleted ${data.examsDeleted} exams & ${data.submissionsDeleted} submissions`);
+
+      // 🔥 refresh stats
+      fetchStats();
+
+    } catch (err) {
+      alert("❌ Failed to clear data");
+    } finally {
+      setLoadingClear(false);
+    }
   };
 
   return (
@@ -156,7 +173,9 @@ function Builder() {
             <option value="Programming & Language">Programming</option>
           </select>
 
-          <button onClick={createExam}>🚀 Create Exam</button>
+          <button onClick={createExam}>
+            🚀 Create Exam
+          </button>
         </div>
       </div>
 
@@ -251,14 +270,26 @@ function Builder() {
 
         {stats && (
           <>
-            <p>Exams: {stats.examCount}</p>
-            <p>Submissions: {stats.submissionCount}</p>
-            <p>Questions: {stats.questionCount}</p>
+            <p>📘 Exams: {stats.examCount}</p>
+            <p>📝 Submissions: {stats.submissionCount}</p>
+            <p>📚 Questions: {stats.questionCount}</p>
           </>
         )}
 
-        <button onClick={clearOldData}>
-          🧹 Clear Old Data
+        <button
+          onClick={clearOldData}
+          disabled={loadingClear}
+          style={{
+            marginTop: 10,
+            padding: "10px 15px",
+            background: loadingClear ? "gray" : "red",
+            border: "none",
+            color: "white",
+            borderRadius: 8,
+            cursor: "pointer"
+          }}
+        >
+          {loadingClear ? "Clearing..." : "🧹 Clear Old Data"}
         </button>
       </div>
 
