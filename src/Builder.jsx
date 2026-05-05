@@ -11,19 +11,19 @@ function Builder() {
   const [stats, setStats] = useState(null);
 
   const [examData, setExamData] = useState({
-    
     title: "",
     duration: ""
   });
 
   const linkRef = useRef(null);
 
+  // load saved exam
   useEffect(() => {
     const saved = localStorage.getItem("examCode");
     if (saved) setExamCode(saved);
   }, []);
 
-  // QUESTIONS
+  // 🔥 fetch questions
   useEffect(() => {
     if (!chapter) return;
 
@@ -32,7 +32,7 @@ function Builder() {
       .then(data => setQuestions(data || []));
   }, [chapter]);
 
-  // STATS
+  // 🔥 fetch stats
   const fetchStats = () => {
     fetch(`${API}/api/exams/stats`)
       .then(res => res.json())
@@ -43,7 +43,7 @@ function Builder() {
     fetchStats();
   }, []);
 
-  // RANKING
+  // 🔥 ranking
   useEffect(() => {
     if (!examCode) return;
 
@@ -54,10 +54,11 @@ function Builder() {
     };
 
     fetchRanking();
-    const i = setInterval(fetchRanking, 3000);
-    return () => clearInterval(i);
+    const interval = setInterval(fetchRanking, 3000);
+    return () => clearInterval(interval);
   }, [examCode]);
 
+  // select question
   const toggleSelect = (id) => {
     setSelected(prev =>
       prev.includes(id)
@@ -70,6 +71,7 @@ function Builder() {
     setExamData({ ...examData, [e.target.name]: e.target.value });
   };
 
+  // create exam
   const createExam = async () => {
     if (!examData.title) return alert("Enter title");
     if (selected.length === 0) return alert("Select questions");
@@ -95,43 +97,44 @@ function Builder() {
     }, 300);
   };
 
+  // copy link
   const copyLink = () => {
     navigator.clipboard.writeText(
       `${window.location.origin}/exam/${examCode}`
     );
   };
 
-  // 🔥 CLEAR OLD DATA (2 days old)
+  // 🔥 CLEAR OLD
   const clearOld = async () => {
-    await fetch(`${API}/api/exams/clear-old`, {
-      method: "DELETE"
-    });
+    const res = await fetch(`${API}/api/exams/clear-old`);
+    const data = await res.json();
+
+    alert(`Deleted: ${data.examsDeleted} exams`);
     fetchStats();
-    alert("Old data cleared");
   };
 
-  // 🔥 DELETE ALL DATA
+  // 🔥 DELETE ALL
   const deleteAll = async () => {
-    const confirmDelete = confirm("Delete ALL exams & submissions?");
+    const confirmDelete = confirm("Delete ALL data?");
     if (!confirmDelete) return;
 
-    await fetch(`${API}/api/exams/delete-all`, {
-      method: "DELETE"
-    });
+    const res = await fetch(`${API}/api/exams/clear-old?type=all`);
+    const data = await res.json();
 
-    fetchStats();
     alert("All data deleted");
+    fetchStats();
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 to-slate-900 text-white px-6 py-10">
 
-      <h1 className="text-5xl font-extrabold text-center mb-12">
+      {/* HEADER */}
+      <h1 className="text-5xl font-bold text-center mb-12">
         🚀 Exam Builder
       </h1>
 
       {/* CREATE */}
-      <div className="max-w-5xl mx-auto bg-white/5 backdrop-blur-md border border-white/10 p-8 rounded-3xl mb-12">
+      <div className="max-w-5xl mx-auto bg-white/5 backdrop-blur-md border border-white/10 p-8 rounded-3xl mb-12 shadow-lg">
 
         <input
           name="title"
@@ -141,6 +144,7 @@ function Builder() {
         />
 
         <div className="flex gap-4 flex-wrap justify-between">
+
           <select
             onChange={(e) => setChapter(e.target.value)}
             className="px-4 py-3 rounded-xl bg-white/10 border border-white/20"
@@ -156,9 +160,11 @@ function Builder() {
           >
             🚀 Create Exam
           </button>
+
         </div>
       </div>
 
+      {/* MAIN */}
       <div className="grid lg:grid-cols-3 gap-10">
 
         {/* QUESTIONS */}
@@ -191,6 +197,7 @@ function Builder() {
         {/* RIGHT PANEL */}
         <div className="space-y-8">
 
+          {/* LINK */}
           {examCode && (
             <div ref={linkRef} className="bg-white/5 p-6 rounded-2xl">
               <p className="text-sm mb-2 text-gray-400">Student Link</p>
