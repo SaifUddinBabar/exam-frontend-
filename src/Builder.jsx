@@ -20,13 +20,12 @@ function Builder() {
 
   const linkRef = useRef(null);
 
-  // ================= LOAD SAVED =================
+  // ================= LOAD =================
   useEffect(() => {
     const savedCode = localStorage.getItem("examCode");
     if (savedCode) setExamCode(savedCode);
   }, []);
 
-  // ================= LOAD QUESTIONS =================
   useEffect(() => {
     if (!chapter) return;
 
@@ -35,7 +34,7 @@ function Builder() {
       .then(data => setQuestions(data));
   }, [chapter, limit]);
 
-  // ================= LOAD STATS =================
+  // ================= STATS =================
   const fetchStats = () => {
     fetch(`${API}/api/exams/stats`)
       .then(res => res.json())
@@ -60,7 +59,7 @@ function Builder() {
     setExamData({ ...examData, [e.target.name]: e.target.value });
   };
 
-  // ================= CREATE EXAM =================
+  // ================= CREATE =================
   const createExam = async () => {
     if (!examData.title) return alert("Enter title");
     if (selected.length === 0) return alert("Select questions");
@@ -113,9 +112,9 @@ function Builder() {
     alert("Copied!");
   };
 
-  // ================= CLEAR DATA =================
+  // ================= 🧹 CLEAR OLD =================
   const clearOldData = async () => {
-    if (!confirm("Delete old data?")) return;
+    if (!confirm("Delete OLD data?")) return;
 
     try {
       setLoadingClear(true);
@@ -126,13 +125,34 @@ function Builder() {
 
       const data = await res.json();
 
-      alert(`✅ Deleted ${data.examsDeleted} exams & ${data.submissionsDeleted} submissions`);
+      alert(`🧹 Old Deleted: ${data.examsDeleted}`);
 
-      // 🔥 refresh stats
       fetchStats();
+    } catch {
+      alert("Error");
+    } finally {
+      setLoadingClear(false);
+    }
+  };
 
-    } catch (err) {
-      alert("❌ Failed to clear data");
+  // ================= 💣 CLEAR ALL =================
+  const clearAllData = async () => {
+    if (!confirm("⚠️ DELETE ALL DATA?")) return;
+
+    try {
+      setLoadingClear(true);
+
+      const res = await fetch(`${API}/api/exams/clear-old?type=all`, {
+        method: "DELETE"
+      });
+
+      const data = await res.json();
+
+      alert(`🔥 ALL DELETED: ${data.examsDeleted}`);
+
+      fetchStats();
+    } catch {
+      alert("Error");
     } finally {
       setLoadingClear(false);
     }
@@ -142,8 +162,7 @@ function Builder() {
     <div style={{
       padding: 20,
       maxWidth: 1100,
-      margin: "auto",
-      fontFamily: "Poppins, sans-serif"
+      margin: "auto"
     }}>
 
       <h1>🎓 Teacher Dashboard</h1>
@@ -161,8 +180,7 @@ function Builder() {
           style={{
             width: "100%",
             padding: 14,
-            marginBottom: 10,
-            borderRadius: 10
+            marginBottom: 10
           }}
         />
 
@@ -181,7 +199,7 @@ function Builder() {
 
       {/* QUESTIONS */}
       <div style={{ marginTop: 30 }}>
-        <h3>🧠 Select Questions</h3>
+        <h3>🧠 Questions</h3>
 
         <div style={{
           display: "grid",
@@ -205,9 +223,6 @@ function Builder() {
               >
                 <small>Q{index + 1}</small>
                 <p>{q.question}</p>
-                <small>
-                  {isSelected ? "✅ Selected" : "Click to select"}
-                </small>
               </div>
             );
           })}
@@ -248,10 +263,7 @@ function Builder() {
               background: index === 0 ? "#22c55e" : "#020617",
               borderRadius: 8
             }}>
-              <span>
-                {index === 0 && "👑 "}
-                #{index + 1} {item.name}
-              </span>
+              <span>#{index + 1} {item.name}</span>
               <span>{item.score}</span>
             </div>
           ))}
@@ -276,21 +288,19 @@ function Builder() {
           </>
         )}
 
-        <button
-          onClick={clearOldData}
-          disabled={loadingClear}
-          style={{
-            marginTop: 10,
-            padding: "10px 15px",
-            background: loadingClear ? "gray" : "red",
-            border: "none",
-            color: "white",
-            borderRadius: 8,
-            cursor: "pointer"
-          }}
-        >
-          {loadingClear ? "Clearing..." : "🧹 Clear Old Data"}
-        </button>
+        {/* BUTTONS */}
+        <div style={{ display: "flex", gap: 10 }}>
+          <button onClick={clearOldData}>
+            🧹 Clear Old
+          </button>
+
+          <button
+            onClick={clearAllData}
+            style={{ background: "red", color: "white" }}
+          >
+            💣 Delete All
+          </button>
+        </div>
       </div>
 
     </div>
