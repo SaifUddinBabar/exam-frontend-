@@ -17,33 +17,35 @@ function Builder() {
 
   const linkRef = useRef(null);
 
-  // load saved exam
+  // Load saved exam
   useEffect(() => {
     const saved = localStorage.getItem("examCode");
     if (saved) setExamCode(saved);
   }, []);
 
-  // 🔥 fetch questions
+  // Fetch questions
   useEffect(() => {
     if (!chapter) return;
 
     fetch(`${API}/api/questions?chapter=${encodeURIComponent(chapter)}`)
       .then(res => res.json())
-      .then(data => setQuestions(data || []));
+      .then(data => setQuestions(data || []))
+      .catch(() => setQuestions([]));
   }, [chapter]);
 
-  // 🔥 fetch stats
+  // Fetch stats
   const fetchStats = () => {
     fetch(`${API}/api/exams/stats`)
       .then(res => res.json())
-      .then(data => setStats(data));
+      .then(data => setStats(data))
+      .catch(() => {});
   };
 
   useEffect(() => {
     fetchStats();
   }, []);
 
-  // 🔥 ranking
+  // Ranking
   useEffect(() => {
     if (!examCode) return;
 
@@ -58,7 +60,7 @@ function Builder() {
     return () => clearInterval(interval);
   }, [examCode]);
 
-  // select question
+  // Select question
   const toggleSelect = (id) => {
     setSelected(prev =>
       prev.includes(id)
@@ -71,70 +73,92 @@ function Builder() {
     setExamData({ ...examData, [e.target.name]: e.target.value });
   };
 
-  // create exam
+  // Create exam
   const createExam = async () => {
     if (!examData.title) return alert("Enter title");
     if (selected.length === 0) return alert("Select questions");
 
-    const res = await fetch(`${API}/api/exams/create`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        ...examData,
-        questions: selected
-      })
-    });
+    try {
+      const res = await fetch(`${API}/api/exams/create`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          ...examData,
+          questions: selected
+        })
+      });
 
-    const data = await res.json();
+      const data = await res.json();
 
-    setExamCode(data.examCode);
-    localStorage.setItem("examCode", data.examCode);
+      setExamCode(data.examCode);
+      localStorage.setItem("examCode", data.examCode);
 
-    setTimeout(() => {
-      linkRef.current?.scrollIntoView({ behavior: "smooth" });
-    }, 300);
+      setTimeout(() => {
+        linkRef.current?.scrollIntoView({ behavior: "smooth" });
+      }, 300);
+
+    } catch (err) {
+      alert("Failed to create exam");
+    }
   };
 
-  // copy link
+  // Copy link
   const copyLink = () => {
     navigator.clipboard.writeText(
       `${window.location.origin}/exam/${examCode}`
     );
   };
 
-  // 🔥 CLEAR OLD
+  // 🔥 CLEAR / DELETE (INSTANT FIXED)
   const clearOld = async () => {
-    const res = await fetch(`${API}/api/exams/clear-old`);
-    const data = await res.json();
+    try {
+      const res = await fetch(`${API}/api/exams/clear-old`, {
+        method: "DELETE"
+      });
 
-    alert(`Deleted: ${data.examsDeleted} exams`);
-    fetchStats();
+      const data = await res.json();
+
+      alert(data.message || "Deleted successfully");
+      fetchStats();
+
+    } catch (err) {
+      console.error(err);
+      alert("Delete failed");
+    }
   };
 
-  // 🔥 DELETE ALL
+  // Same function (instant delete)
   const deleteAll = async () => {
     const confirmDelete = confirm("Delete ALL data?");
     if (!confirmDelete) return;
 
-    const res = await fetch(`${API}/api/exams/clear-old?type=all`);
-    const data = await res.json();
+    try {
+      const res = await fetch(`${API}/api/exams/clear-old`, {
+        method: "DELETE"
+      });
 
-    alert("All data deleted");
-    fetchStats();
+      const data = await res.json();
+
+      alert("All data deleted");
+      fetchStats();
+
+    } catch (err) {
+      console.error(err);
+      alert("Delete failed");
+    }
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-950 to-slate-900 text-white px-6 py-10">
 
-      {/* HEADER */}
       <h1 className="text-5xl font-bold text-center mb-12">
         🚀 Exam Builder
       </h1>
 
       {/* CREATE */}
-      <div className="max-w-5xl mx-auto bg-white/5 backdrop-blur-md border border-white/10 p-8 rounded-3xl mb-12 shadow-lg">
+      <div className="max-w-5xl mx-auto bg-white/5 backdrop-blur-md border border-white/10 p-8 rounded-3xl mb-12">
 
         <input
           name="title"
@@ -156,7 +180,7 @@ function Builder() {
 
           <button
             onClick={createExam}
-            className="bg-gradient-to-r from-indigo-500 to-purple-600 px-8 py-3 rounded-xl font-semibold hover:scale-105 transition"
+            className="bg-gradient-to-r from-indigo-500 to-purple-600 px-8 py-3 rounded-xl hover:scale-105 transition"
           >
             🚀 Create Exam
           </button>
@@ -164,7 +188,6 @@ function Builder() {
         </div>
       </div>
 
-      {/* MAIN */}
       <div className="grid lg:grid-cols-3 gap-10">
 
         {/* QUESTIONS */}
@@ -197,7 +220,6 @@ function Builder() {
         {/* RIGHT PANEL */}
         <div className="space-y-8">
 
-          {/* LINK */}
           {examCode && (
             <div ref={linkRef} className="bg-white/5 p-6 rounded-2xl">
               <p className="text-sm mb-2 text-gray-400">Student Link</p>
@@ -213,7 +235,7 @@ function Builder() {
             </div>
           )}
 
-          {/* STATS + DELETE */}
+          {/* STATS */}
           <div className="bg-white/5 p-6 rounded-2xl">
             <h2 className="mb-4 text-lg">📊 Stats</h2>
 
