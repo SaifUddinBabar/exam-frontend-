@@ -120,23 +120,32 @@ function Builder() {
   // ==============================
   // FETCH QUESTIONS
   // ==============================
-  useEffect(() => {
+ useEffect(() => {
 
-    fetch(`${API}/api/questions`)
-      .then((res) => res.json())
-      .then((data) => {
+  // chapter select না করলে fetch হবে না
+  if (!chapter) {
 
-        setQuestions(data || []);
+    setQuestions([]);
 
-      })
-      .catch(() => {
+    return;
+  }
 
-        setQuestions([]);
+  fetch(
+    `${API}/api/questions?chapter=${chapter}`
+  )
+    .then((res) => res.json())
+    .then((data) => {
 
-      });
+      setQuestions(data || []);
 
-  }, []);
+    })
+    .catch(() => {
 
+      setQuestions([]);
+
+    });
+
+}, [chapter]);
   // ==============================
   // HANDLE CHANGE
   // ==============================
@@ -155,30 +164,7 @@ function Builder() {
   // FILTER QUESTIONS
   // ==============================
 const filteredQuestions =
-  questions.filter((q) => {
-
-    // ICT SUBJECT FIX
-    const matchSubject =
-
-      examData.subject ===
-      "তথ্য ও যোগাযোগ প্রযুক্তি"
-
-        ? q.subject === "ICT"
-
-        : q.subject ===
-          examData.subject;
-
-    // CHAPTER FIX
-    const matchChapter =
-      chapter
-        ? q.chapter === chapter
-        : true;
-
-    return (
-      matchSubject &&
-      matchChapter
-    );
-  });
+  questions;
 
   // ==============================
   // SELECT QUESTION
