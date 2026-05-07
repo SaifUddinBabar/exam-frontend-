@@ -27,7 +27,7 @@ function Builder() {
     academy: "",
     title: "",
     duration: "60",
-    subject: " add subject ",
+    subject: "add subject",
     marks: "20"
   });
 
@@ -135,17 +135,20 @@ function Builder() {
 
     try {
 
-      const res = await fetch(`${API}/api/exams/create`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          title: examData.title,
-          duration: examData.duration,
-          questions: selected
-        })
-      });
+      const res = await fetch(
+        `${API}/api/exams/create`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            title: examData.title,
+            duration: examData.duration,
+            questions: selected
+          })
+        }
+      );
 
       const data = await res.json();
 
@@ -192,22 +195,29 @@ function Builder() {
       document.getElementById("question-paper");
 
     const options = {
+
       margin: 0,
-      filename: `${examData.title || "question-paper"}.pdf`,
+
+      filename:
+        `${examData.title || "question-paper"}.pdf`,
+
       image: {
         type: "jpeg",
         quality: 1
       },
+
       html2canvas: {
         scale: 2,
         useCORS: true,
         scrollY: 0
       },
+
       jsPDF: {
         unit: "mm",
         format: "a4",
         orientation: "portrait"
       },
+
       pagebreak: {
         mode: ["avoid-all", "css", "legacy"]
       }
@@ -223,6 +233,7 @@ function Builder() {
   };
 
   return (
+
     <div className="min-h-screen bg-[#f3f3f3] pb-20">
 
       {/* ==============================
@@ -322,7 +333,9 @@ function Builder() {
 
               <select
                 value={chapter}
-                onChange={(e) => setChapter(e.target.value)}
+                onChange={(e) =>
+                  setChapter(e.target.value)
+                }
                 className="w-full border rounded-xl p-4 text-lg bg-white"
               >
 
@@ -527,41 +540,53 @@ function Builder() {
               {window.location.origin}/exam/{examCode}
             </div>
 
+            {/* COPY BUTTON */}
             <div className="flex justify-center">
 
               <button
                 onClick={copyLink}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-xl text-lg"
+                className="
+                  bg-blue-600
+                  hover:bg-blue-700
+                  text-white
+                  px-8
+                  py-3
+                  rounded-xl
+                  text-lg
+                  font-bold
+                "
               >
                 Copy Link
               </button>
 
             </div>
 
+            {/* RANKING BUTTON */}
+            <div className="flex justify-center mt-5">
+
+              <a
+                href={`/ranking/${examCode}`}
+                target="_blank"
+                rel="noreferrer"
+                className="
+                  bg-purple-600
+                  hover:bg-purple-700
+                  text-white
+                  px-8
+                  py-3
+                  rounded-xl
+                  text-lg
+                  font-bold
+                  shadow-lg
+                "
+              >
+                🏆 View Ranking
+              </a>
+
+            </div>
+
           </div>
         )}
-
-        <div className="flex justify-center mt-5">
-
-  <a
-    href={`${window.location.origin}/ranking/${examCode}`}
-    target="_blank"
-    rel="noreferrer"
-    className="
-      bg-purple-600
-      hover:bg-purple-700
-      text-white
-      px-8
-      py-3
-      rounded-xl
-      text-lg
-      font-bold
-    "
-  >
-    🏆 View Ranking
-  </a>
-
-</div>
 
         {/* ==============================
             PRINTABLE QUESTION PAPER
@@ -571,7 +596,6 @@ function Builder() {
           className="bg-white mt-10 shadow-xl mx-auto preview-paper"
         >
 
-          {/* CUSTOM STYLE */}
           <style>
             {`
 
