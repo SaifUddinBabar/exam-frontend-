@@ -9,6 +9,7 @@ function Builder() {
   const [examCode, setExamCode] = useState("");
 
   const [examData, setExamData] = useState({
+    academy: "",
     title: "",
     duration: "60",
     subject: "ICT",
@@ -52,6 +53,10 @@ function Builder() {
   // CREATE EXAM
   const createExam = async () => {
 
+    if (!examData.academy) {
+      return alert("একাডেমির নাম লিখুন");
+    }
+
     if (!examData.title) {
       return alert("পরীক্ষার নাম লিখুন");
     }
@@ -89,6 +94,7 @@ function Builder() {
     }
   };
 
+  // COPY LINK
   const copyLink = () => {
     navigator.clipboard.writeText(
       `${window.location.origin}/exam/${examCode}`
@@ -128,6 +134,22 @@ function Builder() {
           </h2>
 
           <div className="grid md:grid-cols-2 gap-6">
+
+            {/* ACADEMY */}
+            <div>
+              <label className="font-semibold block mb-2 text-lg">
+                একাডেমি / কলেজের নাম
+              </label>
+
+              <input
+                type="text"
+                name="academy"
+                placeholder="যেমন: রূপচাঁদা একাডেমি"
+                value={examData.academy}
+                onChange={handleChange}
+                className="w-full border rounded-xl p-4 text-lg"
+              />
+            </div>
 
             {/* CLASS */}
             <div>
@@ -399,8 +421,13 @@ function Builder() {
         <div className="bg-white mt-16 rounded-2xl shadow-xl p-10">
 
           <h1 className="text-5xl font-bold text-center mb-10">
-            রূপচাঁদা একাডেমি
+            {examData.academy}
           </h1>
+
+          <div className="text-center mb-8 text-2xl">
+            <p>শ্রেণী: {examData.className}</p>
+            <p>বিষয়: {examData.subject}</p>
+          </div>
 
           <div className="flex justify-between mb-10 text-xl">
             <p>সময়: {examData.duration} মিনিট</p>
