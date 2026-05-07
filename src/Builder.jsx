@@ -27,7 +27,7 @@ function Builder() {
     academy: "",
     title: "",
     duration: "60",
-    subject: " ",
+    subject: " add subject ",
     marks: "20"
   });
 
