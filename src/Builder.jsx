@@ -465,7 +465,7 @@ function Builder() {
           className="
             bg-white
             mt-20
-            p-10
+            p-6
             shadow-xl
             max-w-5xl
             mx-auto
@@ -473,28 +473,28 @@ function Builder() {
         >
 
           {/* HEADER */}
-          <div className="text-center mb-10">
+          <div className="text-center mb-6">
 
-            <div className="inline-block bg-black px-10 py-3">
+            <div className="inline-block bg-black px-8 py-2">
 
-              <h1 className="text-white text-5xl font-bold">
+              <h1 className="text-white text-3xl font-bold">
                 {examData.subject}
               </h1>
 
             </div>
 
-            <h2 className="text-4xl font-bold mt-6">
+            <h2 className="text-2xl font-bold mt-4">
               {examData.academy}
             </h2>
 
-            <p className="text-2xl mt-3">
+            <p className="text-lg mt-2">
               {examData.title}
             </p>
 
           </div>
 
           {/* INFO */}
-          <div className="flex justify-between text-xl border-b pb-4 mb-8">
+          <div className="flex justify-between text-sm border-b pb-2 mb-5">
 
             <p>
               সময়: {examData.duration} মিনিট
@@ -507,7 +507,7 @@ function Builder() {
           </div>
 
           {/* QUESTIONS */}
-          <div className="grid grid-cols-2 gap-x-14 gap-y-10">
+          <div className="grid grid-cols-2 gap-x-8 gap-y-5">
 
             {questions
               .filter((q) =>
@@ -517,13 +517,15 @@ function Builder() {
 
                 <div key={q._id}>
 
-                  <h2 className="text-xl font-bold leading-9 mb-5">
+                  {/* QUESTION */}
+                  <h2 className="text-sm font-bold leading-5 mb-2">
 
                     {i + 1}. {q.question}
 
                   </h2>
 
-                  <div className="space-y-3 text-lg">
+                  {/* OPTIONS */}
+                  <div className="space-y-1 text-xs">
 
                     {q.options?.map((opt, idx) => {
 
