@@ -1,16 +1,34 @@
 import { useState, useEffect } from "react";
 import html2pdf from "html2pdf.js";
 
+// 🔥 API URL
 const API = import.meta.env.VITE_API_URL;
 
 function Builder() {
 
+  // ==============================
+  // STATES
+  // ==============================
+
+  // current chapter questions
   const [questions, setQuestions] = useState([]);
+
+  // all selected chapter questions merge
   const [allQuestions, setAllQuestions] = useState([]);
+
+  // selected question ids
   const [selected, setSelected] = useState([]);
+
+  // selected chapter
   const [chapter, setChapter] = useState("");
+
+  // exam link code
   const [examCode, setExamCode] = useState("");
 
+  // 🔥 PDF compact mode
+  const [pdfCompact, setPdfCompact] = useState(false);
+
+  // exam form data
   const [examData, setExamData] = useState({
     academy: "",
     title: "",
@@ -21,7 +39,9 @@ function Builder() {
     marks: "20"
   });
 
+  // ==============================
   // FETCH QUESTIONS
+  // ==============================
   useEffect(() => {
 
     if (!chapter) return;
@@ -32,10 +52,10 @@ function Builder() {
       .then((res) => res.json())
       .then((data) => {
 
+        // current chapter questions
         setQuestions(data || []);
 
-        // 🔥 IMPORTANT
-        // old + new merge
+        // 🔥 merge old + new questions
         setAllQuestions((prev) => {
 
           const merged = [...prev];
@@ -53,12 +73,15 @@ function Builder() {
 
           return merged;
         });
+
       })
       .catch(() => setQuestions([]));
 
   }, [chapter]);
 
+  // ==============================
   // HANDLE INPUT
+  // ==============================
   const handleChange = (e) => {
 
     setExamData({
@@ -67,10 +90,12 @@ function Builder() {
     });
   };
 
-  // SELECT QUESTION WITH LIMIT
+  // ==============================
+  // SELECT QUESTION
+  // ==============================
   const toggleSelect = (id) => {
 
-    // REMOVE
+    // remove selected
     if (selected.includes(id)) {
 
       setSelected((prev) =>
@@ -80,7 +105,7 @@ function Builder() {
       return;
     }
 
-    // LIMIT
+    // 🔥 question limit
     const limit = Number(examData.marks);
 
     if (selected.length >= limit) {
@@ -92,13 +117,16 @@ function Builder() {
       return;
     }
 
-    // ADD
+    // add question
     setSelected((prev) => [...prev, id]);
   };
 
+  // ==============================
   // CREATE EXAM
+  // ==============================
   const createExam = async () => {
 
+    // validations
     if (!examData.academy) {
       return alert("একাডেমির নাম লিখুন");
     }
@@ -117,6 +145,7 @@ function Builder() {
 
     try {
 
+      // API call
       const res = await fetch(`${API}/api/exams/create`, {
         method: "POST",
         headers: {
@@ -131,16 +160,20 @@ function Builder() {
 
       const data = await res.json();
 
+      // save exam code
       setExamCode(data.examCode);
 
       alert("Exam Created Successfully");
 
     } catch {
+
       alert("Create Failed");
     }
   };
 
+  // ==============================
   // COPY LINK
+  // ==============================
   const copyLink = () => {
 
     navigator.clipboard.writeText(
@@ -150,14 +183,29 @@ function Builder() {
     alert("Link Copied");
   };
 
+  // ==============================
   // DOWNLOAD PDF
-  const downloadPDF = () => {
+  // ==============================
+  const downloadPDF = async () => {
+
+    // 🔥 if question বেশি হয়
+    if (selected.length > 20) {
+      setPdfCompact(true);
+    } else {
+      setPdfCompact(false);
+    }
+
+    // wait render
+    await new Promise((resolve) =>
+      setTimeout(resolve, 300)
+    );
 
     const element =
       document.getElementById("question-paper");
 
+    // pdf settings
     const options = {
-      margin: 0.3,
+      margin: 0.1,
       filename: `${examData.title || "question-paper"}.pdf`,
       image: {
         type: "jpeg",
@@ -167,22 +215,28 @@ function Builder() {
         scale: 2
       },
       jsPDF: {
-        unit: "in",
+        unit: "mm",
         format: "a4",
         orientation: "portrait"
       }
     };
 
-    html2pdf()
+    // generate pdf
+    await html2pdf()
       .set(options)
       .from(element)
       .save();
+
+    // restore preview
+    setPdfCompact(false);
   };
 
   return (
     <div className="min-h-screen bg-[#f3f3f3] pb-20">
 
-      {/* TOPBAR */}
+      {/* ==============================
+          TOPBAR
+      ============================== */}
       <div className="bg-white shadow-sm border-b">
 
         <div className="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
@@ -199,10 +253,14 @@ function Builder() {
 
       </div>
 
-      {/* MAIN */}
+      {/* ==============================
+          MAIN
+      ============================== */}
       <div className="max-w-6xl mx-auto px-4 py-8">
 
-        {/* FORM */}
+        {/* ==============================
+            FORM
+        ============================== */}
         <div className="bg-white rounded-3xl p-8 shadow-sm mb-10">
 
           <h2 className="text-4xl font-bold text-center mb-10 text-gray-800">
@@ -343,7 +401,9 @@ function Builder() {
 
         </div>
 
-        {/* QUESTION TITLE */}
+        {/* ==============================
+            QUESTION TITLE
+        ============================== */}
         <div className="text-center mb-8">
 
           <h2 className="text-4xl font-bold text-gray-800 mb-3">
@@ -361,10 +421,12 @@ function Builder() {
 
         </div>
 
-        {/* QUESTIONS */}
+        {/* ==============================
+            QUESTIONS
+        ============================== */}
         <div className="space-y-5">
 
-          {questions.map((q, i) => {
+          {questions.map((q) => {
 
             const active =
               selected.includes(q._id);
@@ -417,9 +479,12 @@ function Builder() {
 
         </div>
 
-        {/* BUTTONS */}
+        {/* ==============================
+            BUTTONS
+        ============================== */}
         <div className="flex flex-wrap justify-center gap-5 mt-10">
 
+          {/* CREATE EXAM */}
           <button
             onClick={createExam}
             className="
@@ -437,6 +502,7 @@ function Builder() {
             সাবমিট করুন
           </button>
 
+          {/* DOWNLOAD PDF */}
           <button
             onClick={downloadPDF}
             className="
@@ -456,7 +522,9 @@ function Builder() {
 
         </div>
 
-        {/* LINK */}
+        {/* ==============================
+            EXAM LINK
+        ============================== */}
         {examCode && (
 
           <div className="bg-white rounded-2xl shadow-lg p-8 mt-16">
@@ -483,95 +551,149 @@ function Builder() {
           </div>
         )}
 
-        {/* PRINTABLE QUESTION PAPER */}
-       {/* PRINTABLE QUESTION PAPER */}
-<div
-  id="question-paper"
-  className="
-    bg-white
-    mt-10
-    p-4
-    shadow-xl
-    max-w-5xl
-    mx-auto
-  "
->
+        {/* ==============================
+            PRINTABLE QUESTION PAPER
+        ============================== */}
+        <div
+          id="question-paper"
+          className={`
+            bg-white
+            mt-10
+            shadow-xl
+            max-w-5xl
+            mx-auto
+            transition-all
 
-  {/* HEADER */}
-  <div className="text-center mb-3">
+            ${pdfCompact
+              ? "p-2"
+              : "p-4"}
+          `}
+        >
 
-    <div className="inline-block bg-black px-5 py-1">
+          {/* HEADER */}
+          <div className={`
+            text-center
+            ${pdfCompact ? "mb-1" : "mb-3"}
+          `}>
 
-      <h1 className="text-white text-xl font-bold">
-        {examData.subject}
-      </h1>
+            <div className={`
+              inline-block
+              bg-black
 
-    </div>
+              ${pdfCompact
+                ? "px-3 py-[2px]"
+                : "px-5 py-1"}
+            `}>
 
-    <h2 className="text-lg font-bold mt-2">
-      {examData.academy}
-    </h2>
+              <h1 className={`
+                text-white
+                font-bold
 
-    <p className="text-sm mt-1">
-      {examData.title}
-    </p>
+                ${pdfCompact
+                  ? "text-sm"
+                  : "text-xl"}
+              `}>
+                {examData.subject}
+              </h1>
 
-  </div>
+            </div>
 
-  {/* INFO */}
-  <div className="flex justify-between text-[11px] border-b pb-1 mb-3">
+            <h2 className={`
+              font-bold mt-1
 
-    <p>
-      সময়: {examData.duration} মিনিট
-    </p>
+              ${pdfCompact
+                ? "text-xs"
+                : "text-lg"}
+            `}>
+              {examData.academy}
+            </h2>
 
-    <p>
-      পূর্ণমান: {examData.marks}
-    </p>
+            <p className={`
+              ${pdfCompact
+                ? "text-[9px]"
+                : "text-sm"}
+            `}>
+              {examData.title}
+            </p>
 
-  </div>
+          </div>
 
-  {/* QUESTIONS */}
-  <div className="grid grid-cols-2 gap-x-6 gap-y-3">
+          {/* INFO */}
+          <div className={`
+            flex justify-between border-b
 
-    {allQuestions
-      .filter((q) =>
-        selected.includes(q._id)
-      )
-      .map((q, i) => (
+            ${pdfCompact
+              ? "text-[8px] pb-[2px] mb-2"
+              : "text-[11px] pb-1 mb-3"}
+          `}>
 
-        <div key={q._id}>
+            <p>
+              সময়: {examData.duration} মিনিট
+            </p>
 
-          {/* QUESTION */}
-          <h2 className="text-[11px] font-bold leading-4 mb-1">
+            <p>
+              পূর্ণমান: {examData.marks}
+            </p>
 
-            {i + 1}. {q.question}
+          </div>
 
-          </h2>
+          {/* QUESTIONS */}
+          <div className={`
+            grid grid-cols-2
 
-          {/* OPTIONS */}
-          <div className="space-y-[1px] text-[10px] leading-4">
+            ${pdfCompact
+              ? "gap-x-3 gap-y-1"
+              : "gap-x-6 gap-y-3"}
+          `}>
 
-            {q.options?.map((opt, idx) => {
+            {allQuestions
+              .filter((q) =>
+                selected.includes(q._id)
+              )
+              .map((q, i) => (
 
-              const labels =
-                ["ক", "খ", "গ", "ঘ"];
+                <div key={q._id}>
 
-              return (
-                <div key={idx}>
-                  {labels[idx]}. {opt}
+                  {/* QUESTION */}
+                  <h2 className={`
+                    font-bold
+
+                    ${pdfCompact
+                      ? "text-[8px] leading-3 mb-[2px]"
+                      : "text-[11px] leading-4 mb-1"}
+                  `}>
+
+                    {i + 1}. {q.question}
+
+                  </h2>
+
+                  {/* OPTIONS */}
+                  <div className={`
+                    ${pdfCompact
+                      ? "text-[7px] leading-3 space-y-0"
+                      : "text-[10px] leading-4 space-y-[1px]"}
+                  `}>
+
+                    {q.options?.map((opt, idx) => {
+
+                      const labels =
+                        ["ক", "খ", "গ", "ঘ"];
+
+                      return (
+                        <div key={idx}>
+                          {labels[idx]}. {opt}
+                        </div>
+                      );
+                    })}
+
+                  </div>
+
                 </div>
-              );
-            })}
+              ))}
 
           </div>
 
         </div>
-      ))}
-
-  </div>
-
-</div>
 
       </div>
 
