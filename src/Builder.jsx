@@ -541,6 +541,28 @@ function Builder() {
           </div>
         )}
 
+        <div className="flex justify-center mt-5">
+
+  <a
+    href={`${window.location.origin}/ranking/${examCode}`}
+    target="_blank"
+    rel="noreferrer"
+    className="
+      bg-purple-600
+      hover:bg-purple-700
+      text-white
+      px-8
+      py-3
+      rounded-xl
+      text-lg
+      font-bold
+    "
+  >
+    🏆 View Ranking
+  </a>
+
+</div>
+
         {/* ==============================
             PRINTABLE QUESTION PAPER
         ============================== */}

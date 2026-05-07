@@ -2,6 +2,7 @@ import { Routes, Route, Link, useLocation } from "react-router-dom";
 import Builder from "./Builder";
 import ExamPage from "./ExamPage";
 import Ranking from "./RankingPage";
+import RankingPage from "./RankingPage";
 
 function App() {
   const location = useLocation();
@@ -25,6 +26,10 @@ function App() {
         <Route path="/" element={<Builder />} />
         <Route path="/exam/:code" element={<ExamPage />} />
         <Route path="/ranking/:code" element={<Ranking />} />
+        <Route
+  path="/ranking/:code"
+  element={<RankingPage />}
+/>
       </Routes>
 
     </div>
