@@ -27,7 +27,7 @@ function Builder() {
     academy: "",
     title: "",
     duration: "60",
-    subject: "বাংলা প্রথম পত্র",
+    subject: " ",
     marks: "20"
   });
 
