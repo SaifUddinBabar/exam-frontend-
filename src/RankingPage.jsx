@@ -1,6 +1,3 @@
-# RankingPage.jsx
-
-```jsx
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 
@@ -25,9 +22,12 @@ function RankingPage() {
         setRanking(data || []);
 
         setLoading(false);
+
       })
       .catch(() => {
+
         setLoading(false);
+
       });
 
   }, [code]);
@@ -38,6 +38,7 @@ function RankingPage() {
   if (loading) {
 
     return (
+
       <div
         style={{
           minHeight: "100vh",
@@ -52,6 +53,7 @@ function RankingPage() {
       >
         Loading Ranking...
       </div>
+
     );
   }
 
@@ -120,6 +122,7 @@ function RankingPage() {
           >
             এখনও কেউ পরীক্ষা দেয়নি
           </div>
+
         )}
 
         {/* LIST */}
@@ -224,6 +227,7 @@ function RankingPage() {
               </div>
 
             </div>
+
           ))}
 
         </div>
@@ -231,51 +235,8 @@ function RankingPage() {
       </div>
 
     </div>
+
   );
 }
 
 export default RankingPage;
-```
-
----
-
-# App.jsx এ add করো
-
-```jsx
-import RankingPage from "./pages/RankingPage";
-```
-
-তারপর routes এর ভিতরে এটা add করো:
-
-```jsx
-<Route path="/ranking/:code" element={<RankingPage />} />
-```
-
----
-
-# Builder.jsx এ Student Link section এর নিচে এটা add করো
-
-```jsx
-{/* RANKING BUTTON */}
-<div className="flex justify-center mt-5">
-
-  <a
-    href={`${window.location.origin}/ranking/${examCode}`}
-    target="_blank"
-    rel="noreferrer"
-    className="bg-purple-600 hover:bg-purple-700 text-white px-8 py-3 rounded-xl text-lg font-bold"
-  >
-    🏆 View Ranking
-  </a>
-
-</div>
-```
-
-এখন:
-
-✅ আলাদা সুন্দর Ranking Page হবে
-✅ Top 1/2/3 different color হবে
-✅ Mobile responsive হবে
-✅ Builder থেকে button click করলেই ranking open হবে
-✅ Live ranking দেখাবে
-✅ Modern UI হবে
