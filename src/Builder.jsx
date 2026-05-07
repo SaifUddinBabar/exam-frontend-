@@ -120,9 +120,8 @@ function Builder() {
   // ==============================
   // FETCH QUESTIONS
   // ==============================
- useEffect(() => {
+useEffect(() => {
 
-  // chapter select না করলে fetch হবে না
   if (!chapter) {
 
     setQuestions([]);
@@ -130,16 +129,28 @@ function Builder() {
     return;
   }
 
+  console.log(
+    "Selected Chapter:",
+    chapter
+  );
+
   fetch(
-    `${API}/api/questions?chapter=${chapter}`
+    `${API}/api/questions?chapter=${encodeURIComponent(chapter)}`
   )
     .then((res) => res.json())
     .then((data) => {
 
+      console.log(
+        "Fetched Questions:",
+        data
+      );
+
       setQuestions(data || []);
 
     })
-    .catch(() => {
+    .catch((err) => {
+
+      console.log(err);
 
       setQuestions([]);
 
