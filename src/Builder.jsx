@@ -6,6 +6,7 @@ const API = import.meta.env.VITE_API_URL;
 function Builder() {
 
   const [questions, setQuestions] = useState([]);
+  const [allQuestions, setAllQuestions] = useState([]);
   const [selected, setSelected] = useState([]);
   const [chapter, setChapter] = useState("");
   const [examCode, setExamCode] = useState("");
@@ -29,7 +30,30 @@ function Builder() {
       `${API}/api/questions?chapter=${encodeURIComponent(chapter)}`
     )
       .then((res) => res.json())
-      .then((data) => setQuestions(data || []))
+      .then((data) => {
+
+        setQuestions(data || []);
+
+        // 🔥 IMPORTANT
+        // old + new merge
+        setAllQuestions((prev) => {
+
+          const merged = [...prev];
+
+          data.forEach((q) => {
+
+            const exists = merged.find(
+              (item) => item._id === q._id
+            );
+
+            if (!exists) {
+              merged.push(q);
+            }
+          });
+
+          return merged;
+        });
+      })
       .catch(() => setQuestions([]));
 
   }, [chapter]);
@@ -367,7 +391,7 @@ function Builder() {
 
                 {/* QUESTION */}
                 <h2 className="text-2xl font-bold text-gray-800 mb-6 leading-10">
-                  {i + 1}. {q.question}
+                  {q.question}
                 </h2>
 
                 {/* OPTIONS */}
@@ -509,7 +533,7 @@ function Builder() {
           {/* QUESTIONS */}
           <div className="grid grid-cols-2 gap-x-8 gap-y-5">
 
-            {questions
+            {allQuestions
               .filter((q) =>
                 selected.includes(q._id)
               )
