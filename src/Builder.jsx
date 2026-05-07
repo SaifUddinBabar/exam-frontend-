@@ -30,14 +30,16 @@ const SUBJECTS = {
 
     {
       label:
-        "চতুর্থ অধ্যায় : ওয়েব ডিজাইন",
-      value: "web"
+  "চতুর্থ অধ্যায় : ওয়েব ও HTML",
+value:
+  "Web & HTML"
     },
 
     {
       label:
-        "পঞ্চম অধ্যায় : প্রোগ্রামিং ভাষা",
-      value: "programming"
+  "পঞ্চম অধ্যায় : প্রোগ্রামিং ও ভাষা",
+value:
+  "Programming & Language"
     }
 
   ],
@@ -152,25 +154,31 @@ function Builder() {
   // ==============================
   // FILTER QUESTIONS
   // ==============================
-  const filteredQuestions =
-    questions.filter((q) => {
+const filteredQuestions =
+  questions.filter((q) => {
 
-      const matchSubject =
-        examData.subject
-          ? q.subject ===
-            examData.subject
-          : true;
+    // ICT SUBJECT FIX
+    const matchSubject =
 
-      const matchChapter =
-        chapter
-          ? q.chapter === chapter
-          : true;
+      examData.subject ===
+      "তথ্য ও যোগাযোগ প্রযুক্তি"
 
-      return (
-        matchSubject &&
-        matchChapter
-      );
-    });
+        ? q.subject === "ICT"
+
+        : q.subject ===
+          examData.subject;
+
+    // CHAPTER FIX
+    const matchChapter =
+      chapter
+        ? q.chapter === chapter
+        : true;
+
+    return (
+      matchSubject &&
+      matchChapter
+    );
+  });
 
   // ==============================
   // SELECT QUESTION
