@@ -641,18 +641,156 @@ function Builder() {
                 >
 
                   {/* QUESTION */}
-                  <h2 className={`
-                    font-bold
-                    text-justify
+                {/* QUESTIONS */}
+<div
+  className={`
+    columns-2
 
-                    ${pdfCompact
-                      ? "text-[9px] leading-4 mb-[2px]"
-                      : "text-sm leading-5 mb-1"}
-                  `}>
+    ${pdfCompact
+      ? "gap-4"
+      : "gap-8"}
+  `}
+>
 
-                    {i + 1}. {q.question}
+  {allQuestions
+    .filter((q) =>
+      selected.includes(q._id)
+    )
+    .map((q, i) => (
 
-                  </h2>
+      <div
+        key={q._id}
+        className={`
+          break-inside-avoid
+          mb-3
+
+          ${pdfCompact
+            ? "mb-2"
+            : "mb-4"}
+        `}
+      >
+
+   {/* QUESTIONS */}
+<div
+  className={`
+    columns-2
+
+    ${pdfCompact
+      ? "gap-4"
+      : "gap-8"}
+  `}
+>
+
+  {allQuestions
+    .filter((q) =>
+      selected.includes(q._id)
+    )
+    .map((q, i) => (
+
+      <div
+        key={q._id}
+        className={`
+          break-inside-avoid
+          mb-3
+
+          ${pdfCompact
+            ? "mb-2"
+            : "mb-4"}
+        `}
+      >
+
+        {/* QUESTION */}
+        <h2 className={`
+          font-bold
+          text-justify
+
+          ${pdfCompact
+            ? "text-[8px] leading-3 mb-[2px]"
+            : "text-[11px] leading-5 mb-1"}
+        `}>
+
+          {i + 1}. {q.question}
+
+        </h2>
+
+        {/* OPTIONS */}
+        <div className={`
+          grid grid-cols-2
+
+          ${pdfCompact
+            ? "gap-y-[1px] gap-x-2 text-[7px] leading-3"
+            : "gap-y-1 gap-x-4 text-[10px] leading-4"}
+        `}>
+
+          {q.options?.map((opt, idx) => {
+
+            const labels =
+              ["ক", "খ", "গ", "ঘ"];
+
+            return (
+
+              <div
+                key={idx}
+                className="flex items-start gap-1"
+              >
+
+                <span className="font-semibold">
+                  {labels[idx]}.
+                </span>
+
+                <span>
+                  {opt}
+                </span>
+
+              </div>
+            );
+          })}
+
+        </div>
+
+      </div>
+    ))}
+
+</div>
+        {/* OPTIONS */}
+        <div className={`
+          grid grid-cols-2
+
+          ${pdfCompact
+            ? "gap-y-[1px] gap-x-2 text-[7px] leading-3"
+            : "gap-y-1 gap-x-4 text-[10px] leading-4"}
+        `}>
+
+          {q.options?.map((opt, idx) => {
+
+            const labels =
+              ["ক", "খ", "গ", "ঘ"];
+
+            return (
+
+              <div
+                key={idx}
+                className="flex items-start gap-1"
+              >
+
+                <span className="font-semibold">
+                  {labels[idx]}.
+                </span>
+
+                <span>
+                  {opt}
+                </span>
+
+              </div>
+            );
+          })}
+
+        </div>
+
+      </div>
+    ))}
+
+</div>
 
                   {/* OPTIONS */}
                   <div className={`
