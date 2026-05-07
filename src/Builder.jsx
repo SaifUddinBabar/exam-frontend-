@@ -306,39 +306,53 @@ const filteredQuestions =
   // ==============================
   // DOWNLOAD PDF
   // ==============================
-  const downloadPDF = () => {
+/* ==============================
+   DOWNLOAD PDF
+============================== */
 
-    const element =
-      document.getElementById(
-        "question-paper"
-      );
+const downloadPDF = () => {
 
-    html2pdf()
-      .set({
+  const element =
+    document.getElementById(
+      "question-paper"
+    );
 
-        margin: [5, 5, 5, 5],
+  html2pdf()
+    .set({
 
-        filename:
-          `${examData.title}.pdf`,
+      margin: [2, 2, 2, 2],
 
-        image: {
-          type: "jpeg",
-          quality: 1
-        },
+      filename:
+        `${examData.title}.pdf`,
 
-        html2canvas: {
-          scale: 2
-        },
+      image: {
+        type: "jpeg",
+        quality: 1
+      },
 
-        jsPDF: {
-          unit: "mm",
-          format: "a4",
-          orientation: "portrait"
-        }
-      })
-      .from(element)
-      .save();
-  };
+      html2canvas: {
+
+        scale: 3,
+
+        useCORS: true
+
+      },
+
+      jsPDF: {
+
+        unit: "mm",
+
+        format: "a4",
+
+        orientation:
+          "portrait"
+
+      }
+
+    })
+    .from(element)
+    .save();
+};
 
   return (
 
@@ -977,125 +991,158 @@ const filteredQuestions =
         )}
 
         {/* PDF SECTION */}
+        
+   PDF SECTION
+============================== */}
+
+<div
+  id="question-paper"
+  className="
+    bg-white
+    mt-16
+    w-[210mm]
+    min-h-[297mm]
+    mx-auto
+    px-[10mm]
+    py-[8mm]
+    text-black
+  "
+>
+
+  {/* SUBJECT */}
+  <h1 className="
+    text-[18px]
+    font-bold
+    text-center
+    mb-2
+  ">
+
+    {examData.subject}
+
+  </h1>
+
+  {/* ACADEMY */}
+  <h2 className="
+    text-[15px]
+    font-bold
+    text-center
+    mb-1
+  ">
+
+    {examData.academy}
+
+  </h2>
+
+  {/* EXAM TITLE */}
+  <h3 className="
+    text-[13px]
+    font-semibold
+    text-center
+    mb-4
+  ">
+
+    {examData.title}
+
+  </h3>
+
+  {/* INFO BAR */}
+  <div className="
+    flex
+    justify-between
+    items-center
+    border-y
+    border-black
+    py-2
+    mb-4
+    text-[11px]
+    font-semibold
+  ">
+
+    <div>
+      সময়:
+      {" "}
+      {examData.duration}
+      {" "}
+      মিনিট
+    </div>
+
+    <div>
+      পূর্ণমান:
+      {" "}
+      {examData.marks}
+    </div>
+
+  </div>
+
+  {/* QUESTIONS */}
+  <div className="
+    grid
+    grid-cols-2
+    gap-x-5
+    gap-y-3
+  ">
+
+    {selectedQuestions.map(
+      (q, index) => (
+
         <div
-          id="question-paper"
+          key={q._id}
           className="
-            bg-white
-            mt-16
-            p-6
-            md:p-10
+            break-inside-avoid
+            page-break-inside-avoid
           "
         >
 
-          <h1 className="
-            text-2xl
-            md:text-4xl
-            font-bold
-            text-center
-            mb-4
-          ">
-
-            {examData.subject}
-
-          </h1>
-
-          <h2 className="
-            text-xl
-            md:text-3xl
-            font-bold
-            text-center
-            mb-3
-          ">
-
-            {examData.academy}
-
-          </h2>
-
+          {/* QUESTION */}
           <h3 className="
-            text-lg
-            md:text-2xl
-            text-center
-            mb-8
+            font-semibold
+            text-[11px]
+            leading-[16px]
+            mb-1
           ">
 
-            {examData.title}
+            {index + 1}.
+            {" "}
+            {q.question}
 
           </h3>
 
-          <div className="
-            flex
-            justify-between
-            mb-10
-            text-sm
-            md:text-xl
-          ">
-
-            <div>
-              সময়:
-              {" "}
-              {examData.duration}
-              {" "}
-              মিনিট
-            </div>
-
-            <div>
-              পূর্ণমান:
-              {" "}
-              {examData.marks}
-            </div>
-
-          </div>
-
+          {/* OPTIONS */}
           <div className="
             grid
-            md:grid-cols-2
-            gap-6
+            grid-cols-2
+            gap-x-3
+            gap-y-1
+            pl-2
+            text-[10px]
+            leading-[14px]
           ">
 
-            {selectedQuestions.map(
-              (q, index) => (
+            {q.options.map(
+              (opt, i) => (
 
                 <div
-                  key={q._id}
+                  key={i}
                   className="
-                    mb-6
-                    break-inside-avoid
+                    flex
+                    items-start
+                    gap-1
                   "
                 >
 
-                  <h3 className="
-                    font-bold
-                    mb-3
-                    text-sm
-                    md:text-lg
-                    leading-relaxed
-                  ">
+                  <span>
 
-                    {index + 1}.
-                    {" "}
-                    {q.question}
-
-                  </h3>
-
-                  <div className="
-                    grid
-                    grid-cols-2
-                    gap-2
-                    text-xs
-                    md:text-base
-                  ">
-
-                    {q.options.map(
-                      (opt, i) => (
-
-                        <div key={i}>
-                          {opt}
-                        </div>
-
-                      )
+                    {String.fromCharCode(
+                      97 + i
                     )}
 
-                  </div>
+                    )
+
+                  </span>
+
+                  <span>
+                    {opt}
+                  </span>
 
                 </div>
 
@@ -1105,6 +1152,13 @@ const filteredQuestions =
           </div>
 
         </div>
+
+      )
+    )}
+
+  </div>
+
+</div>
 
       </div>
 
