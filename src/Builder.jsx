@@ -8,73 +8,62 @@ const API = import.meta.env.VITE_API_URL;
 // ==============================
 const SUBJECTS = {
 
+  "বাংলা": [
+    "গদ্য",
+    "পদ্য",
+    "ব্যাকরণ",
+    "নির্মিতি"
+  ],
+
+  "ইংরেজি": [
+    "Grammar",
+    "Seen Passage",
+    "Writing",
+    "Vocabulary"
+  ],
+
   "তথ্য ও যোগাযোগ প্রযুক্তি": [
-
-    {
-      label:
-        "প্রথম অধ্যায় : তথ্য ও যোগাযোগ প্রযুক্তি",
-      value: "ict"
-    },
-
-    {
-      label:
-        "দ্বিতীয় অধ্যায় : কমিউনিকেশন সিস্টেম",
-      value: "communication"
-    },
-
-    {
-      label:
-        "তৃতীয় অধ্যায় : সংখ্যা পদ্ধতি",
-      value: "number-system"
-    },
-
-    {
-      label:
-  "চতুর্থ অধ্যায় : ওয়েব ও HTML",
-value:
-  "Web & HTML"
-    },
-
-    {
-      label:
-  "পঞ্চম অধ্যায় : প্রোগ্রামিং ও ভাষা",
-value:
-  "Programming & Language"
-    }
-
+    "প্রথম অধ্যায় : তথ্য ও যোগাযোগ প্রযুক্তি",
+    "দ্বিতীয় অধ্যায় : কমিউনিকেশন সিস্টেম",
+    "তৃতীয় অধ্যায় : সংখ্যা পদ্ধতি",
+    "চতুর্থ অধ্যায় : ওয়েব ডিজাইন",
+    "পঞ্চম অধ্যায় : প্রোগ্রামিং ভাষা"
   ],
 
   "পদার্থবিজ্ঞান": [
-    {
-      label: "ভেক্টর",
-      value: "vector"
-    },
-    {
-      label: "নিউটনিয়ান বলবিদ্যা",
-      value: "newton"
-    }
+    "ভৌত জগৎ ও পরিমাপ",
+    "ভেক্টর",
+    "নিউটনিয়ান বলবিদ্যা",
+    "কাজ শক্তি ক্ষমতা",
+    "মহাকর্ষ ও অভিকর্ষ",
+    "তাপগতিবিদ্যা"
   ],
 
   "রসায়ন": [
-    {
-      label: "পরমাণুর গঠন",
-      value: "atom"
-    },
-    {
-      label: "জৈব রসায়ন",
-      value: "organic"
-    }
+    "ল্যাবরেটরির নিরাপদ ব্যবহার",
+    "গুণগত রসায়ন",
+    "পরমাণুর গঠন",
+    "রাসায়নিক পরিবর্তন",
+    "জৈব রসায়ন",
+    "তড়িৎ রসায়ন"
   ],
 
   "জীববিজ্ঞান": [
-    {
-      label: "কোষ ও এর গঠন",
-      value: "cell"
-    },
-    {
-      label: "মানবদেহ",
-      value: "human-body"
-    }
+    "কোষ ও এর গঠন",
+    "কোষ বিভাজন",
+    "অণুজীব",
+    "শৈবাল ও ছত্রাক",
+    "মানবদেহ",
+    "জীবপ্রযুক্তি"
+  ],
+
+  "উচ্চতর গণিত": [
+    "ম্যাট্রিক্স ও নির্ণায়ক",
+    "সরলরেখা",
+    "বৃত্ত",
+    "ত্রিকোণমিতি",
+    "অন্তরীকরণ",
+    "যোগজীকরণ"
   ]
 };
 
@@ -83,69 +72,47 @@ function Builder() {
   // ==============================
   // STATES
   // ==============================
-  const [questions, setQuestions] =
-    useState([]);
+  const [questions, setQuestions] = useState([]);
 
-  const [
-    selectedQuestions,
-    setSelectedQuestions
-  ] = useState([]);
+  const [selectedQuestions, setSelectedQuestions] = useState([]);
 
-  const [chapter, setChapter] =
-    useState("");
+  const [chapter, setChapter] = useState("");
 
-  const [examCode, setExamCode] =
-    useState("");
+  const [examCode, setExamCode] = useState("");
 
   // ==============================
   // FORM DATA
   // ==============================
-  const [examData, setExamData] =
-    useState({
+  const [examData, setExamData] = useState({
 
-      academy: "",
+    academy: "",
 
-      title: "",
+    title: "",
 
-      className: "একাদশ-দ্বাদশ",
+    className: "একাদশ-দ্বাদশ",
 
-      duration: "60",
+    duration: "60",
 
-      subject:
-        "তথ্য ও যোগাযোগ প্রযুক্তি",
+    subject: "",
 
-      marks: "20"
-    });
+    marks: "20"
+  });
 
   // ==============================
   // FETCH QUESTIONS
   // ==============================
- useEffect(() => {
+  useEffect(() => {
 
-  // chapter select না করলে fetch হবে না
-  if (!chapter) {
+    fetch(`${API}/api/questions`)
+      .then((res) => res.json())
+      .then((data) => {
 
-    setQuestions([]);
+        setQuestions(data);
 
-    return;
-  }
+      });
 
- fetch(
-  `${API}/api/questions?chapter=${encodeURIComponent(chapter)}`
-)
-    .then((res) => res.json())
-    .then((data) => {
+  }, []);
 
-      setQuestions(data || []);
-
-    })
-    .catch(() => {
-
-      setQuestions([]);
-
-    });
-
-}, [chapter]);
   // ==============================
   // HANDLE CHANGE
   // ==============================
@@ -155,16 +122,31 @@ function Builder() {
 
       ...examData,
 
-      [e.target.name]:
-        e.target.value
+      [e.target.name]: e.target.value
     });
   };
 
   // ==============================
   // FILTER QUESTIONS
   // ==============================
-const filteredQuestions =
-  questions;
+  const filteredQuestions =
+    questions.filter((q) => {
+
+      const matchSubject =
+        examData.subject
+          ? q.subject === examData.subject
+          : true;
+
+      const matchChapter =
+        chapter
+          ? q.chapter === chapter
+          : true;
+
+      return (
+        matchSubject &&
+        matchChapter
+      );
+    });
 
   // ==============================
   // SELECT QUESTION
@@ -173,25 +155,23 @@ const filteredQuestions =
 
     const exists =
       selectedQuestions.find(
-        (item) =>
-          item._id === q._id
+        (item) => item._id === q._id
       );
 
-    // REMOVE
+    // remove
     if (exists) {
 
       setSelectedQuestions(
 
         selectedQuestions.filter(
-          (item) =>
-            item._id !== q._id
+          (item) => item._id !== q._id
         )
       );
 
       return;
     }
 
-    // LIMIT
+    // limit
     if (
       selectedQuestions.length >=
       Number(examData.marks)
@@ -204,7 +184,7 @@ const filteredQuestions =
       return;
     }
 
-    // ADD
+    // add
     setSelectedQuestions([
       ...selectedQuestions,
       q
@@ -225,58 +205,46 @@ const filteredQuestions =
       );
     }
 
-    try {
+    const res = await fetch(
+      `${API}/api/exams/create`,
+      {
+        method: "POST",
 
-      const res = await fetch(
-        `${API}/api/exams/create`,
-        {
+        headers: {
+          "Content-Type":
+            "application/json"
+        },
 
-          method: "POST",
+        body: JSON.stringify({
 
-          headers: {
-            "Content-Type":
-              "application/json"
-          },
+          title: examData.title,
 
-          body: JSON.stringify({
+          academy:
+            examData.academy,
 
-            title:
-              examData.title,
+          className:
+            examData.className,
 
-            academy:
-              examData.academy,
+          subject:
+            examData.subject,
 
-            className:
-              examData.className,
+          duration:
+            examData.duration,
 
-            subject:
-              examData.subject,
+          marks:
+            examData.marks,
 
-            duration:
-              examData.duration,
+          questions:
+            selectedQuestions
+        })
+      }
+    );
 
-            marks:
-              examData.marks,
+    const data = await res.json();
 
-            questions:
-              selectedQuestions
-          })
-        }
-      );
+    setExamCode(data.examCode);
 
-      const data =
-        await res.json();
-
-      setExamCode(data.examCode);
-
-      alert(
-        "Exam Created Successfully"
-      );
-
-    } catch {
-
-      alert("Create Failed");
-    }
+    alert("Exam Created");
   };
 
   // ==============================
@@ -295,165 +263,106 @@ const filteredQuestions =
   // ==============================
   // DOWNLOAD PDF
   // ==============================
- const downloadPDF = () => {
+  const downloadPDF = () => {
 
-  const element =
-    document.getElementById(
-      "question-paper"
-    );
+    const element =
+      document.getElementById(
+        "question-paper"
+      );
 
-  html2pdf()
-    .set({
+    const total =
+      selectedQuestions.length;
 
-      margin: [2, 2, 2, 2],
+    let fontSize = "16px";
 
-      filename:
-        `${examData.title}.pdf`,
+    if (total > 20)
+      fontSize = "12px";
 
-      image: {
+    if (total > 25)
+      fontSize = "10px";
 
-        type: "jpeg",
+    element.style.fontSize =
+      fontSize;
 
-        quality: 1
+    html2pdf()
+      .set({
 
-      },
+        margin: [5, 5, 5, 5],
 
-      html2canvas: {
+        filename:
+          `${examData.title}.pdf`,
 
-        scale: 3,
+        image: {
+          type: "jpeg",
+          quality: 1
+        },
 
-        useCORS: true,
+        html2canvas: {
+          scale: 2
+        },
 
-        scrollY: 0
-
-      },
-
-      jsPDF: {
-
-        unit: "mm",
-
-        format: "a4",
-
-        orientation:
-          "portrait"
-
-      },
-
-      pagebreak: {
-
-        mode: [
-          "avoid-all",
-          "css",
-          "legacy"
-        ]
-
-      }
-
-    })
-    .from(element)
-    .save();
-};
+        jsPDF: {
+          unit: "mm",
+          format: "a4",
+          orientation: "portrait"
+        }
+      })
+      .from(element)
+      .save();
+  };
 
   return (
 
-    <div className="min-h-screen bg-gray-100 pb-16">
+    <div className="min-h-screen bg-gray-100 pb-20">
 
       {/* ==============================
-          TOPBAR
+          TOP NAV
       ============================== */}
-      <div className="bg-white shadow-sm border-b">
+      <div className="bg-white shadow-md py-5 px-6 flex justify-between items-center">
 
-        <div className="
-          max-w-7xl
-          mx-auto
-          px-4
-          py-4
-          flex
-          justify-between
-          items-center
-        ">
+        <h1 className="text-4xl font-bold text-blue-900">
+          📄 প্রশ্নব্যাংক
+        </h1>
 
-          <h1 className="
-            text-2xl
-            md:text-4xl
+        <a
+          href="/"
+          className="
+            bg-green-500
+            hover:bg-green-600
+            text-white
+            px-6
+            py-3
+            rounded-xl
             font-bold
-            text-blue-900
-          ">
-            📄 প্রশ্নব্যাংক
-          </h1>
-
-          <a
-            href="/"
-            className="
-              bg-green-500
-              hover:bg-green-600
-              text-white
-              px-4
-              md:px-6
-              py-2
-              md:py-3
-              rounded-xl
-              font-bold
-              text-sm
-              md:text-base
-            "
-          >
-            মূল তালিকা
-          </a>
-
-        </div>
+          "
+        >
+          মূল তালিকা
+        </a>
 
       </div>
 
       {/* ==============================
           MAIN BOX
       ============================== */}
-      <div className="
-        max-w-7xl
-        mx-auto
-        bg-white
-        mt-6
-        md:mt-10
-        rounded-3xl
-        shadow-lg
-        p-4
-        md:p-10
-      ">
+      <div className="max-w-7xl mx-auto bg-white mt-10 rounded-3xl shadow-lg p-10">
 
         {/* TITLE */}
-        <h1 className="
-          text-2xl
-          md:text-5xl
-          font-bold
-          text-center
-          mb-10
-          md:mb-16
-          text-slate-800
-        ">
+        <h1 className="text-6xl font-bold text-center mb-16 text-slate-800">
 
           বেসিক তথ্য পূরণ করুন
 
         </h1>
 
-        {/* FORM GRID */}
-        <div className="
-          grid
-          md:grid-cols-2
-          gap-5
-          md:gap-8
-        ">
+        {/* GRID */}
+        <div className="grid md:grid-cols-2 gap-8">
 
           {/* ACADEMY */}
           <div>
 
-            <label className="
-              font-bold
-              text-lg
-              md:text-2xl
-              block
-              mb-3
-            ">
+            <label className="font-bold text-3xl block mb-4">
+
               একাডেমি / কলেজের নাম
+
             </label>
 
             <input
@@ -466,26 +375,20 @@ const filteredQuestions =
                 w-full
                 border
                 rounded-2xl
-                p-3
-                md:p-5
-                text-base
-                md:text-xl
+                p-5
+                text-2xl
               "
             />
 
           </div>
 
-          {/* TITLE */}
+          {/* EXAM TITLE */}
           <div>
 
-            <label className="
-              font-bold
-              text-lg
-              md:text-2xl
-              block
-              mb-3
-            ">
+            <label className="font-bold text-3xl block mb-4">
+
               পরীক্ষার নাম
+
             </label>
 
             <input
@@ -498,10 +401,8 @@ const filteredQuestions =
                 w-full
                 border
                 rounded-2xl
-                p-3
-                md:p-5
-                text-base
-                md:text-xl
+                p-5
+                text-2xl
               "
             />
 
@@ -510,14 +411,10 @@ const filteredQuestions =
           {/* CLASS */}
           <div>
 
-            <label className="
-              font-bold
-              text-lg
-              md:text-2xl
-              block
-              mb-3
-            ">
+            <label className="font-bold text-3xl block mb-4">
+
               শ্রেণি
+
             </label>
 
             <select
@@ -528,65 +425,25 @@ const filteredQuestions =
                 w-full
                 border
                 rounded-2xl
-                p-3
-                md:p-5
-                text-base
-                md:text-xl
+                p-5
+                text-2xl
                 bg-white
               "
             >
 
-              <option>
-                ১ম শ্রেণি
-              </option>
-
-              <option>
-                ২য় শ্রেণি
-              </option>
-
-              <option>
-                ৩য় শ্রেণি
-              </option>
-
-              <option>
-                ৪র্থ শ্রেণি
-              </option>
-
-              <option>
-                ৫ম শ্রেণি
-              </option>
-
-              <option>
-                ৬ষ্ঠ শ্রেণি
-              </option>
-
-              <option>
-                ৭ম শ্রেণি
-              </option>
-
-              <option>
-                ৮ম শ্রেণি
-              </option>
-
-              <option>
-                ৯ম শ্রেণি
-              </option>
-
-              <option>
-                ১০ম শ্রেণি
-              </option>
-
-              <option>
-                একাদশ
-              </option>
-
-              <option>
-                দ্বাদশ
-              </option>
-
-              <option>
-                একাদশ-দ্বাদশ
-              </option>
+              <option>১ম শ্রেণি</option>
+              <option>২য় শ্রেণি</option>
+              <option>৩য় শ্রেণি</option>
+              <option>৪র্থ শ্রেণি</option>
+              <option>৫ম শ্রেণি</option>
+              <option>৬ষ্ঠ শ্রেণি</option>
+              <option>৭ম শ্রেণি</option>
+              <option>৮ম শ্রেণি</option>
+              <option>৯ম শ্রেণি</option>
+              <option>১০ম শ্রেণি</option>
+              <option>একাদশ</option>
+              <option>দ্বাদশ</option>
+              <option>একাদশ-দ্বাদশ</option>
 
             </select>
 
@@ -595,14 +452,10 @@ const filteredQuestions =
           {/* SUBJECT */}
           <div>
 
-            <label className="
-              font-bold
-              text-lg
-              md:text-2xl
-              block
-              mb-3
-            ">
+            <label className="font-bold text-3xl block mb-4">
+
               বিষয়
+
             </label>
 
             <select
@@ -618,26 +471,28 @@ const filteredQuestions =
                 w-full
                 border
                 rounded-2xl
-                p-3
-                md:p-5
-                text-base
-                md:text-xl
+                p-5
+                text-2xl
                 bg-white
               "
             >
 
-              {Object.keys(
-                SUBJECTS
-              ).map((sub) => (
+              <option value="">
+                বিষয় নির্বাচন করুন
+              </option>
 
-                <option
-                  key={sub}
-                  value={sub}
-                >
-                  {sub}
-                </option>
+              {Object.keys(SUBJECTS).map(
+                (sub) => (
 
-              ))}
+                  <option
+                    key={sub}
+                    value={sub}
+                  >
+                    {sub}
+                  </option>
+
+                )
+              )}
 
             </select>
 
@@ -646,14 +501,10 @@ const filteredQuestions =
           {/* CHAPTER */}
           <div>
 
-            <label className="
-              font-bold
-              text-lg
-              md:text-2xl
-              block
-              mb-3
-            ">
+            <label className="font-bold text-3xl block mb-4">
+
               অধ্যায়
+
             </label>
 
             <select
@@ -667,10 +518,8 @@ const filteredQuestions =
                 w-full
                 border
                 rounded-2xl
-                p-3
-                md:p-5
-                text-base
-                md:text-xl
+                p-5
+                text-2xl
                 bg-white
               "
             >
@@ -686,10 +535,10 @@ const filteredQuestions =
               ).map((chap) => (
 
                 <option
-                  key={chap.value}
-                  value={chap.value}
+                  key={chap}
+                  value={chap}
                 >
-                  {chap.label}
+                  {chap}
                 </option>
 
               ))}
@@ -698,17 +547,13 @@ const filteredQuestions =
 
           </div>
 
-          {/* QUESTION LIMIT */}
+          {/* MARKS */}
           <div>
 
-            <label className="
-              font-bold
-              text-lg
-              md:text-2xl
-              block
-              mb-3
-            ">
+            <label className="font-bold text-3xl block mb-4">
+
               প্রশ্ন সংখ্যা
+
             </label>
 
             <input
@@ -720,10 +565,8 @@ const filteredQuestions =
                 w-full
                 border
                 rounded-2xl
-                p-3
-                md:p-5
-                text-base
-                md:text-xl
+                p-5
+                text-2xl
               "
             />
 
@@ -732,14 +575,10 @@ const filteredQuestions =
           {/* DURATION */}
           <div>
 
-            <label className="
-              font-bold
-              text-lg
-              md:text-2xl
-              block
-              mb-3
-            ">
+            <label className="font-bold text-3xl block mb-4">
+
               সময় (মিনিট)
+
             </label>
 
             <input
@@ -751,10 +590,8 @@ const filteredQuestions =
                 w-full
                 border
                 rounded-2xl
-                p-3
-                md:p-5
-                text-base
-                md:text-xl
+                p-5
+                text-2xl
               "
             />
 
@@ -762,19 +599,18 @@ const filteredQuestions =
 
         </div>
 
-        {/* QUESTIONS */}
-        <div className="mt-12">
+        {/* ==============================
+            QUESTION LIST
+        ============================== */}
+        <div className="mt-16">
 
-          <h2 className="
-            text-2xl
-            md:text-4xl
-            font-bold
-            mb-8
-          ">
+          <h2 className="text-4xl font-bold mb-10">
+
             প্রশ্ন সিলেক্ট করুন
+
           </h2>
 
-          <div className="grid gap-5">
+          <div className="grid gap-6">
 
             {filteredQuestions.map(
               (q, index) => {
@@ -782,8 +618,7 @@ const filteredQuestions =
                 const selected =
                   selectedQuestions.find(
                     (item) =>
-                      item._id ===
-                      q._id
+                      item._id === q._id
                   );
 
                 return (
@@ -794,13 +629,11 @@ const filteredQuestions =
                       toggleQuestion(q)
                     }
                     className={`
-                      border-2
+                      border-4
                       rounded-2xl
-                      p-4
-                      md:p-6
+                      p-8
                       cursor-pointer
                       transition
-
                       ${
                         selected
                           ? "border-green-500 bg-green-50"
@@ -809,32 +642,20 @@ const filteredQuestions =
                     `}
                   >
 
-                    <h3 className="
-                      text-lg
-                      md:text-2xl
-                      font-bold
-                      mb-4
-                      leading-relaxed
-                    ">
+                    <h3 className="text-3xl font-bold mb-6">
 
-                      {index + 1}.
-                      {" "}
-                      {q.question}
+                      {index + 1}. {q.question}
 
                     </h3>
 
-                    <div className="
-                      grid
-                      md:grid-cols-2
-                      gap-3
-                      text-sm
-                      md:text-lg
-                    ">
+                    <div className="grid md:grid-cols-2 gap-4 text-2xl">
 
                       {q.options.map(
                         (opt, i) => (
 
-                          <div key={i}>
+                          <div
+                            key={i}
+                          >
                             {opt}
                           </div>
 
@@ -852,14 +673,10 @@ const filteredQuestions =
 
         </div>
 
-        {/* BUTTONS */}
-        <div className="
-          flex
-          flex-wrap
-          justify-center
-          gap-4
-          mt-12
-        ">
+        {/* ==============================
+            BUTTONS
+        ============================== */}
+        <div className="flex flex-wrap justify-center gap-6 mt-16">
 
           <button
             onClick={createExam}
@@ -867,13 +684,10 @@ const filteredQuestions =
               bg-blue-600
               hover:bg-blue-700
               text-white
-              px-6
-              md:px-10
-              py-3
-              md:py-5
+              px-10
+              py-5
               rounded-2xl
-              text-base
-              md:text-xl
+              text-2xl
               font-bold
             "
           >
@@ -886,13 +700,10 @@ const filteredQuestions =
               bg-red-500
               hover:bg-red-600
               text-white
-              px-6
-              md:px-10
-              py-3
-              md:py-5
+              px-10
+              py-5
               rounded-2xl
-              text-base
-              md:text-xl
+              text-2xl
               font-bold
             "
           >
@@ -901,70 +712,55 @@ const filteredQuestions =
 
         </div>
 
-        {/* STUDENT LINK */}
+        {/* ==============================
+            STUDENT LINK
+        ============================== */}
         {examCode && (
 
-          <div className="
-            bg-white
-            rounded-2xl
-            shadow-lg
-            p-5
-            md:p-8
-            mt-14
-          ">
+          <div className="bg-white rounded-2xl shadow-lg p-8 mt-16">
 
-            <h2 className="
-              text-2xl
-              md:text-4xl
-              font-bold
-              mb-6
-              text-center
-            ">
+            <h2 className="text-4xl font-bold mb-8 text-center">
+
               Student Link
+
             </h2>
 
+            {/* LINK */}
             <div className="
               bg-gray-100
-              p-4
+              p-6
               rounded-2xl
               break-all
-              text-sm
-              md:text-xl
+              text-2xl
               text-center
-              mb-6
+              mb-8
             ">
 
-              {window.location.origin}
-              /exam/
-              {examCode}
+              {window.location.origin}/exam/{examCode}
 
             </div>
 
-            <div className="
-              flex
-              flex-wrap
-              justify-center
-              gap-4
-            ">
+            {/* BUTTONS */}
+            <div className="flex flex-wrap justify-center gap-6">
 
+              {/* COPY */}
               <button
                 onClick={copyLink}
                 className="
                   bg-blue-600
                   hover:bg-blue-700
                   text-white
-                  px-6
-                  md:px-10
-                  py-3
+                  px-10
+                  py-4
                   rounded-2xl
-                  text-base
-                  md:text-xl
+                  text-2xl
                   font-bold
                 "
               >
                 Copy Link
               </button>
 
+              {/* RANKING */}
               <a
                 href={`/ranking/${examCode}`}
                 target="_blank"
@@ -973,12 +769,10 @@ const filteredQuestions =
                   bg-purple-600
                   hover:bg-purple-700
                   text-white
-                  px-6
-                  md:px-10
-                  py-3
+                  px-10
+                  py-4
                   rounded-2xl
-                  text-base
-                  md:text-xl
+                  text-2xl
                   font-bold
                 "
               >
@@ -990,196 +784,73 @@ const filteredQuestions =
           </div>
         )}
 
-      {/* PDF SECTION */}
-<div
-  id="question-paper"
-  className="
-    bg-white
-    mt-16
-
-    w-full
-    md:w-[210mm]
-
-    min-h-[297mm]
-
-    mx-auto
-
-    px-3
-    md:px-[10mm]
-
-    py-4
-    md:py-[8mm]
-
-    text-black
-
-    overflow-hidden
-
-    rounded-xl
-  "
->
-
-  {/* SUBJECT */}
-  <h1 className="
-    text-[20px]
-    md:text-[18px]
-
-    font-bold
-    text-center
-
-    mb-2
-  ">
-
-    {examData.subject}
-
-  </h1>
-
-  {/* ACADEMY */}
-  <h2 className="
-    text-[16px]
-    md:text-[15px]
-
-    font-bold
-    text-center
-
-    mb-1
-  ">
-
-    {examData.academy}
-
-  </h2>
-
-  {/* EXAM TITLE */}
-  <h3 className="
-    text-[14px]
-    md:text-[13px]
-
-    font-semibold
-    text-center
-
-    mb-4
-  ">
-
-    {examData.title}
-
-  </h3>
-
-  {/* INFO BAR */}
-  <div className="
-    flex
-    justify-between
-    items-center
-
-    border-y
-    border-black
-
-    py-2
-    mb-5
-
-    text-[12px]
-    md:text-[11px]
-
-    font-semibold
-  ">
-
-    <div>
-      সময়:
-      {" "}
-      {examData.duration}
-      {" "}
-      মিনিট
-    </div>
-
-    <div>
-      পূর্ণমান:
-      {" "}
-      {examData.marks}
-    </div>
-
-  </div>
-
-  {/* QUESTIONS */}
-  <div className="
-    grid
-
-    grid-cols-1
-    md:grid-cols-2
-
-    gap-x-5
-    gap-y-4
-  ">
-
-    {selectedQuestions.map(
-      (q, index) => (
-
+        {/* ==============================
+            PDF PAPER
+        ============================== */}
         <div
-          key={q._id}
-          className="
-            break-inside-avoid
-            page-break-inside-avoid
-          "
+          id="question-paper"
+          className="bg-white mt-20 p-10"
         >
 
-          {/* QUESTION */}
-          <h3 className="
-            font-semibold
+          <h1 className="text-5xl font-bold text-center mb-6">
 
-            text-[13px]
-            md:text-[11px]
+            {examData.subject}
 
-            leading-[18px]
-            md:leading-[16px]
+          </h1>
 
-            mb-1
-          ">
+          <h2 className="text-4xl font-bold text-center mb-4">
 
-            {index + 1}.
-            {" "}
-            {q.question}
+            {examData.academy}
+
+          </h2>
+
+          <h3 className="text-3xl text-center mb-10">
+
+            {examData.title}
 
           </h3>
 
-          {/* OPTIONS */}
-          <div className="
-            grid
-            grid-cols-2
+          <div className="flex justify-between mb-12 text-2xl">
 
-            gap-x-3
-            gap-y-1
+            <div>
+              সময়: {examData.duration} মিনিট
+            </div>
 
-            pl-2
+            <div>
+              পূর্ণমান: {examData.marks}
+            </div>
 
-            text-[12px]
-            md:text-[10px]
+          </div>
 
-            leading-[16px]
-            md:leading-[14px]
-          ">
+          <div className="grid grid-cols-2 gap-10">
 
-            {q.options.map(
-              (opt, i) => (
+            {selectedQuestions.map(
+              (q, index) => (
 
                 <div
-                  key={i}
-                  className="
-                    flex
-                    items-start
-                    gap-1
-                  "
+                  key={q._id}
+                  className="mb-10 break-inside-avoid"
                 >
 
-                  <span>
+                  <h3 className="font-bold mb-4">
 
-                    {String.fromCharCode(
-                      97 + i
+                    {index + 1}. {q.question}
+
+                  </h3>
+
+                  <div className="grid grid-cols-2 gap-3">
+
+                    {q.options.map(
+                      (opt, i) => (
+
+                        <div key={i}>
+                          {opt}
+                        </div>
+
+                      )
                     )}
 
-                    )
-
-                  </span>
-
-                  <span>
-                    {opt}
-                  </span>
+                  </div>
 
                 </div>
 
@@ -1190,12 +861,6 @@ const filteredQuestions =
 
         </div>
 
-      )
-    )}
-
-  </div>
-
-</div>
       </div>
 
     </div>
