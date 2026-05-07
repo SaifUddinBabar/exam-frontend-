@@ -1,10 +1,71 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import html2pdf from "html2pdf.js";
 
-// ==============================
-// API
-// ==============================
 const API = import.meta.env.VITE_API_URL;
+
+// ==============================
+// SUBJECT + CHAPTER DATA
+// ==============================
+const SUBJECTS = {
+
+  "বাংলা": [
+    "গদ্য",
+    "পদ্য",
+    "ব্যাকরণ",
+    "নির্মিতি"
+  ],
+
+  "ইংরেজি": [
+    "Grammar",
+    "Seen Passage",
+    "Writing",
+    "Vocabulary"
+  ],
+
+  "তথ্য ও যোগাযোগ প্রযুক্তি": [
+    "প্রথম অধ্যায় : তথ্য ও যোগাযোগ প্রযুক্তি",
+    "দ্বিতীয় অধ্যায় : কমিউনিকেশন সিস্টেম",
+    "তৃতীয় অধ্যায় : সংখ্যা পদ্ধতি",
+    "চতুর্থ অধ্যায় : ওয়েব ডিজাইন",
+    "পঞ্চম অধ্যায় : প্রোগ্রামিং ভাষা"
+  ],
+
+  "পদার্থবিজ্ঞান": [
+    "ভৌত জগৎ ও পরিমাপ",
+    "ভেক্টর",
+    "নিউটনিয়ান বলবিদ্যা",
+    "কাজ শক্তি ক্ষমতা",
+    "মহাকর্ষ ও অভিকর্ষ",
+    "তাপগতিবিদ্যা"
+  ],
+
+  "রসায়ন": [
+    "ল্যাবরেটরির নিরাপদ ব্যবহার",
+    "গুণগত রসায়ন",
+    "পরমাণুর গঠন",
+    "রাসায়নিক পরিবর্তন",
+    "জৈব রসায়ন",
+    "তড়িৎ রসায়ন"
+  ],
+
+  "জীববিজ্ঞান": [
+    "কোষ ও এর গঠন",
+    "কোষ বিভাজন",
+    "অণুজীব",
+    "শৈবাল ও ছত্রাক",
+    "মানবদেহ",
+    "জীবপ্রযুক্তি"
+  ],
+
+  "উচ্চতর গণিত": [
+    "ম্যাট্রিক্স ও নির্ণায়ক",
+    "সরলরেখা",
+    "বৃত্ত",
+    "ত্রিকোণমিতি",
+    "অন্তরীকরণ",
+    "যোগজীকরণ"
+  ]
+};
 
 function Builder() {
 
@@ -12,22 +73,28 @@ function Builder() {
   // STATES
   // ==============================
   const [questions, setQuestions] = useState([]);
-  const [allQuestions, setAllQuestions] = useState([]);
-  const [selected, setSelected] = useState([]);
-  const [chapter, setChapter] = useState("");
-  const [examCode, setExamCode] = useState("");
 
-  // PDF compact mode
-  const [pdfCompact, setPdfCompact] = useState(false);
+  const [selectedQuestions, setSelectedQuestions] = useState([]);
+
+  const [chapter, setChapter] = useState("");
+
+  const [examCode, setExamCode] = useState("");
 
   // ==============================
   // FORM DATA
   // ==============================
   const [examData, setExamData] = useState({
+
     academy: "",
+
     title: "",
+
+    className: "একাদশ-দ্বাদশ",
+
     duration: "60",
-    subject: "add subject",
+
+    subject: "",
+
     marks: "20"
   });
 
@@ -36,80 +103,92 @@ function Builder() {
   // ==============================
   useEffect(() => {
 
-    if (!chapter) return;
-
-    fetch(
-      `${API}/api/questions?chapter=${encodeURIComponent(chapter)}`
-    )
+    fetch(`${API}/api/questions`)
       .then((res) => res.json())
       .then((data) => {
 
-        setQuestions(data || []);
+        setQuestions(data);
 
-        // merge all chapter questions
-        setAllQuestions((prev) => {
+      });
 
-          const merged = [...prev];
-
-          data.forEach((q) => {
-
-            const exists = merged.find(
-              (item) => item._id === q._id
-            );
-
-            if (!exists) {
-              merged.push(q);
-            }
-          });
-
-          return merged;
-        });
-
-      })
-      .catch(() => setQuestions([]));
-
-  }, [chapter]);
+  }, []);
 
   // ==============================
-  // HANDLE INPUT
+  // HANDLE CHANGE
   // ==============================
   const handleChange = (e) => {
 
     setExamData({
+
       ...examData,
+
       [e.target.name]: e.target.value
     });
   };
 
   // ==============================
+  // FILTER QUESTIONS
+  // ==============================
+  const filteredQuestions =
+    questions.filter((q) => {
+
+      const matchSubject =
+        examData.subject
+          ? q.subject === examData.subject
+          : true;
+
+      const matchChapter =
+        chapter
+          ? q.chapter === chapter
+          : true;
+
+      return (
+        matchSubject &&
+        matchChapter
+      );
+    });
+
+  // ==============================
   // SELECT QUESTION
   // ==============================
-  const toggleSelect = (id) => {
+  const toggleQuestion = (q) => {
+
+    const exists =
+      selectedQuestions.find(
+        (item) => item._id === q._id
+      );
 
     // remove
-    if (selected.includes(id)) {
+    if (exists) {
 
-      setSelected((prev) =>
-        prev.filter((q) => q !== id)
+      setSelectedQuestions(
+
+        selectedQuestions.filter(
+          (item) => item._id !== q._id
+        )
       );
 
       return;
     }
 
     // limit
-    const limit = Number(examData.marks);
-
-    if (selected.length >= limit) {
+    if (
+      selectedQuestions.length >=
+      Number(examData.marks)
+    ) {
 
       alert(
-        `আপনি সর্বোচ্চ ${limit} টি প্রশ্ন সিলেক্ট করতে পারবেন`
+        `সর্বোচ্চ ${examData.marks} টি প্রশ্ন নির্বাচন করা যাবে`
       );
 
       return;
     }
 
     // add
-    setSelected((prev) => [...prev, id]);
+    setSelectedQuestions([
+      ...selectedQuestions,
+      q
+    ]);
   };
 
   // ==============================
@@ -117,49 +196,55 @@ function Builder() {
   // ==============================
   const createExam = async () => {
 
-    if (!examData.academy) {
-      return alert("একাডেমির নাম লিখুন");
-    }
+    if (
+      selectedQuestions.length === 0
+    ) {
 
-    if (!examData.title) {
-      return alert("পরীক্ষার নাম লিখুন");
-    }
-
-    if (!chapter) {
-      return alert("অধ্যায় নির্বাচন করুন");
-    }
-
-    if (selected.length === 0) {
-      return alert("প্রশ্ন সিলেক্ট করুন");
-    }
-
-    try {
-
-      const res = await fetch(
-        `${API}/api/exams/create`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
-            title: examData.title,
-            duration: examData.duration,
-            questions: selected
-          })
-        }
+      return alert(
+        "প্রশ্ন নির্বাচন করুন"
       );
-
-      const data = await res.json();
-
-      setExamCode(data.examCode);
-
-      alert("Exam Created Successfully");
-
-    } catch {
-
-      alert("Create Failed");
     }
+
+    const res = await fetch(
+      `${API}/api/exams/create`,
+      {
+        method: "POST",
+
+        headers: {
+          "Content-Type":
+            "application/json"
+        },
+
+        body: JSON.stringify({
+
+          title: examData.title,
+
+          academy:
+            examData.academy,
+
+          className:
+            examData.className,
+
+          subject:
+            examData.subject,
+
+          duration:
+            examData.duration,
+
+          marks:
+            examData.marks,
+
+          questions:
+            selectedQuestions
+        })
+      }
+    );
+
+    const data = await res.json();
+
+    setExamCode(data.examCode);
+
+    alert("Exam Created");
   };
 
   // ==============================
@@ -167,367 +252,462 @@ function Builder() {
   // ==============================
   const copyLink = () => {
 
-    
-
-
     navigator.clipboard.writeText(
+
       `${window.location.origin}/exam/${examCode}`
     );
-
-
-
-
 
     alert("Link Copied");
   };
 
   // ==============================
-  // PDF DOWNLOAD
+  // DOWNLOAD PDF
   // ==============================
-  const downloadPDF = async () => {
-
-    // compact mode
-    if (selected.length > 20) {
-      setPdfCompact(true);
-    } else {
-      setPdfCompact(false);
-    }
-
-    // wait render
-    await new Promise((resolve) =>
-      setTimeout(resolve, 300)
-    );
+  const downloadPDF = () => {
 
     const element =
-      document.getElementById("question-paper");
+      document.getElementById(
+        "question-paper"
+      );
 
-    const options = {
+    const total =
+      selectedQuestions.length;
 
-      margin: 0,
+    let fontSize = "16px";
 
-      filename:
-        `${examData.title || "question-paper"}.pdf`,
+    if (total > 20)
+      fontSize = "12px";
 
-      image: {
-        type: "jpeg",
-        quality: 1
-      },
+    if (total > 25)
+      fontSize = "10px";
 
-      html2canvas: {
-        scale: 2,
-        useCORS: true,
-        scrollY: 0
-      },
+    element.style.fontSize =
+      fontSize;
 
-      jsPDF: {
-        unit: "mm",
-        format: "a4",
-        orientation: "portrait"
-      },
+    html2pdf()
+      .set({
 
-      pagebreak: {
-        mode: ["avoid-all", "css", "legacy"]
-      }
-    };
+        margin: [5, 5, 5, 5],
 
-    await html2pdf()
-      .set(options)
+        filename:
+          `${examData.title}.pdf`,
+
+        image: {
+          type: "jpeg",
+          quality: 1
+        },
+
+        html2canvas: {
+          scale: 2
+        },
+
+        jsPDF: {
+          unit: "mm",
+          format: "a4",
+          orientation: "portrait"
+        }
+      })
       .from(element)
       .save();
-
-    // restore
-    setPdfCompact(false);
   };
 
   return (
 
-    <div className="min-h-screen bg-[#f3f3f3] pb-20">
+    <div className="min-h-screen bg-gray-100 pb-20">
 
       {/* ==============================
-          TOPBAR
+          TOP NAV
       ============================== */}
-      <div className="bg-white shadow-sm border-b">
+      <div className="bg-white shadow-md py-5 px-6 flex justify-between items-center">
 
-        <div className="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
+        <h1 className="text-4xl font-bold text-blue-900">
+          📄 প্রশ্নব্যাংক
+        </h1>
 
-          <h1 className="text-3xl font-bold text-[#0b2c6b]">
-            📝 প্রশ্নব্যাংক
-          </h1>
-
-          <button className="bg-green-500 text-white px-5 py-2 rounded-xl">
-            মূল তালিকা
-          </button>
-
-        </div>
+        <a
+          href="/"
+          className="
+            bg-green-500
+            hover:bg-green-600
+            text-white
+            px-6
+            py-3
+            rounded-xl
+            font-bold
+          "
+        >
+          মূল তালিকা
+        </a>
 
       </div>
 
       {/* ==============================
-          MAIN
+          MAIN BOX
       ============================== */}
-      <div className="max-w-6xl mx-auto px-4 py-8">
+      <div className="max-w-7xl mx-auto bg-white mt-10 rounded-3xl shadow-lg p-10">
 
-        {/* ==============================
-            FORM
-        ============================== */}
-        <div className="bg-white rounded-3xl p-8 shadow-sm mb-10">
+        {/* TITLE */}
+        <h1 className="text-6xl font-bold text-center mb-16 text-slate-800">
 
-          <h2 className="text-4xl font-bold text-center mb-10 text-gray-800">
-            বেসিক তথ্য পূরণ করুন
-          </h2>
+          বেসিক তথ্য পূরণ করুন
 
-          <div className="grid md:grid-cols-2 gap-6">
+        </h1>
 
-            {/* ACADEMY */}
-            <div>
+        {/* GRID */}
+        <div className="grid md:grid-cols-2 gap-8">
 
-              <label className="font-semibold block mb-2 text-lg">
-                একাডেমি / কলেজের নাম
-              </label>
+          {/* ACADEMY */}
+          <div>
 
-              <input
-                type="text"
-                name="academy"
-                placeholder="যেমন: Saif Academy"
-                value={examData.academy}
-                onChange={handleChange}
-                className="w-full border rounded-xl p-4 text-lg"
-              />
+            <label className="font-bold text-3xl block mb-4">
 
-            </div>
+              একাডেমি / কলেজের নাম
 
-            {/* EXAM TITLE */}
-            <div>
+            </label>
 
-              <label className="font-semibold block mb-2 text-lg">
-                পরীক্ষার নাম
-              </label>
+            <input
+              type="text"
+              name="academy"
+              value={examData.academy}
+              onChange={handleChange}
+              placeholder="যেমন: Saif Academy"
+              className="
+                w-full
+                border
+                rounded-2xl
+                p-5
+                text-2xl
+              "
+            />
 
-              <input
-                type="text"
-                name="title"
-                placeholder="যেমন: Model Test"
-                value={examData.title}
-                onChange={handleChange}
-                className="w-full border rounded-xl p-4 text-lg"
-              />
+          </div>
 
-            </div>
+          {/* EXAM TITLE */}
+          <div>
 
-            {/* SUBJECT */}
-            <div>
+            <label className="font-bold text-3xl block mb-4">
 
-              <label className="font-semibold block mb-2 text-lg">
-                বিষয়
-              </label>
+              পরীক্ষার নাম
 
-              <input
-                type="text"
-                name="subject"
-                value={examData.subject}
-                onChange={handleChange}
-                className="w-full border rounded-xl p-4 text-lg"
-              />
+            </label>
 
-            </div>
+            <input
+              type="text"
+              name="title"
+              value={examData.title}
+              onChange={handleChange}
+              placeholder="যেমন: Model Test"
+              className="
+                w-full
+                border
+                rounded-2xl
+                p-5
+                text-2xl
+              "
+            />
 
-            {/* CHAPTER */}
-            <div>
+          </div>
 
-              <label className="font-semibold block mb-2 text-lg">
-                অধ্যায়
-              </label>
+          {/* CLASS */}
+          <div>
 
-              <select
-                value={chapter}
-                onChange={(e) =>
-                  setChapter(e.target.value)
-                }
-                className="w-full border rounded-xl p-4 text-lg bg-white"
-              >
+            <label className="font-bold text-3xl block mb-4">
 
-                <option value="">
-                  অধ্যায় নির্বাচন করুন
+              শ্রেণি
+
+            </label>
+
+            <select
+              name="className"
+              value={examData.className}
+              onChange={handleChange}
+              className="
+                w-full
+                border
+                rounded-2xl
+                p-5
+                text-2xl
+                bg-white
+              "
+            >
+
+              <option>১ম শ্রেণি</option>
+              <option>২য় শ্রেণি</option>
+              <option>৩য় শ্রেণি</option>
+              <option>৪র্থ শ্রেণি</option>
+              <option>৫ম শ্রেণি</option>
+              <option>৬ষ্ঠ শ্রেণি</option>
+              <option>৭ম শ্রেণি</option>
+              <option>৮ম শ্রেণি</option>
+              <option>৯ম শ্রেণি</option>
+              <option>১০ম শ্রেণি</option>
+              <option>একাদশ</option>
+              <option>দ্বাদশ</option>
+              <option>একাদশ-দ্বাদশ</option>
+
+            </select>
+
+          </div>
+
+          {/* SUBJECT */}
+          <div>
+
+            <label className="font-bold text-3xl block mb-4">
+
+              বিষয়
+
+            </label>
+
+            <select
+              name="subject"
+              value={examData.subject}
+              onChange={(e) => {
+
+                handleChange(e);
+
+                setChapter("");
+              }}
+              className="
+                w-full
+                border
+                rounded-2xl
+                p-5
+                text-2xl
+                bg-white
+              "
+            >
+
+              <option value="">
+                বিষয় নির্বাচন করুন
+              </option>
+
+              {Object.keys(SUBJECTS).map(
+                (sub) => (
+
+                  <option
+                    key={sub}
+                    value={sub}
+                  >
+                    {sub}
+                  </option>
+
+                )
+              )}
+
+            </select>
+
+          </div>
+
+          {/* CHAPTER */}
+          <div>
+
+            <label className="font-bold text-3xl block mb-4">
+
+              অধ্যায়
+
+            </label>
+
+            <select
+              value={chapter}
+              onChange={(e) =>
+                setChapter(
+                  e.target.value
+                )
+              }
+              className="
+                w-full
+                border
+                rounded-2xl
+                p-5
+                text-2xl
+                bg-white
+              "
+            >
+
+              <option value="">
+                অধ্যায় নির্বাচন করুন
+              </option>
+
+              {(
+                SUBJECTS[
+                  examData.subject
+                ] || []
+              ).map((chap) => (
+
+                <option
+                  key={chap}
+                  value={chap}
+                >
+                  {chap}
                 </option>
 
-                <option value="Introduction to ICT">
-                  Chapter 1 - ICT Introduction
-                </option>
+              ))}
 
-                <option value="Communication Systems">
-                  Chapter 2 - Communication Systems
-                </option>
+            </select>
 
-                <option value="Numbers & Digital Devices">
-                  Chapter 3 - Number System
-                </option>
+          </div>
 
-                <option value="Web & HTML">
-                  Chapter 4 - Web & HTML
-                </option>
+          {/* MARKS */}
+          <div>
 
-                <option value="Programming & Language">
-                  Chapter 5 - Programming
-                </option>
+            <label className="font-bold text-3xl block mb-4">
 
-              </select>
+              প্রশ্ন সংখ্যা
 
-            </div>
+            </label>
 
-            {/* QUESTION LIMIT */}
-            <div>
+            <input
+              type="number"
+              name="marks"
+              value={examData.marks}
+              onChange={handleChange}
+              className="
+                w-full
+                border
+                rounded-2xl
+                p-5
+                text-2xl
+              "
+            />
 
-              <label className="font-semibold block mb-2 text-lg">
-                প্রশ্ন সংখ্যা
-              </label>
+          </div>
 
-              <input
-                type="number"
-                name="marks"
-                value={examData.marks}
-                onChange={handleChange}
-                className="w-full border rounded-xl p-4 text-lg"
-              />
+          {/* DURATION */}
+          <div>
 
-            </div>
+            <label className="font-bold text-3xl block mb-4">
 
-            {/* TIME */}
-            <div>
+              সময় (মিনিট)
 
-              <label className="font-semibold block mb-2 text-lg">
-                সময় (মিনিট)
-              </label>
+            </label>
 
-              <input
-                type="number"
-                name="duration"
-                value={examData.duration}
-                onChange={handleChange}
-                className="w-full border rounded-xl p-4 text-lg"
-              />
-
-            </div>
+            <input
+              type="number"
+              name="duration"
+              value={examData.duration}
+              onChange={handleChange}
+              className="
+                w-full
+                border
+                rounded-2xl
+                p-5
+                text-2xl
+              "
+            />
 
           </div>
 
         </div>
 
         {/* ==============================
-            QUESTION TITLE
+            QUESTION LIST
         ============================== */}
-        <div className="text-center mb-8">
+        <div className="mt-16">
 
-          <h2 className="text-4xl font-bold text-gray-800 mb-3">
+          <h2 className="text-4xl font-bold mb-10">
+
             প্রশ্ন সিলেক্ট করুন
+
           </h2>
 
-          <p className="text-gray-500 text-lg">
-            প্রশ্নগুলো সিলেক্ট করে সাবমিট করলেই প্রশ্ন তৈরি হয়ে যাবে।
-          </p>
+          <div className="grid gap-6">
 
-          <p className="text-green-600 text-2xl font-bold mt-4">
-            Selected: {selected.length} / {examData.marks}
-          </p>
+            {filteredQuestions.map(
+              (q, index) => {
 
-        </div>
+                const selected =
+                  selectedQuestions.find(
+                    (item) =>
+                      item._id === q._id
+                  );
 
-        {/* ==============================
-            QUESTIONS UI
-        ============================== */}
-        <div className="space-y-5">
+                return (
 
-          {questions.map((q) => {
+                  <div
+                    key={q._id}
+                    onClick={() =>
+                      toggleQuestion(q)
+                    }
+                    className={`
+                      border-4
+                      rounded-2xl
+                      p-8
+                      cursor-pointer
+                      transition
+                      ${
+                        selected
+                          ? "border-green-500 bg-green-50"
+                          : "border-gray-200 bg-white"
+                      }
+                    `}
+                  >
 
-            const active =
-              selected.includes(q._id);
+                    <h3 className="text-3xl font-bold mb-6">
 
-            return (
+                      {index + 1}. {q.question}
 
-              <div
-                key={q._id}
-                onClick={() => toggleSelect(q._id)}
-                className={`
-                  bg-white
-                  rounded-2xl
-                  border-2
-                  cursor-pointer
-                  transition-all
-                  duration-300
-                  p-6
+                    </h3>
 
-                  ${active
-                    ? "border-green-500 shadow-lg"
-                    : "border-gray-200 hover:border-green-400"}
-                `}
-              >
+                    <div className="grid md:grid-cols-2 gap-4 text-2xl">
 
-                {/* QUESTION */}
-                <h2 className="text-2xl font-bold text-gray-800 mb-6 leading-10">
-                  {q.question}
-                </h2>
+                      {q.options.map(
+                        (opt, i) => (
 
-                {/* OPTIONS */}
-                <div className="grid grid-cols-2 gap-y-5 gap-x-10 text-xl text-gray-700">
+                          <div
+                            key={i}
+                          >
+                            {opt}
+                          </div>
 
-                  {q.options?.map((opt, index) => {
+                        )
+                      )}
 
-                    const labels =
-                      ["ক", "খ", "গ", "ঘ"];
+                    </div>
 
-                    return (
-                      <div key={index}>
-                        {labels[index]}. {opt}
-                      </div>
-                    );
-                  })}
+                  </div>
+                );
+              }
+            )}
 
-                </div>
-
-              </div>
-            );
-          })}
+          </div>
 
         </div>
 
         {/* ==============================
             BUTTONS
         ============================== */}
-        <div className="flex flex-wrap justify-center gap-5 mt-10">
+        <div className="flex flex-wrap justify-center gap-6 mt-16">
 
-          {/* CREATE */}
           <button
             onClick={createExam}
-            className="
-              bg-green-500
-              hover:bg-green-600
-              text-white
-              text-xl
-              font-bold
-              px-10
-              py-4
-              rounded-2xl
-              shadow-lg
-            "
-          >
-            অনলাইনে পরক্ষা নিন
-          </button>
-
-          {/* PDF */}
-          <button
-            onClick={downloadPDF}
             className="
               bg-blue-600
               hover:bg-blue-700
               text-white
-              text-xl
-              font-bold
               px-10
-              py-4
+              py-5
               rounded-2xl
-              shadow-lg
+              text-2xl
+              font-bold
             "
           >
-            PDF Download
+            Create Exam
+          </button>
+
+          <button
+            onClick={downloadPDF}
+            className="
+              bg-red-500
+              hover:bg-red-600
+              text-white
+              px-10
+              py-5
+              rounded-2xl
+              text-2xl
+              font-bold
+            "
+          >
+            Download PDF
           </button>
 
         </div>
@@ -539,38 +719,48 @@ function Builder() {
 
           <div className="bg-white rounded-2xl shadow-lg p-8 mt-16">
 
-            <h2 className="text-3xl font-bold mb-6 text-center">
+            <h2 className="text-4xl font-bold mb-8 text-center">
+
               Student Link
+
             </h2>
 
-            <div className="bg-gray-100 p-5 rounded-xl break-all text-lg text-center mb-6">
+            {/* LINK */}
+            <div className="
+              bg-gray-100
+              p-6
+              rounded-2xl
+              break-all
+              text-2xl
+              text-center
+              mb-8
+            ">
+
               {window.location.origin}/exam/{examCode}
+
             </div>
 
-            {/* COPY BUTTON */}
-            <div className="flex justify-center">
+            {/* BUTTONS */}
+            <div className="flex flex-wrap justify-center gap-6">
 
+              {/* COPY */}
               <button
                 onClick={copyLink}
                 className="
                   bg-blue-600
                   hover:bg-blue-700
                   text-white
-                  px-8
-                  py-3
-                  rounded-xl
-                  text-lg
+                  px-10
+                  py-4
+                  rounded-2xl
+                  text-2xl
                   font-bold
                 "
               >
                 Copy Link
               </button>
 
-            </div>
-
-            {/* RANKING BUTTON */}
-            <div className="flex justify-center mt-5">
-
+              {/* RANKING */}
               <a
                 href={`/ranking/${examCode}`}
                 target="_blank"
@@ -579,12 +769,11 @@ function Builder() {
                   bg-purple-600
                   hover:bg-purple-700
                   text-white
-                  px-8
-                  py-3
-                  rounded-xl
-                  text-lg
+                  px-10
+                  py-4
+                  rounded-2xl
+                  text-2xl
                   font-bold
-                  shadow-lg
                 "
               >
                 🏆 View Ranking
@@ -596,222 +785,77 @@ function Builder() {
         )}
 
         {/* ==============================
-            PRINTABLE QUESTION PAPER
+            PDF PAPER
         ============================== */}
         <div
           id="question-paper"
-          className="bg-white mt-10 shadow-xl mx-auto preview-paper"
+          className="bg-white mt-20 p-10"
         >
 
-          <style>
-            {`
+          <h1 className="text-5xl font-bold text-center mb-6">
 
-              .preview-paper{
-                width:210mm;
-                min-height:297mm;
-                background:white;
-                padding:14mm;
-                box-sizing:border-box;
-                overflow:hidden;
-              }
+            {examData.subject}
 
-              .preview-paper *{
-                box-sizing:border-box;
-                word-break:break-word;
-                overflow-wrap:break-word;
-              }
+          </h1>
 
-              .question-block{
-                width:100%;
-                margin-bottom:12px;
-                page-break-inside:avoid;
-                break-inside:avoid;
-              }
+          <h2 className="text-4xl font-bold text-center mb-4">
 
-              .question-title{
-                font-weight:700;
-                text-align:justify;
-              }
+            {examData.academy}
 
-              .option-line{
-                display:flex;
-                gap:4px;
-                align-items:flex-start;
-              }
+          </h2>
 
-              @media screen and (max-width:900px){
+          <h3 className="text-3xl text-center mb-10">
 
-                .preview-paper{
-                  width:100%;
-                  padding:14px;
-                }
+            {examData.title}
 
-              }
+          </h3>
 
-            `}
-          </style>
+          <div className="flex justify-between mb-12 text-2xl">
 
-          {/* HEADER */}
-          <div className="text-center border-b pb-3 mb-4">
-
-            <div className="inline-block bg-black px-5 py-1 mb-2">
-
-              <h1
-                className={`
-                  text-white
-                  font-bold
-
-                  ${pdfCompact
-                    ? "text-base"
-                    : "text-2xl"}
-                `}
-              >
-                {examData.subject}
-              </h1>
-
+            <div>
+              সময়: {examData.duration} মিনিট
             </div>
 
-            <h2
-              className={`
-                font-bold
-
-                ${pdfCompact
-                  ? "text-sm"
-                  : "text-xl"}
-              `}
-            >
-              {examData.academy}
-            </h2>
-
-            <p
-              className={`
-                text-gray-700 mt-1
-
-                ${pdfCompact
-                  ? "text-[10px]"
-                  : "text-sm"}
-              `}
-            >
-              {examData.title}
-            </p>
-
-            {/* INFO */}
-            <div
-              className={`
-                flex justify-between mt-3 border-t pt-2
-
-                ${pdfCompact
-                  ? "text-[9px]"
-                  : "text-sm"}
-              `}
-            >
-
-              <p>
-                সময়: {examData.duration} মিনিট
-              </p>
-
-              <p>
-                পূর্ণমান: {examData.marks}
-              </p>
-
+            <div>
+              পূর্ণমান: {examData.marks}
             </div>
 
           </div>
 
-          {/* QUESTIONS */}
-          <div
-            style={{
-              columnCount: 2,
-              columnGap: pdfCompact
-                ? "14px"
-                : "28px"
-            }}
-          >
+          <div className="grid grid-cols-2 gap-10">
 
-            {allQuestions
-              .filter((q) =>
-                selected.includes(q._id)
-              )
-              .map((q, i) => (
+            {selectedQuestions.map(
+              (q, index) => (
 
                 <div
                   key={q._id}
-                  className="question-block"
+                  className="mb-10 break-inside-avoid"
                 >
 
-                  {/* QUESTION */}
-                  <h2
-                    className="question-title"
-                    style={{
-                      fontSize: pdfCompact
-                        ? "9px"
-                        : "12px",
+                  <h3 className="font-bold mb-4">
 
-                      lineHeight: pdfCompact
-                        ? "14px"
-                        : "18px",
+                    {index + 1}. {q.question}
 
-                      marginBottom: "4px"
-                    }}
-                  >
+                  </h3>
 
-                    {i + 1}. {q.question}
+                  <div className="grid grid-cols-2 gap-3">
 
-                  </h2>
+                    {q.options.map(
+                      (opt, i) => (
 
-                  {/* OPTIONS */}
-                  <div
-                    style={{
-                      display: "grid",
-                      gridTemplateColumns:
-                        "1fr 1fr",
-
-                      gap: pdfCompact
-                        ? "2px 8px"
-                        : "4px 14px",
-
-                      fontSize: pdfCompact
-                        ? "8px"
-                        : "10px",
-
-                      lineHeight: pdfCompact
-                        ? "12px"
-                        : "15px"
-                    }}
-                  >
-
-                    {q.options?.map((opt, idx) => {
-
-                      const labels =
-                        ["ক", "খ", "গ", "ঘ"];
-
-                      return (
-
-                        <div
-                          key={idx}
-                          className="option-line"
-                        >
-
-                          <span
-                            style={{
-                              fontWeight: "bold"
-                            }}
-                          >
-                            {labels[idx]}.
-                          </span>
-
-                          <span>
-                            {opt}
-                          </span>
-
+                        <div key={i}>
+                          {opt}
                         </div>
-                      );
-                    })}
+
+                      )
+                    )}
 
                   </div>
 
                 </div>
-              ))}
+
+              )
+            )}
 
           </div>
 
