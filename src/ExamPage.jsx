@@ -151,63 +151,72 @@ function ExamPage() {
     );
 
     // ==============================
-    // DOWNLOAD RESULT
+    // DOWNLOAD RESULT PDF
     // ==============================
-    const downloadResult = () => {
+    const downloadResult = async () => {
 
-      const content =
+      const html2pdf =
+        (await import("html2pdf.js")).default;
+
+      const element =
         document.getElementById(
           "result-sheet"
-        ).innerHTML;
+        );
 
-      const win =
-        window.open("", "", "width=1200,height=700");
+      // 🔥 PDF MODE
+      element.classList.add("pdf-mode");
 
-      win.document.write(`
-        <html>
+      // wait render
+      await new Promise((resolve) =>
+        setTimeout(resolve, 300)
+      );
 
-        <head>
+      // OPTIONS
+      const options = {
 
-          <title>Exam Result</title>
+        margin: [5, 5, 5, 5],
 
-          <style>
+        filename:
+          `${exam.title || "exam-result"}.pdf`,
 
-            *{
-              box-sizing:border-box;
-            }
+        image: {
+          type: "jpeg",
+          quality: 1
+        },
 
-            body{
-              font-family:Arial;
-              padding:20px;
-              background:#f1f5f9;
-            }
+        html2canvas: {
 
-            .question{
-              background:white;
-              padding:20px;
-              border-radius:14px;
-              margin-bottom:20px;
-              box-shadow:0 5px 15px rgba(0,0,0,0.08);
-            }
+          scale: 2,
 
-          </style>
+          useCORS: true,
 
-        </head>
+          backgroundColor: "#071028",
 
-        <body>
+          scrollY: 0
+        },
 
-          ${content}
+        jsPDF: {
 
-        </body>
+          unit: "mm",
 
-        </html>
-      `);
+          format: "a4",
 
-      win.document.close();
+          orientation: "portrait"
+        },
 
-      setTimeout(() => {
-        win.print();
-      }, 500);
+        pagebreak: {
+          mode: ["avoid-all", "css", "legacy"]
+        }
+      };
+
+      // GENERATE PDF
+      await html2pdf()
+        .set(options)
+        .from(element)
+        .save();
+
+      // REMOVE PDF MODE
+      element.classList.remove("pdf-mode");
     };
 
     return (
@@ -220,11 +229,33 @@ function ExamPage() {
         }}
       >
 
+        {/* PDF STYLE */}
+        <style>
+          {`
+
+            .pdf-mode{
+              background:#071028 !important;
+              padding:20px !important;
+            }
+
+            .pdf-mode *{
+              box-sizing:border-box;
+            }
+
+            .pdf-mode .question{
+              page-break-inside: avoid !important;
+              break-inside: avoid !important;
+            }
+
+          `}
+        </style>
+
         <div
           id="result-sheet"
           style={{
             maxWidth: 1200,
-            margin: "auto"
+            margin: "auto",
+            width: "100%"
           }}
         >
 
@@ -291,8 +322,7 @@ function ExamPage() {
                   background:
                     "rgba(255,255,255,0.12)",
                   padding: 20,
-                  borderRadius: 20,
-                  backdropFilter: "blur(10px)"
+                  borderRadius: 20
                 }}
               >
 
@@ -515,11 +545,11 @@ function ExamPage() {
                           borderRadius: 14,
                           background: bg,
                           border: `2px solid ${border}`,
-                          fontSize: "clamp(15px,2.7vw,20px)",
+                          fontSize:
+                            "clamp(15px,2.7vw,20px)",
                           fontWeight: 500,
                           lineHeight: 1.6,
-                          wordBreak: "break-word",
-                          overflowWrap: "break-word"
+                          wordBreak: "break-word"
                         }}
                       >
 
@@ -614,8 +644,7 @@ function ExamPage() {
             style={{
               fontSize: "clamp(28px,5vw,55px)",
               marginBottom: 14,
-              lineHeight: 1.2,
-              wordBreak: "break-word"
+              lineHeight: 1.2
             }}
           >
             📝 {exam.title}
@@ -650,7 +679,6 @@ function ExamPage() {
             }}
           >
 
-            {/* NAME */}
             <input
               type="text"
               placeholder="Your Name"
@@ -668,7 +696,6 @@ function ExamPage() {
               }}
             />
 
-            {/* ROLL */}
             <input
               type="text"
               placeholder="Your Roll"
@@ -709,8 +736,7 @@ function ExamPage() {
                 fontSize: "clamp(20px,3vw,30px)",
                 marginBottom: 20,
                 color: "#0f172a",
-                lineHeight: 1.5,
-                wordBreak: "break-word"
+                lineHeight: 1.5
               }}
             >
               {index + 1}. {q.question}
