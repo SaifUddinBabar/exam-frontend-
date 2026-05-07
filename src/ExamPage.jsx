@@ -139,6 +139,73 @@ function ExamPage() {
   };
 
   // ==============================
+  // DOWNLOAD RESULT PDF
+  // ==============================
+  const downloadResult = async () => {
+
+    const html2pdf =
+      (await import("html2pdf.js")).default;
+
+    const element =
+      document.getElementById(
+        "result-sheet"
+      );
+
+    // PDF MODE
+    element.classList.add("pdf-mode");
+
+    // wait render
+    await new Promise((resolve) =>
+      setTimeout(resolve, 300)
+    );
+
+    const options = {
+
+      margin: [5, 5, 5, 5],
+
+      filename:
+        `${exam.title || "exam-result"}.pdf`,
+
+      image: {
+        type: "jpeg",
+        quality: 1
+      },
+
+      html2canvas: {
+
+        scale: 2,
+
+        useCORS: true,
+
+        backgroundColor: "#071028",
+
+        scrollY: 0
+      },
+
+      jsPDF: {
+
+        unit: "mm",
+
+        format: "a4",
+
+        orientation: "portrait"
+      },
+
+      pagebreak: {
+        mode: ["avoid-all", "css", "legacy"]
+      }
+    };
+
+    await html2pdf()
+      .set(options)
+      .from(element)
+      .save();
+
+    // remove mode
+    element.classList.remove("pdf-mode");
+  };
+
+  // ==============================
   // RESULT PAGE
   // ==============================
   if (score !== null && reviewData) {
@@ -149,75 +216,6 @@ function ExamPage() {
     const percentage = Math.round(
       (score / reviewData.questions.length) * 100
     );
-
-    // ==============================
-    // DOWNLOAD RESULT PDF
-    // ==============================
-    const downloadResult = async () => {
-
-      const html2pdf =
-        (await import("html2pdf.js")).default;
-
-      const element =
-        document.getElementById(
-          "result-sheet"
-        );
-
-      // 🔥 PDF MODE
-      element.classList.add("pdf-mode");
-
-      // wait render
-      await new Promise((resolve) =>
-        setTimeout(resolve, 300)
-      );
-
-      // OPTIONS
-      const options = {
-
-        margin: [5, 5, 5, 5],
-
-        filename:
-          `${exam.title || "exam-result"}.pdf`,
-
-        image: {
-          type: "jpeg",
-          quality: 1
-        },
-
-        html2canvas: {
-
-          scale: 2,
-
-          useCORS: true,
-
-          backgroundColor: "#071028",
-
-          scrollY: 0
-        },
-
-        jsPDF: {
-
-          unit: "mm",
-
-          format: "a4",
-
-          orientation: "portrait"
-        },
-
-        pagebreak: {
-          mode: ["avoid-all", "css", "legacy"]
-        }
-      };
-
-      // GENERATE PDF
-      await html2pdf()
-        .set(options)
-        .from(element)
-        .save();
-
-      // REMOVE PDF MODE
-      element.classList.remove("pdf-mode");
-    };
 
     return (
 

@@ -167,9 +167,16 @@ function Builder() {
   // ==============================
   const copyLink = () => {
 
+    
+
+
     navigator.clipboard.writeText(
       `${window.location.origin}/exam/${examCode}`
     );
+
+
+
+
 
     alert("Link Copied");
   };
