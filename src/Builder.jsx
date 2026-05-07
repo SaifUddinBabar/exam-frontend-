@@ -17,7 +17,7 @@ function Builder() {
   const [chapter, setChapter] = useState("");
   const [examCode, setExamCode] = useState("");
 
-  // 🔥 PDF compact mode
+  // PDF compact mode
   const [pdfCompact, setPdfCompact] = useState(false);
 
   // ==============================
@@ -46,7 +46,7 @@ function Builder() {
 
         setQuestions(data || []);
 
-        // 🔥 merge all questions
+        // merge all chapter questions
         setAllQuestions((prev) => {
 
           const merged = [...prev];
@@ -176,7 +176,7 @@ function Builder() {
   // ==============================
   const downloadPDF = async () => {
 
-    // 🔥 compact mode
+    // compact mode
     if (selected.length > 20) {
       setPdfCompact(true);
     } else {
@@ -192,7 +192,7 @@ function Builder() {
       document.getElementById("question-paper");
 
     const options = {
-      margin: 0.1,
+      margin: 0.2,
       filename: `${examData.title || "question-paper"}.pdf`,
       image: {
         type: "jpeg",
@@ -400,7 +400,6 @@ function Builder() {
             প্রশ্নগুলো সিলেক্ট করে সাবমিট করলেই প্রশ্ন তৈরি হয়ে যাবে।
           </p>
 
-          {/* COUNT */}
           <p className="text-green-600 text-2xl font-bold mt-4">
             Selected: {selected.length} / {examData.marks}
           </p>
@@ -408,7 +407,7 @@ function Builder() {
         </div>
 
         {/* ==============================
-            QUESTIONS
+            QUESTIONS UI
         ============================== */}
         <div className="space-y-5">
 
@@ -509,7 +508,7 @@ function Builder() {
         </div>
 
         {/* ==============================
-            EXAM LINK
+            STUDENT LINK
         ============================== */}
         {examCode && (
 
@@ -548,7 +547,6 @@ function Builder() {
             shadow-xl
             max-w-5xl
             mx-auto
-            transition-all
 
             ${pdfCompact
               ? "p-3"
@@ -559,13 +557,11 @@ function Builder() {
           {/* HEADER */}
           <div className="text-center border-b pb-3 mb-4">
 
-            {/* SUBJECT */}
             <div className="inline-block bg-black px-5 py-1 mb-2">
 
               <h1 className={`
                 text-white
                 font-bold
-                tracking-wide
 
                 ${pdfCompact
                   ? "text-base"
@@ -576,9 +572,8 @@ function Builder() {
 
             </div>
 
-            {/* ACADEMY */}
             <h2 className={`
-              font-bold text-center
+              font-bold
 
               ${pdfCompact
                 ? "text-sm"
@@ -587,7 +582,6 @@ function Builder() {
               {examData.academy}
             </h2>
 
-            {/* EXAM TITLE */}
             <p className={`
               text-gray-700 mt-1
 
@@ -600,8 +594,7 @@ function Builder() {
 
             {/* INFO */}
             <div className={`
-              flex justify-between mt-3
-              border-t pt-2
+              flex justify-between mt-3 border-t pt-2
 
               ${pdfCompact
                 ? "text-[9px]"
@@ -620,14 +613,18 @@ function Builder() {
 
           </div>
 
-          {/* QUESTIONS */}
-          <div className={`
-            grid grid-cols-2
+          {/* ==============================
+              QUESTIONS PDF
+          ============================== */}
+          <div
+            className={`
+              columns-2
 
-            ${pdfCompact
-              ? "gap-x-5 gap-y-2"
-              : "gap-x-10 gap-y-4"}
-          `}>
+              ${pdfCompact
+                ? "gap-4"
+                : "gap-8"}
+            `}
+          >
 
             {allQuestions
               .filter((q) =>
@@ -637,168 +634,36 @@ function Builder() {
 
                 <div
                   key={q._id}
-                  className="break-inside-avoid"
+                  className={`
+                    break-inside-avoid
+
+                    ${pdfCompact
+                      ? "mb-2"
+                      : "mb-4"}
+                  `}
                 >
 
                   {/* QUESTION */}
-                {/* QUESTIONS */}
-<div
-  className={`
-    columns-2
+                  <h2 className={`
+                    font-bold
+                    text-justify
 
-    ${pdfCompact
-      ? "gap-4"
-      : "gap-8"}
-  `}
->
+                    ${pdfCompact
+                      ? "text-[8px] leading-3 mb-[2px]"
+                      : "text-[11px] leading-5 mb-1"}
+                  `}>
 
-  {allQuestions
-    .filter((q) =>
-      selected.includes(q._id)
-    )
-    .map((q, i) => (
+                    {i + 1}. {q.question}
 
-      <div
-        key={q._id}
-        className={`
-          break-inside-avoid
-          mb-3
-
-          ${pdfCompact
-            ? "mb-2"
-            : "mb-4"}
-        `}
-      >
-
-   {/* QUESTIONS */}
-<div
-  className={`
-    columns-2
-
-    ${pdfCompact
-      ? "gap-4"
-      : "gap-8"}
-  `}
->
-
-  {allQuestions
-    .filter((q) =>
-      selected.includes(q._id)
-    )
-    .map((q, i) => (
-
-      <div
-        key={q._id}
-        className={`
-          break-inside-avoid
-          mb-3
-
-          ${pdfCompact
-            ? "mb-2"
-            : "mb-4"}
-        `}
-      >
-
-        {/* QUESTION */}
-        <h2 className={`
-          font-bold
-          text-justify
-
-          ${pdfCompact
-            ? "text-[8px] leading-3 mb-[2px]"
-            : "text-[11px] leading-5 mb-1"}
-        `}>
-
-          {i + 1}. {q.question}
-
-        </h2>
-
-        {/* OPTIONS */}
-        <div className={`
-          grid grid-cols-2
-
-          ${pdfCompact
-            ? "gap-y-[1px] gap-x-2 text-[7px] leading-3"
-            : "gap-y-1 gap-x-4 text-[10px] leading-4"}
-        `}>
-
-          {q.options?.map((opt, idx) => {
-
-            const labels =
-              ["ক", "খ", "গ", "ঘ"];
-
-            return (
-
-              <div
-                key={idx}
-                className="flex items-start gap-1"
-              >
-
-                <span className="font-semibold">
-                  {labels[idx]}.
-                </span>
-
-                <span>
-                  {opt}
-                </span>
-
-              </div>
-            );
-          })}
-
-        </div>
-
-      </div>
-    ))}
-
-</div>
-        {/* OPTIONS */}
-        <div className={`
-          grid grid-cols-2
-
-          ${pdfCompact
-            ? "gap-y-[1px] gap-x-2 text-[7px] leading-3"
-            : "gap-y-1 gap-x-4 text-[10px] leading-4"}
-        `}>
-
-          {q.options?.map((opt, idx) => {
-
-            const labels =
-              ["ক", "খ", "গ", "ঘ"];
-
-            return (
-
-              <div
-                key={idx}
-                className="flex items-start gap-1"
-              >
-
-                <span className="font-semibold">
-                  {labels[idx]}.
-                </span>
-
-                <span>
-                  {opt}
-                </span>
-
-              </div>
-            );
-          })}
-
-        </div>
-
-      </div>
-    ))}
-
-</div>
+                  </h2>
 
                   {/* OPTIONS */}
                   <div className={`
                     grid grid-cols-2
 
                     ${pdfCompact
-                      ? "gap-y-[2px] gap-x-2 text-[8px] leading-4"
-                      : "gap-y-1 gap-x-4 text-[11px] leading-5"}
+                      ? "gap-y-[1px] gap-x-2 text-[7px] leading-3"
+                      : "gap-y-1 gap-x-4 text-[10px] leading-4"}
                   `}>
 
                     {q.options?.map((opt, idx) => {
@@ -817,7 +682,7 @@ function Builder() {
                             {labels[idx]}.
                           </span>
 
-                          <span className="flex-1">
+                          <span>
                             {opt}
                           </span>
 
