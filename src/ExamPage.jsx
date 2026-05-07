@@ -31,7 +31,6 @@ function ExamPage() {
 
         setExam(data);
 
-        // minutes -> seconds
         if (data.duration) {
           setTimeLeft(data.duration * 60);
         }
@@ -80,7 +79,7 @@ function ExamPage() {
   };
 
   // ==============================
-  // ANSWER CHANGE
+  // ANSWER
   // ==============================
   const handleAnswer = (qid, option) => {
 
@@ -123,17 +122,6 @@ function ExamPage() {
 
       setReviewData(data);
 
-      // prevent back
-      window.history.pushState(
-        null,
-        "",
-        window.location.href
-      );
-
-      window.onpopstate = () => {
-        window.history.go(1);
-      };
-
     } catch {
 
       alert("Submit Failed");
@@ -163,7 +151,7 @@ function ExamPage() {
     );
 
     // ==============================
-    // DOWNLOAD PDF
+    // DOWNLOAD RESULT
     // ==============================
     const downloadResult = () => {
 
@@ -184,8 +172,12 @@ function ExamPage() {
 
           <style>
 
+            *{
+              box-sizing:border-box;
+            }
+
             body{
-              font-family: Arial;
+              font-family:Arial;
               padding:20px;
               background:#f1f5f9;
             }
@@ -223,41 +215,63 @@ function ExamPage() {
       <div
         style={{
           minHeight: "100vh",
-          background: "#0f172a",
-          padding: 20
+          background: "#071028",
+          padding: "14px"
         }}
       >
 
         <div
           id="result-sheet"
           style={{
-            maxWidth: 1100,
+            maxWidth: 1200,
             margin: "auto"
           }}
         >
 
-          {/* TOP */}
+          {/* TOP CARD */}
           <div
             style={{
               background:
                 "linear-gradient(135deg,#2563eb,#7c3aed)",
-              borderRadius: 24,
-              padding: 30,
+              borderRadius: 28,
+              padding: "25px 18px",
               color: "white",
               marginBottom: 30
             }}
           >
 
-            <h1
+            {/* TITLE */}
+            <div
               style={{
-                fontSize: 42,
-                marginBottom: 10
+                display: "flex",
+                flexWrap: "wrap",
+                alignItems: "center",
+                gap: 12,
+                marginBottom: 15
               }}
             >
-              🎉 Exam Completed
-            </h1>
 
-            <h2>
+              <h1
+                style={{
+                  fontSize: "clamp(28px,5vw,55px)",
+                  margin: 0,
+                  fontWeight: "700",
+                  lineHeight: 1.2
+                }}
+              >
+                🎉 Exam Completed
+              </h1>
+
+            </div>
+
+            {/* EXAM TITLE */}
+            <h2
+              style={{
+                fontSize: "clamp(16px,3vw,28px)",
+                marginBottom: 25,
+                wordBreak: "break-word"
+              }}
+            >
               {exam.title}
             </h2>
 
@@ -266,9 +280,8 @@ function ExamPage() {
               style={{
                 display: "grid",
                 gridTemplateColumns:
-                  "repeat(auto-fit,minmax(180px,1fr))",
-                gap: 20,
-                marginTop: 25
+                  "repeat(auto-fit,minmax(160px,1fr))",
+                gap: 16
               }}
             >
 
@@ -278,15 +291,25 @@ function ExamPage() {
                   background:
                     "rgba(255,255,255,0.12)",
                   padding: 20,
-                  borderRadius: 18
+                  borderRadius: 20,
+                  backdropFilter: "blur(10px)"
                 }}
               >
 
-                <p>Score</p>
+                <p
+                  style={{
+                    opacity: 0.9,
+                    marginBottom: 10,
+                    fontSize: 16
+                  }}
+                >
+                  Score
+                </p>
 
                 <h1
                   style={{
-                    fontSize: 40
+                    fontSize: "clamp(30px,5vw,50px)",
+                    margin: 0
                   }}
                 >
                   {score}/{reviewData.questions.length}
@@ -298,17 +321,25 @@ function ExamPage() {
               <div
                 style={{
                   background:
-                    "rgba(34,197,94,0.2)",
+                    "rgba(34,197,94,0.18)",
                   padding: 20,
-                  borderRadius: 18
+                  borderRadius: 20
                 }}
               >
 
-                <p>Correct</p>
+                <p
+                  style={{
+                    marginBottom: 10,
+                    fontSize: 16
+                  }}
+                >
+                  Correct
+                </p>
 
                 <h1
                   style={{
-                    fontSize: 40
+                    fontSize: "clamp(30px,5vw,50px)",
+                    margin: 0
                   }}
                 >
                   ✅ {score}
@@ -320,17 +351,25 @@ function ExamPage() {
               <div
                 style={{
                   background:
-                    "rgba(239,68,68,0.2)",
+                    "rgba(239,68,68,0.18)",
                   padding: 20,
-                  borderRadius: 18
+                  borderRadius: 20
                 }}
               >
 
-                <p>Wrong</p>
+                <p
+                  style={{
+                    marginBottom: 10,
+                    fontSize: 16
+                  }}
+                >
+                  Wrong
+                </p>
 
                 <h1
                   style={{
-                    fontSize: 40
+                    fontSize: "clamp(30px,5vw,50px)",
+                    margin: 0
                   }}
                 >
                   ❌ {wrong}
@@ -344,15 +383,23 @@ function ExamPage() {
                   background:
                     "rgba(255,255,255,0.12)",
                   padding: 20,
-                  borderRadius: 18
+                  borderRadius: 20
                 }}
               >
 
-                <p>Percentage</p>
+                <p
+                  style={{
+                    marginBottom: 10,
+                    fontSize: 16
+                  }}
+                >
+                  Percentage
+                </p>
 
                 <h1
                   style={{
-                    fontSize: 40
+                    fontSize: "clamp(30px,5vw,50px)",
+                    margin: 0
                   }}
                 >
                   {percentage}%
@@ -376,14 +423,16 @@ function ExamPage() {
             <button
               onClick={downloadResult}
               style={{
-                padding: "16px 35px",
+                padding: "16px 28px",
                 border: "none",
-                borderRadius: 16,
+                borderRadius: 18,
                 background: "#22c55e",
                 color: "white",
                 fontSize: 18,
-                fontWeight: "bold",
-                cursor: "pointer"
+                fontWeight: "700",
+                cursor: "pointer",
+                width: "100%",
+                maxWidth: 350
               }}
             >
               📄 Download Result PDF
@@ -407,80 +456,95 @@ function ExamPage() {
                 className="question"
                 style={{
                   background: "white",
-                  padding: 25,
-                  borderRadius: 20,
-                  marginBottom: 20,
+                  padding: "18px",
+                  borderRadius: 24,
+                  marginBottom: 22,
                   boxShadow:
-                    "0 10px 25px rgba(0,0,0,0.08)"
+                    "0 10px 25px rgba(0,0,0,0.08)",
+                  overflow: "hidden"
                 }}
               >
 
                 {/* QUESTION */}
                 <h2
                   style={{
-                    fontSize: 22,
-                    marginBottom: 18
+                    fontSize: "clamp(18px,3vw,28px)",
+                    marginBottom: 18,
+                    color: "#0f172a",
+                    lineHeight: 1.5,
+                    wordBreak: "break-word"
                   }}
                 >
                   Q{index + 1}. {q.question}
                 </h2>
 
                 {/* OPTIONS */}
-                {q.options.map((opt, i) => {
+                <div
+                  style={{
+                    display: "grid",
+                    gap: 12
+                  }}
+                >
 
-                  let bg = "#f1f5f9";
-                  let border = "#cbd5e1";
+                  {q.options.map((opt, i) => {
 
-                  // correct
-                  if (opt === correct) {
-                    bg = "#dcfce7";
-                    border = "#16a34a";
-                  }
+                    let bg = "#f1f5f9";
+                    let border = "#cbd5e1";
 
-                  // wrong
-                  if (
-                    opt === userAns &&
-                    opt !== correct
-                  ) {
-                    bg = "#fee2e2";
-                    border = "#dc2626";
-                  }
+                    // correct
+                    if (opt === correct) {
+                      bg = "#dcfce7";
+                      border = "#16a34a";
+                    }
 
-                  return (
+                    // wrong
+                    if (
+                      opt === userAns &&
+                      opt !== correct
+                    ) {
+                      bg = "#fee2e2";
+                      border = "#dc2626";
+                    }
 
-                    <div
-                      key={i}
-                      style={{
-                        padding: 14,
-                        borderRadius: 12,
-                        marginTop: 10,
-                        background: bg,
-                        border: `2px solid ${border}`,
-                        fontSize: 16,
-                        fontWeight: 500
-                      }}
-                    >
+                    return (
 
-                      {opt}
+                      <div
+                        key={i}
+                        style={{
+                          padding: "15px 14px",
+                          borderRadius: 14,
+                          background: bg,
+                          border: `2px solid ${border}`,
+                          fontSize: "clamp(15px,2.7vw,20px)",
+                          fontWeight: 500,
+                          lineHeight: 1.6,
+                          wordBreak: "break-word",
+                          overflowWrap: "break-word"
+                        }}
+                      >
 
-                      {/* correct */}
-                      {opt === correct && (
-                        <span>
-                          {" "}✅ Correct
-                        </span>
-                      )}
+                        {opt}
 
-                      {/* wrong */}
-                      {opt === userAns &&
-                        opt !== correct && (
-                        <span>
-                          {" "}❌ Your Answer
-                        </span>
-                      )}
+                        {/* CORRECT */}
+                        {opt === correct && (
+                          <span>
+                            {" "}✅ Correct
+                          </span>
+                        )}
 
-                    </div>
-                  );
-                })}
+                        {/* WRONG */}
+                        {opt === userAns &&
+                          opt !== correct && (
+                          <span>
+                            {" "}❌ Your Answer
+                          </span>
+                        )}
+
+                      </div>
+                    );
+                  })}
+
+                </div>
 
               </div>
             );
@@ -523,7 +587,7 @@ function ExamPage() {
         minHeight: "100vh",
         background:
           "linear-gradient(135deg,#0f172a,#1e293b)",
-        padding: 20
+        padding: 14
       }}
     >
 
@@ -539,17 +603,19 @@ function ExamPage() {
           style={{
             background:
               "linear-gradient(135deg,#2563eb,#7c3aed)",
-            borderRadius: 24,
-            padding: 30,
+            borderRadius: 28,
+            padding: "25px 18px",
             color: "white",
-            marginBottom: 30
+            marginBottom: 25
           }}
         >
 
           <h1
             style={{
-              fontSize: 42,
-              marginBottom: 10
+              fontSize: "clamp(28px,5vw,55px)",
+              marginBottom: 14,
+              lineHeight: 1.2,
+              wordBreak: "break-word"
             }}
           >
             📝 {exam.title}
@@ -557,7 +623,7 @@ function ExamPage() {
 
           <p
             style={{
-              fontSize: 18
+              fontSize: "clamp(18px,3vw,24px)"
             }}
           >
             ⏰ Time Left: {formatTime()}
@@ -569,9 +635,9 @@ function ExamPage() {
         <div
           style={{
             background: "white",
-            borderRadius: 20,
-            padding: 25,
-            marginBottom: 30
+            borderRadius: 22,
+            padding: 20,
+            marginBottom: 25
           }}
         >
 
@@ -579,11 +645,12 @@ function ExamPage() {
             style={{
               display: "grid",
               gridTemplateColumns:
-                "1fr 1fr",
-              gap: 20
+                "repeat(auto-fit,minmax(220px,1fr))",
+              gap: 16
             }}
           >
 
+            {/* NAME */}
             <input
               type="text"
               placeholder="Your Name"
@@ -593,12 +660,15 @@ function ExamPage() {
               }
               style={{
                 padding: 16,
-                borderRadius: 12,
+                borderRadius: 14,
                 border: "1px solid #cbd5e1",
-                fontSize: 16
+                fontSize: 16,
+                width: "100%",
+                boxSizing: "border-box"
               }}
             />
 
+            {/* ROLL */}
             <input
               type="text"
               placeholder="Your Roll"
@@ -608,9 +678,11 @@ function ExamPage() {
               }
               style={{
                 padding: 16,
-                borderRadius: 12,
+                borderRadius: 14,
                 border: "1px solid #cbd5e1",
-                fontSize: 16
+                fontSize: 16,
+                width: "100%",
+                boxSizing: "border-box"
               }}
             />
 
@@ -625,18 +697,20 @@ function ExamPage() {
             key={q._id}
             style={{
               background: "white",
-              borderRadius: 20,
-              padding: 25,
-              marginBottom: 25
+              borderRadius: 24,
+              padding: 20,
+              marginBottom: 22
             }}
           >
 
             {/* QUESTION */}
             <h2
               style={{
-                fontSize: 24,
+                fontSize: "clamp(20px,3vw,30px)",
                 marginBottom: 20,
-                color: "#0f172a"
+                color: "#0f172a",
+                lineHeight: 1.5,
+                wordBreak: "break-word"
               }}
             >
               {index + 1}. {q.question}
@@ -646,7 +720,7 @@ function ExamPage() {
             <div
               style={{
                 display: "grid",
-                gap: 15
+                gap: 14
               }}
             >
 
@@ -658,8 +732,8 @@ function ExamPage() {
                     handleAnswer(q._id, opt)
                   }
                   style={{
-                    padding: 18,
-                    borderRadius: 14,
+                    padding: "16px 18px",
+                    borderRadius: 16,
                     border:
                       answers[q._id] === opt
                         ? "2px solid #2563eb"
@@ -670,8 +744,12 @@ function ExamPage() {
                         : "#f8fafc",
                     cursor: "pointer",
                     textAlign: "left",
-                    fontSize: 17,
-                    fontWeight: 500
+                    fontSize:
+                      "clamp(15px,2.7vw,20px)",
+                    fontWeight: 500,
+                    lineHeight: 1.6,
+                    width: "100%",
+                    wordBreak: "break-word"
                   }}
                 >
                   {opt}
@@ -690,21 +768,23 @@ function ExamPage() {
           style={{
             display: "flex",
             justifyContent: "center",
-            marginTop: 40
+            marginTop: 35
           }}
         >
 
           <button
             onClick={submitExam}
             style={{
-              padding: "18px 40px",
+              padding: "18px 28px",
               border: "none",
               borderRadius: 18,
               background: "#22c55e",
               color: "white",
               fontSize: 20,
-              fontWeight: "bold",
-              cursor: "pointer"
+              fontWeight: "700",
+              cursor: "pointer",
+              width: "100%",
+              maxWidth: 350
             }}
           >
             🚀 Submit Exam
