@@ -120,8 +120,9 @@ function Builder() {
   // ==============================
   // FETCH QUESTIONS
   // ==============================
-useEffect(() => {
+ useEffect(() => {
 
+  // chapter select না করলে fetch হবে না
   if (!chapter) {
 
     setQuestions([]);
@@ -129,28 +130,16 @@ useEffect(() => {
     return;
   }
 
-  console.log(
-    "Selected Chapter:",
-    chapter
-  );
-
-  fetch(
-    `${API}/api/questions?chapter=${encodeURIComponent(chapter)}`
-  )
+ fetch(
+  `${API}/api/questions?chapter=${encodeURIComponent(chapter)}`
+)
     .then((res) => res.json())
     .then((data) => {
-
-      console.log(
-        "Fetched Questions:",
-        data
-      );
 
       setQuestions(data || []);
 
     })
-    .catch((err) => {
-
-      console.log(err);
+    .catch(() => {
 
       setQuestions([]);
 
@@ -306,11 +295,7 @@ const filteredQuestions =
   // ==============================
   // DOWNLOAD PDF
   // ==============================
-/* ==============================
-   DOWNLOAD PDF
-============================== */
-
-const downloadPDF = () => {
+ const downloadPDF = () => {
 
   const element =
     document.getElementById(
@@ -326,15 +311,20 @@ const downloadPDF = () => {
         `${examData.title}.pdf`,
 
       image: {
+
         type: "jpeg",
+
         quality: 1
+
       },
 
       html2canvas: {
 
         scale: 3,
 
-        useCORS: true
+        useCORS: true,
+
+        scrollY: 0
 
       },
 
@@ -346,6 +336,16 @@ const downloadPDF = () => {
 
         orientation:
           "portrait"
+
+      },
+
+      pagebreak: {
+
+        mode: [
+          "avoid-all",
+          "css",
+          "legacy"
+        ]
 
       }
 
@@ -990,30 +990,42 @@ const downloadPDF = () => {
           </div>
         )}
 
-        {/* PDF SECTION */}
-        
-   PDF SECTION
-============================== */}
-
+      {/* PDF SECTION */}
 <div
   id="question-paper"
   className="
     bg-white
     mt-16
-    w-[210mm]
+
+    w-full
+    md:w-[210mm]
+
     min-h-[297mm]
+
     mx-auto
-    px-[10mm]
-    py-[8mm]
+
+    px-3
+    md:px-[10mm]
+
+    py-4
+    md:py-[8mm]
+
     text-black
+
+    overflow-hidden
+
+    rounded-xl
   "
 >
 
   {/* SUBJECT */}
   <h1 className="
-    text-[18px]
+    text-[20px]
+    md:text-[18px]
+
     font-bold
     text-center
+
     mb-2
   ">
 
@@ -1023,9 +1035,12 @@ const downloadPDF = () => {
 
   {/* ACADEMY */}
   <h2 className="
-    text-[15px]
+    text-[16px]
+    md:text-[15px]
+
     font-bold
     text-center
+
     mb-1
   ">
 
@@ -1035,9 +1050,12 @@ const downloadPDF = () => {
 
   {/* EXAM TITLE */}
   <h3 className="
-    text-[13px]
+    text-[14px]
+    md:text-[13px]
+
     font-semibold
     text-center
+
     mb-4
   ">
 
@@ -1050,11 +1068,16 @@ const downloadPDF = () => {
     flex
     justify-between
     items-center
+
     border-y
     border-black
+
     py-2
-    mb-4
-    text-[11px]
+    mb-5
+
+    text-[12px]
+    md:text-[11px]
+
     font-semibold
   ">
 
@@ -1077,9 +1100,12 @@ const downloadPDF = () => {
   {/* QUESTIONS */}
   <div className="
     grid
-    grid-cols-2
+
+    grid-cols-1
+    md:grid-cols-2
+
     gap-x-5
-    gap-y-3
+    gap-y-4
   ">
 
     {selectedQuestions.map(
@@ -1096,8 +1122,13 @@ const downloadPDF = () => {
           {/* QUESTION */}
           <h3 className="
             font-semibold
-            text-[11px]
-            leading-[16px]
+
+            text-[13px]
+            md:text-[11px]
+
+            leading-[18px]
+            md:leading-[16px]
+
             mb-1
           ">
 
@@ -1111,11 +1142,17 @@ const downloadPDF = () => {
           <div className="
             grid
             grid-cols-2
+
             gap-x-3
             gap-y-1
+
             pl-2
-            text-[10px]
-            leading-[14px]
+
+            text-[12px]
+            md:text-[10px]
+
+            leading-[16px]
+            md:leading-[14px]
           ">
 
             {q.options.map(
@@ -1159,7 +1196,6 @@ const downloadPDF = () => {
   </div>
 
 </div>
-
       </div>
 
     </div>
