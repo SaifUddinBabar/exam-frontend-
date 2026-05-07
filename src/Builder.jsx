@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 
 const API = import.meta.env.VITE_API_URL;
 
@@ -7,7 +7,6 @@ function Builder() {
   const [selected, setSelected] = useState([]);
   const [chapter, setChapter] = useState("");
   const [examCode, setExamCode] = useState("");
-  const [stats, setStats] = useState(null);
 
   const [examData, setExamData] = useState({
     title: "",
@@ -18,15 +17,7 @@ function Builder() {
     marks: "100"
   });
 
-  const linkRef = useRef(null);
-
-  // Load saved exam
-  useEffect(() => {
-    const saved = localStorage.getItem("examCode");
-    if (saved) setExamCode(saved);
-  }, []);
-
-  // Fetch Questions
+  // FETCH QUESTIONS
   useEffect(() => {
     if (!chapter) return;
 
@@ -34,21 +25,22 @@ function Builder() {
       .then((res) => res.json())
       .then((data) => setQuestions(data || []))
       .catch(() => setQuestions([]));
+
   }, [chapter]);
 
-  // Fetch Stats
-  const fetchStats = () => {
-    fetch(`${API}/api/exams/stats`)
-      .then((res) => res.json())
-      .then((data) => setStats(data))
-      .catch(() => {});
+  // HANDLE INPUT
+  const handleChange = (e) => {
+    setExamData({
+      ...examData,
+      [e.target.name]: e.target.value
+    });
+
+    if (e.target.name === "subject") {
+      setChapter("");
+    }
   };
 
-  useEffect(() => {
-    fetchStats();
-  }, []);
-
-  // Select Question
+  // SELECT QUESTION
   const toggleSelect = (id) => {
     setSelected((prev) =>
       prev.includes(id)
@@ -57,21 +49,9 @@ function Builder() {
     );
   };
 
-  // Handle Input
-  const handleChange = (e) => {
-    setExamData({
-      ...examData,
-      [e.target.name]: e.target.value
-    });
-
-    // subject change হলে chapter reset
-    if (e.target.name === "subject") {
-      setChapter("");
-    }
-  };
-
-  // Create Exam
+  // CREATE EXAM
   const createExam = async () => {
+
     if (!examData.title) {
       return alert("পরীক্ষার নাম লিখুন");
     }
@@ -85,6 +65,7 @@ function Builder() {
     }
 
     try {
+
       const res = await fetch(`${API}/api/exams/create`, {
         method: "POST",
         headers: {
@@ -101,20 +82,13 @@ function Builder() {
 
       setExamCode(data.examCode);
 
-      localStorage.setItem("examCode", data.examCode);
-
-      setTimeout(() => {
-        linkRef.current?.scrollIntoView({
-          behavior: "smooth"
-        });
-      }, 400);
+      alert("Exam Created");
 
     } catch {
       alert("Create Failed");
     }
   };
 
-  // Copy Link
   const copyLink = () => {
     navigator.clipboard.writeText(
       `${window.location.origin}/exam/${examCode}`
@@ -123,58 +97,33 @@ function Builder() {
     alert("Link Copied");
   };
 
-  // Delete All
-  const deleteAll = async () => {
-    const confirmDelete = confirm(
-      "সব exam data delete করতে চান?"
-    );
-
-    if (!confirmDelete) return;
-
-    try {
-      const res = await fetch(
-        `${API}/api/exams/clear-old`,
-        {
-          method: "DELETE"
-        }
-      );
-
-      const data = await res.json();
-
-      alert(data.message);
-
-      fetchStats();
-
-    } catch {
-      alert("Delete failed");
-    }
-  };
-
   return (
-    <div className="min-h-screen bg-[#f5f7fb] pb-20">
+    <div className="min-h-screen bg-[#f3f3f3] pb-20">
 
       {/* TOPBAR */}
-      <div className="bg-white border-b sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
+      <div className="bg-white shadow-sm border-b">
 
-          <h1 className="text-3xl font-bold text-blue-900">
+        <div className="max-w-5xl mx-auto px-4 py-4 flex justify-between items-center">
+
+          <h1 className="text-3xl font-bold text-[#0b2c6b]">
             📝 প্রশ্নব্যাংক
           </h1>
 
-          <button className="bg-blue-600 text-white px-5 py-2 rounded-xl shadow hover:bg-blue-700 transition">
-            Dashboard
+          <button className="bg-green-500 text-white px-5 py-2 rounded-xl">
+            মূল তালিকা
           </button>
 
         </div>
+
       </div>
 
-      {/* CONTAINER */}
-      <div className="max-w-7xl mx-auto px-4 py-10">
+      {/* MAIN */}
+      <div className="max-w-5xl mx-auto px-4 py-8">
 
         {/* FORM */}
-        <div className="bg-white rounded-3xl shadow-sm border p-8 mb-10">
+        <div className="bg-white rounded-2xl p-8 shadow-sm mb-10">
 
-          <h2 className="text-3xl font-bold text-blue-900 mb-8">
+          <h2 className="text-4xl font-bold text-center mb-10 text-gray-800">
             বেসিক তথ্য পূরণ করুন
           </h2>
 
@@ -182,14 +131,14 @@ function Builder() {
 
             {/* CLASS */}
             <div>
-              <label className="font-semibold block mb-2">
+              <label className="font-semibold block mb-2 text-lg">
                 শ্রেণী
               </label>
 
               <select
                 name="className"
                 onChange={handleChange}
-                className="w-full border rounded-2xl p-4 outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full border rounded-xl p-4 text-lg bg-white"
               >
                 <option>HSC</option>
               </select>
@@ -197,14 +146,14 @@ function Builder() {
 
             {/* VERSION */}
             <div>
-              <label className="font-semibold block mb-2">
+              <label className="font-semibold block mb-2 text-lg">
                 ভার্সন
               </label>
 
               <select
                 name="version"
                 onChange={handleChange}
-                className="w-full border rounded-2xl p-4 outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full border rounded-xl p-4 text-lg bg-white"
               >
                 <option>Bangla Medium</option>
               </select>
@@ -212,65 +161,61 @@ function Builder() {
 
             {/* SUBJECT */}
             <div>
-              <label className="font-semibold block mb-2">
+              <label className="font-semibold block mb-2 text-lg">
                 বিষয়
               </label>
 
               <select
                 name="subject"
                 onChange={handleChange}
-                className="w-full border rounded-2xl p-4 outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full border rounded-xl p-4 text-lg bg-white"
               >
                 <option>ICT</option>
-                <option disabled>Physics</option>
-                <option disabled>Chemistry</option>
               </select>
             </div>
 
             {/* CHAPTER */}
             <div>
-              <label className="font-semibold block mb-2">
+              <label className="font-semibold block mb-2 text-lg">
                 অধ্যায়
               </label>
 
               <select
                 value={chapter}
                 onChange={(e) => setChapter(e.target.value)}
-                className="w-full border rounded-2xl p-4 outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full border rounded-xl p-4 text-lg bg-white"
               >
+
                 <option value="">
                   অধ্যায় নির্বাচন করুন
                 </option>
 
-                {examData.subject === "ICT" && (
-                  <>
-                    <option value="Introduction to ICT">
-                      Chapter 1 - ICT Introduction
-                    </option>
+                <option value="Introduction to ICT">
+                  Chapter 1 - ICT Introduction
+                </option>
 
-                    <option value="Communication Systems">
-                      Chapter 2 - Communication Systems
-                    </option>
+                <option value="Communication Systems">
+                  Chapter 2 - Communication Systems
+                </option>
 
-                    <option value="Numbers & Digital Devices">
-                      Chapter 3 - Number System
-                    </option>
+                <option value="Numbers & Digital Devices">
+                  Chapter 3 - Number System
+                </option>
 
-                    <option value="Web & HTML">
-                      Chapter 4 - Web & HTML
-                    </option>
+                <option value="Web & HTML">
+                  Chapter 4 - Web & HTML
+                </option>
 
-                    <option value="Programming & Language">
-                      Chapter 5 - Programming
-                    </option>
-                  </>
-                )}
+                <option value="Programming & Language">
+                  Chapter 5 - Programming
+                </option>
+
               </select>
             </div>
 
             {/* EXAM NAME */}
             <div>
-              <label className="font-semibold block mb-2">
+              <label className="font-semibold block mb-2 text-lg">
                 পরীক্ষার নাম
               </label>
 
@@ -279,13 +224,13 @@ function Builder() {
                 name="title"
                 placeholder="যেমন: HSC ICT Model Test"
                 onChange={handleChange}
-                className="w-full border rounded-2xl p-4 outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full border rounded-xl p-4 text-lg"
               />
             </div>
 
             {/* MARKS */}
             <div>
-              <label className="font-semibold block mb-2">
+              <label className="font-semibold block mb-2 text-lg">
                 পূর্ণমান
               </label>
 
@@ -294,13 +239,13 @@ function Builder() {
                 name="marks"
                 value={examData.marks}
                 onChange={handleChange}
-                className="w-full border rounded-2xl p-4 outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full border rounded-xl p-4 text-lg"
               />
             </div>
 
             {/* TIME */}
             <div>
-              <label className="font-semibold block mb-2">
+              <label className="font-semibold block mb-2 text-lg">
                 সময় (মিনিট)
               </label>
 
@@ -309,157 +254,193 @@ function Builder() {
                 name="duration"
                 value={examData.duration}
                 onChange={handleChange}
-                className="w-full border rounded-2xl p-4 outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full border rounded-xl p-4 text-lg"
               />
             </div>
 
           </div>
         </div>
 
+        {/* QUESTION TITLE */}
+        <div className="text-center mb-8">
+
+          <h2 className="text-4xl font-bold text-gray-800 mb-3">
+            প্রশ্ন সিলেক্ট করুন
+          </h2>
+
+          <p className="text-gray-500 text-lg">
+            প্রশ্নগুলো সিলেক্ট করে সাবমিট করলেই প্রশ্ন তৈরি হয়ে যাবে।
+          </p>
+
+        </div>
+
         {/* QUESTIONS */}
-        <div className="grid lg:grid-cols-3 gap-8">
+        <div className="space-y-5">
 
-          {/* LEFT */}
-          <div className="lg:col-span-2">
+          {questions.map((q, i) => {
 
-            <div className="flex justify-between items-center mb-6">
+            const active = selected.includes(q._id);
 
-              <h2 className="text-3xl font-bold text-gray-800">
-                প্রশ্ন সিলেক্ট করুন
-              </h2>
+            return (
 
-              <div className="bg-blue-100 text-blue-700 px-4 py-2 rounded-xl font-semibold">
-                {selected.length} Selected
+              <div
+                key={q._id}
+                onClick={() => toggleSelect(q._id)}
+                className={`
+                  bg-white
+                  rounded-2xl
+                  border-2
+                  cursor-pointer
+                  transition-all
+                  duration-300
+                  p-6
+
+                  ${active
+                    ? "border-green-500 shadow-lg"
+                    : "border-gray-200 hover:border-green-400"}
+                `}
+              >
+
+                {/* QUESTION */}
+                <h2 className="text-2xl font-bold text-gray-800 mb-6 leading-10">
+                  {i + 1}. {q.question}
+                </h2>
+
+                {/* OPTIONS */}
+                <div className="grid grid-cols-2 gap-y-5 gap-x-10 text-xl text-gray-700">
+
+                  {q.options?.map((opt, index) => {
+
+                    const labels = ["ক", "খ", "গ", "ঘ"];
+
+                    return (
+                      <div key={index}>
+                        {labels[index]}. {opt}
+                      </div>
+                    );
+                  })}
+
+                </div>
+
               </div>
+            );
+          })}
 
-            </div>
+        </div>
 
-            <div className="space-y-5">
+        {/* PAGINATION */}
+        <div className="flex items-center justify-center gap-5 mt-12">
 
-              {questions.map((q, i) => {
-                const active = selected.includes(q._id);
+          <button className="bg-white border px-6 py-3 rounded-xl text-lg">
+            ← পূর্ববর্তী
+          </button>
 
-                return (
-                  <div
-                    key={q._id}
-                    onClick={() => toggleSelect(q._id)}
-                    className={`border-2 rounded-3xl p-6 cursor-pointer transition-all duration-300
-                    ${active
-                        ? "border-green-500 bg-green-50 scale-[1.01] shadow-lg"
-                        : "border-gray-200 bg-white hover:border-blue-400 hover:shadow-md"
-                      }`}
-                  >
-
-                    <div className="flex justify-between items-start mb-4">
-
-                      <p className="font-bold text-lg text-gray-700">
-                        প্রশ্ন {i + 1}
-                      </p>
-
-                      {active && (
-                        <span className="bg-green-500 text-white px-3 py-1 rounded-full text-sm">
-                          Selected
-                        </span>
-                      )}
-
-                    </div>
-
-                    <p className="text-gray-800 text-lg leading-8">
-                      {q.question}
-                    </p>
-
-                  </div>
-                );
-              })}
-
-            </div>
+          <div className="text-2xl font-bold">
+            1 / 2
           </div>
 
-          {/* RIGHT */}
-          <div className="space-y-6 sticky top-24 h-fit">
+          <button className="bg-white border px-6 py-3 rounded-xl text-lg">
+            পরবর্তী →
+          </button>
 
-            {/* CREATE */}
-            <div className="bg-white rounded-3xl border p-6 shadow-sm">
+        </div>
+
+        {/* SUBMIT */}
+        <div className="flex justify-center mt-10">
+
+          <button
+            onClick={createExam}
+            className="
+              bg-green-500
+              hover:bg-green-600
+              text-white
+              text-2xl
+              font-bold
+              px-12
+              py-4
+              rounded-2xl
+              shadow-lg
+              transition
+            "
+          >
+            সাবমিট করুন
+          </button>
+
+        </div>
+
+        {/* LINK */}
+        {examCode && (
+
+          <div className="bg-white rounded-2xl shadow-lg p-8 mt-16">
+
+            <h2 className="text-3xl font-bold mb-6 text-center">
+              Student Link
+            </h2>
+
+            <div className="bg-gray-100 p-5 rounded-xl break-all text-lg text-center mb-6">
+              {window.location.origin}/exam/{examCode}
+            </div>
+
+            <div className="flex justify-center">
 
               <button
-                onClick={createExam}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white py-4 rounded-2xl text-lg font-bold transition shadow-lg"
+                onClick={copyLink}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-xl text-lg"
               >
-                🚀 প্রশ্ন তৈরি করুন
+                Copy Link
               </button>
 
             </div>
 
-            {/* LINK */}
-            {examCode && (
-              <div
-                ref={linkRef}
-                className="bg-white rounded-3xl border p-6 shadow-sm"
-              >
+          </div>
+        )}
 
-                <h3 className="font-bold text-xl mb-4">
-                  Student Link
-                </h3>
+        {/* LIVE PREVIEW */}
+        <div className="bg-white mt-16 rounded-2xl shadow-xl p-10">
 
-                <p className="text-sm break-all bg-gray-100 p-4 rounded-xl mb-4">
-                  {window.location.origin}/exam/{examCode}
-                </p>
+          <h1 className="text-5xl font-bold text-center mb-10">
+            রূপচাঁদা একাডেমি
+          </h1>
 
-                <button
-                  onClick={copyLink}
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-3 rounded-xl transition"
-                >
-                  Copy Link
-                </button>
+          <div className="flex justify-between mb-10 text-xl">
+            <p>সময়: {examData.duration} মিনিট</p>
+            <p>পূর্ণমান: {examData.marks}</p>
+          </div>
 
-              </div>
-            )}
+          <div className="space-y-10">
 
-            {/* STATS */}
-            <div className="bg-white rounded-3xl border p-6 shadow-sm">
+            {questions
+              .filter((q) => selected.includes(q._id))
+              .map((q, i) => (
 
-              <h3 className="text-2xl font-bold mb-5">
-                📊 Statistics
-              </h3>
+                <div key={q._id}>
 
-              {stats && (
-                <div className="space-y-4 mb-6">
+                  <h2 className="text-2xl font-semibold mb-5">
+                    {i + 1}. {q.question}
+                  </h2>
 
-                  <div className="flex justify-between">
-                    <span>📘 Exams</span>
-                    <span className="font-bold">
-                      {stats.examCount}
-                    </span>
-                  </div>
+                  <div className="grid grid-cols-2 gap-y-4 text-xl">
 
-                  <div className="flex justify-between">
-                    <span>📝 Submissions</span>
-                    <span className="font-bold">
-                      {stats.submissionCount}
-                    </span>
-                  </div>
+                    {q.options?.map((opt, idx) => {
 
-                  <div className="flex justify-between">
-                    <span>📚 Questions</span>
-                    <span className="font-bold">
-                      {stats.questionCount}
-                    </span>
+                      const labels = ["ক", "খ", "গ", "ঘ"];
+
+                      return (
+                        <div key={idx}>
+                          {labels[idx]}. {opt}
+                        </div>
+                      );
+                    })}
+
                   </div>
 
                 </div>
-              )}
-
-              <button
-                onClick={deleteAll}
-                className="w-full bg-red-600 hover:bg-red-700 text-white py-3 rounded-2xl font-bold transition"
-              >
-                ❌ Delete All Data
-              </button>
-
-            </div>
+              ))}
 
           </div>
+
         </div>
+
       </div>
     </div>
   );
