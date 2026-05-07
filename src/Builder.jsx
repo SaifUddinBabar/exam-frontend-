@@ -192,19 +192,24 @@ function Builder() {
       document.getElementById("question-paper");
 
     const options = {
-      margin: 0.2,
+      margin: 0,
       filename: `${examData.title || "question-paper"}.pdf`,
       image: {
         type: "jpeg",
         quality: 1
       },
       html2canvas: {
-        scale: 2
+        scale: 2,
+        useCORS: true,
+        scrollY: 0
       },
       jsPDF: {
         unit: "mm",
         format: "a4",
         orientation: "portrait"
+      },
+      pagebreak: {
+        mode: ["avoid-all", "css", "legacy"]
       }
     };
 
@@ -484,7 +489,7 @@ function Builder() {
               shadow-lg
             "
           >
-            সাবমিট করুন
+            অনলাইনে পরক্ষা নিন
           </button>
 
           {/* PDF */}
@@ -541,65 +546,112 @@ function Builder() {
         ============================== */}
         <div
           id="question-paper"
-          className={`
-            bg-white
-            mt-10
-            shadow-xl
-            max-w-5xl
-            mx-auto
-
-            ${pdfCompact
-              ? "p-3"
-              : "p-6"}
-          `}
+          className="bg-white mt-10 shadow-xl mx-auto preview-paper"
         >
+
+          {/* CUSTOM STYLE */}
+          <style>
+            {`
+
+              .preview-paper{
+                width:210mm;
+                min-height:297mm;
+                background:white;
+                padding:14mm;
+                box-sizing:border-box;
+                overflow:hidden;
+              }
+
+              .preview-paper *{
+                box-sizing:border-box;
+                word-break:break-word;
+                overflow-wrap:break-word;
+              }
+
+              .question-block{
+                width:100%;
+                margin-bottom:12px;
+                page-break-inside:avoid;
+                break-inside:avoid;
+              }
+
+              .question-title{
+                font-weight:700;
+                text-align:justify;
+              }
+
+              .option-line{
+                display:flex;
+                gap:4px;
+                align-items:flex-start;
+              }
+
+              @media screen and (max-width:900px){
+
+                .preview-paper{
+                  width:100%;
+                  padding:14px;
+                }
+
+              }
+
+            `}
+          </style>
 
           {/* HEADER */}
           <div className="text-center border-b pb-3 mb-4">
 
             <div className="inline-block bg-black px-5 py-1 mb-2">
 
-              <h1 className={`
-                text-white
-                font-bold
+              <h1
+                className={`
+                  text-white
+                  font-bold
 
-                ${pdfCompact
-                  ? "text-base"
-                  : "text-2xl"}
-              `}>
+                  ${pdfCompact
+                    ? "text-base"
+                    : "text-2xl"}
+                `}
+              >
                 {examData.subject}
               </h1>
 
             </div>
 
-            <h2 className={`
-              font-bold
+            <h2
+              className={`
+                font-bold
 
-              ${pdfCompact
-                ? "text-sm"
-                : "text-xl"}
-            `}>
+                ${pdfCompact
+                  ? "text-sm"
+                  : "text-xl"}
+              `}
+            >
               {examData.academy}
             </h2>
 
-            <p className={`
-              text-gray-700 mt-1
+            <p
+              className={`
+                text-gray-700 mt-1
 
-              ${pdfCompact
-                ? "text-[10px]"
-                : "text-sm"}
-            `}>
+                ${pdfCompact
+                  ? "text-[10px]"
+                  : "text-sm"}
+              `}
+            >
               {examData.title}
             </p>
 
             {/* INFO */}
-            <div className={`
-              flex justify-between mt-3 border-t pt-2
+            <div
+              className={`
+                flex justify-between mt-3 border-t pt-2
 
-              ${pdfCompact
-                ? "text-[9px]"
-                : "text-sm"}
-            `}>
+                ${pdfCompact
+                  ? "text-[9px]"
+                  : "text-sm"}
+              `}
+            >
 
               <p>
                 সময়: {examData.duration} মিনিট
@@ -613,17 +665,14 @@ function Builder() {
 
           </div>
 
-          {/* ==============================
-              QUESTIONS PDF
-          ============================== */}
+          {/* QUESTIONS */}
           <div
-            className={`
-              columns-2
-
-              ${pdfCompact
-                ? "gap-4"
-                : "gap-8"}
-            `}
+            style={{
+              columnCount: 2,
+              columnGap: pdfCompact
+                ? "14px"
+                : "28px"
+            }}
           >
 
             {allQuestions
@@ -634,37 +683,49 @@ function Builder() {
 
                 <div
                   key={q._id}
-                  className={`
-                    break-inside-avoid
-
-                    ${pdfCompact
-                      ? "mb-2"
-                      : "mb-4"}
-                  `}
+                  className="question-block"
                 >
 
                   {/* QUESTION */}
-                  <h2 className={`
-                    font-bold
-                    text-justify
+                  <h2
+                    className="question-title"
+                    style={{
+                      fontSize: pdfCompact
+                        ? "9px"
+                        : "12px",
 
-                    ${pdfCompact
-                      ? "text-[8px] leading-3 mb-[2px]"
-                      : "text-[11px] leading-5 mb-1"}
-                  `}>
+                      lineHeight: pdfCompact
+                        ? "14px"
+                        : "18px",
+
+                      marginBottom: "4px"
+                    }}
+                  >
 
                     {i + 1}. {q.question}
 
                   </h2>
 
                   {/* OPTIONS */}
-                  <div className={`
-                    grid grid-cols-2
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns:
+                        "1fr 1fr",
 
-                    ${pdfCompact
-                      ? "gap-y-[1px] gap-x-2 text-[7px] leading-3"
-                      : "gap-y-1 gap-x-4 text-[10px] leading-4"}
-                  `}>
+                      gap: pdfCompact
+                        ? "2px 8px"
+                        : "4px 14px",
+
+                      fontSize: pdfCompact
+                        ? "8px"
+                        : "10px",
+
+                      lineHeight: pdfCompact
+                        ? "12px"
+                        : "15px"
+                    }}
+                  >
 
                     {q.options?.map((opt, idx) => {
 
@@ -675,10 +736,14 @@ function Builder() {
 
                         <div
                           key={idx}
-                          className="flex items-start gap-1"
+                          className="option-line"
                         >
 
-                          <span className="font-semibold">
+                          <span
+                            style={{
+                              fontWeight: "bold"
+                            }}
+                          >
                             {labels[idx]}.
                           </span>
 
