@@ -57,18 +57,27 @@ function Builder() {
     );
   };
 
-  // Input Change
+  // Handle Input
   const handleChange = (e) => {
     setExamData({
       ...examData,
       [e.target.name]: e.target.value
     });
+
+    // subject change হলে chapter reset
+    if (e.target.name === "subject") {
+      setChapter("");
+    }
   };
 
   // Create Exam
   const createExam = async () => {
     if (!examData.title) {
       return alert("পরীক্ষার নাম লিখুন");
+    }
+
+    if (!chapter) {
+      return alert("অধ্যায় নির্বাচন করুন");
     }
 
     if (selected.length === 0) {
@@ -100,7 +109,7 @@ function Builder() {
         });
       }, 400);
 
-    } catch (err) {
+    } catch {
       alert("Create Failed");
     }
   };
@@ -114,7 +123,7 @@ function Builder() {
     alert("Link Copied");
   };
 
-  // Delete
+  // Delete All
   const deleteAll = async () => {
     const confirmDelete = confirm(
       "সব exam data delete করতে চান?"
@@ -136,7 +145,7 @@ function Builder() {
 
       fetchStats();
 
-    } catch (err) {
+    } catch {
       alert("Delete failed");
     }
   };
@@ -171,6 +180,7 @@ function Builder() {
 
           <div className="grid md:grid-cols-2 gap-6">
 
+            {/* CLASS */}
             <div>
               <label className="font-semibold block mb-2">
                 শ্রেণী
@@ -185,6 +195,7 @@ function Builder() {
               </select>
             </div>
 
+            {/* VERSION */}
             <div>
               <label className="font-semibold block mb-2">
                 ভার্সন
@@ -199,6 +210,7 @@ function Builder() {
               </select>
             </div>
 
+            {/* SUBJECT */}
             <div>
               <label className="font-semibold block mb-2">
                 বিষয়
@@ -215,6 +227,48 @@ function Builder() {
               </select>
             </div>
 
+            {/* CHAPTER */}
+            <div>
+              <label className="font-semibold block mb-2">
+                অধ্যায়
+              </label>
+
+              <select
+                value={chapter}
+                onChange={(e) => setChapter(e.target.value)}
+                className="w-full border rounded-2xl p-4 outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">
+                  অধ্যায় নির্বাচন করুন
+                </option>
+
+                {examData.subject === "ICT" && (
+                  <>
+                    <option value="Introduction to ICT">
+                      Chapter 1 - ICT Introduction
+                    </option>
+
+                    <option value="Communication Systems">
+                      Chapter 2 - Communication Systems
+                    </option>
+
+                    <option value="Numbers & Digital Devices">
+                      Chapter 3 - Number System
+                    </option>
+
+                    <option value="Web & HTML">
+                      Chapter 4 - Web & HTML
+                    </option>
+
+                    <option value="Programming & Language">
+                      Chapter 5 - Programming
+                    </option>
+                  </>
+                )}
+              </select>
+            </div>
+
+            {/* EXAM NAME */}
             <div>
               <label className="font-semibold block mb-2">
                 পরীক্ষার নাম
@@ -229,6 +283,7 @@ function Builder() {
               />
             </div>
 
+            {/* MARKS */}
             <div>
               <label className="font-semibold block mb-2">
                 পূর্ণমান
@@ -243,6 +298,7 @@ function Builder() {
               />
             </div>
 
+            {/* TIME */}
             <div>
               <label className="font-semibold block mb-2">
                 সময় (মিনিট)
@@ -258,33 +314,6 @@ function Builder() {
             </div>
 
           </div>
-        </div>
-
-        {/* CHAPTER */}
-        <div className="flex flex-wrap gap-4 mb-8">
-
-          <button
-            onClick={() => setChapter("Web & HTML")}
-            className={`px-6 py-3 rounded-2xl font-semibold transition
-            ${chapter === "Web & HTML"
-                ? "bg-blue-600 text-white shadow-lg"
-                : "bg-white border hover:bg-blue-50"
-              }`}
-          >
-            🌐 Web & HTML
-          </button>
-
-          <button
-            onClick={() => setChapter("Programming & Language")}
-            className={`px-6 py-3 rounded-2xl font-semibold transition
-            ${chapter === "Programming & Language"
-                ? "bg-blue-600 text-white shadow-lg"
-                : "bg-white border hover:bg-blue-50"
-              }`}
-          >
-            💻 Programming
-          </button>
-
         </div>
 
         {/* QUESTIONS */}
