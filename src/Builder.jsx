@@ -1,7 +1,9 @@
 import { useState, useEffect } from "react";
 import html2pdf from "html2pdf.js";
 
-// 🔥 API URL
+// ==============================
+// API
+// ==============================
 const API = import.meta.env.VITE_API_URL;
 
 function Builder() {
@@ -9,33 +11,23 @@ function Builder() {
   // ==============================
   // STATES
   // ==============================
-
-  // current chapter questions
   const [questions, setQuestions] = useState([]);
-
-  // all selected chapter questions merge
   const [allQuestions, setAllQuestions] = useState([]);
-
-  // selected question ids
   const [selected, setSelected] = useState([]);
-
-  // selected chapter
   const [chapter, setChapter] = useState("");
-
-  // exam link code
   const [examCode, setExamCode] = useState("");
 
   // 🔥 PDF compact mode
   const [pdfCompact, setPdfCompact] = useState(false);
 
-  // exam form data
+  // ==============================
+  // FORM DATA
+  // ==============================
   const [examData, setExamData] = useState({
     academy: "",
     title: "",
     duration: "60",
-    subject: "ICT",
-    className: "HSC",
-    version: "Bangla Medium",
+    subject: "বাংলা প্রথম পত্র",
     marks: "20"
   });
 
@@ -52,10 +44,9 @@ function Builder() {
       .then((res) => res.json())
       .then((data) => {
 
-        // current chapter questions
         setQuestions(data || []);
 
-        // 🔥 merge old + new questions
+        // 🔥 merge all questions
         setAllQuestions((prev) => {
 
           const merged = [...prev];
@@ -95,7 +86,7 @@ function Builder() {
   // ==============================
   const toggleSelect = (id) => {
 
-    // remove selected
+    // remove
     if (selected.includes(id)) {
 
       setSelected((prev) =>
@@ -105,7 +96,7 @@ function Builder() {
       return;
     }
 
-    // 🔥 question limit
+    // limit
     const limit = Number(examData.marks);
 
     if (selected.length >= limit) {
@@ -117,7 +108,7 @@ function Builder() {
       return;
     }
 
-    // add question
+    // add
     setSelected((prev) => [...prev, id]);
   };
 
@@ -126,7 +117,6 @@ function Builder() {
   // ==============================
   const createExam = async () => {
 
-    // validations
     if (!examData.academy) {
       return alert("একাডেমির নাম লিখুন");
     }
@@ -145,7 +135,6 @@ function Builder() {
 
     try {
 
-      // API call
       const res = await fetch(`${API}/api/exams/create`, {
         method: "POST",
         headers: {
@@ -160,7 +149,6 @@ function Builder() {
 
       const data = await res.json();
 
-      // save exam code
       setExamCode(data.examCode);
 
       alert("Exam Created Successfully");
@@ -184,11 +172,11 @@ function Builder() {
   };
 
   // ==============================
-  // DOWNLOAD PDF
+  // PDF DOWNLOAD
   // ==============================
   const downloadPDF = async () => {
 
-    // 🔥 if question বেশি হয়
+    // 🔥 compact mode
     if (selected.length > 20) {
       setPdfCompact(true);
     } else {
@@ -203,7 +191,6 @@ function Builder() {
     const element =
       document.getElementById("question-paper");
 
-    // pdf settings
     const options = {
       margin: 0.1,
       filename: `${examData.title || "question-paper"}.pdf`,
@@ -221,13 +208,12 @@ function Builder() {
       }
     };
 
-    // generate pdf
     await html2pdf()
       .set(options)
       .from(element)
       .save();
 
-    // restore preview
+    // restore
     setPdfCompact(false);
   };
 
@@ -279,7 +265,7 @@ function Builder() {
               <input
                 type="text"
                 name="academy"
-                placeholder="যেমন: ঢাকা কলেজ"
+                placeholder="যেমন: Saif Academy"
                 value={examData.academy}
                 onChange={handleChange}
                 className="w-full border rounded-xl p-4 text-lg"
@@ -297,7 +283,7 @@ function Builder() {
               <input
                 type="text"
                 name="title"
-                placeholder="যেমন: HSC ICT Model Test"
+                placeholder="যেমন: Model Test"
                 value={examData.title}
                 onChange={handleChange}
                 className="w-full border rounded-xl p-4 text-lg"
@@ -312,13 +298,13 @@ function Builder() {
                 বিষয়
               </label>
 
-              <select
+              <input
+                type="text"
                 name="subject"
+                value={examData.subject}
                 onChange={handleChange}
-                className="w-full border rounded-xl p-4 text-lg bg-white"
-              >
-                <option>ICT</option>
-              </select>
+                className="w-full border rounded-xl p-4 text-lg"
+              />
 
             </div>
 
@@ -484,7 +470,7 @@ function Builder() {
         ============================== */}
         <div className="flex flex-wrap justify-center gap-5 mt-10">
 
-          {/* CREATE EXAM */}
+          {/* CREATE */}
           <button
             onClick={createExam}
             className="
@@ -502,7 +488,7 @@ function Builder() {
             সাবমিট করুন
           </button>
 
-          {/* DOWNLOAD PDF */}
+          {/* PDF */}
           <button
             onClick={downloadPDF}
             className="
@@ -565,75 +551,72 @@ function Builder() {
             transition-all
 
             ${pdfCompact
-              ? "p-2"
-              : "p-4"}
+              ? "p-3"
+              : "p-6"}
           `}
         >
 
           {/* HEADER */}
-          <div className={`
-            text-center
-            ${pdfCompact ? "mb-1" : "mb-3"}
-          `}>
+          <div className="text-center border-b pb-3 mb-4">
 
-            <div className={`
-              inline-block
-              bg-black
-
-              ${pdfCompact
-                ? "px-3 py-[2px]"
-                : "px-5 py-1"}
-            `}>
+            {/* SUBJECT */}
+            <div className="inline-block bg-black px-5 py-1 mb-2">
 
               <h1 className={`
                 text-white
                 font-bold
+                tracking-wide
 
                 ${pdfCompact
-                  ? "text-sm"
-                  : "text-xl"}
+                  ? "text-base"
+                  : "text-2xl"}
               `}>
                 {examData.subject}
               </h1>
 
             </div>
 
+            {/* ACADEMY */}
             <h2 className={`
-              font-bold mt-1
+              font-bold text-center
 
               ${pdfCompact
-                ? "text-xs"
-                : "text-lg"}
+                ? "text-sm"
+                : "text-xl"}
             `}>
               {examData.academy}
             </h2>
 
+            {/* EXAM TITLE */}
             <p className={`
+              text-gray-700 mt-1
+
               ${pdfCompact
-                ? "text-[9px]"
+                ? "text-[10px]"
                 : "text-sm"}
             `}>
               {examData.title}
             </p>
 
-          </div>
+            {/* INFO */}
+            <div className={`
+              flex justify-between mt-3
+              border-t pt-2
 
-          {/* INFO */}
-          <div className={`
-            flex justify-between border-b
+              ${pdfCompact
+                ? "text-[9px]"
+                : "text-sm"}
+            `}>
 
-            ${pdfCompact
-              ? "text-[8px] pb-[2px] mb-2"
-              : "text-[11px] pb-1 mb-3"}
-          `}>
+              <p>
+                সময়: {examData.duration} মিনিট
+              </p>
 
-            <p>
-              সময়: {examData.duration} মিনিট
-            </p>
+              <p>
+                পূর্ণমান: {examData.marks}
+              </p>
 
-            <p>
-              পূর্ণমান: {examData.marks}
-            </p>
+            </div>
 
           </div>
 
@@ -642,8 +625,8 @@ function Builder() {
             grid grid-cols-2
 
             ${pdfCompact
-              ? "gap-x-3 gap-y-1"
-              : "gap-x-6 gap-y-3"}
+              ? "gap-x-5 gap-y-2"
+              : "gap-x-10 gap-y-4"}
           `}>
 
             {allQuestions
@@ -652,15 +635,19 @@ function Builder() {
               )
               .map((q, i) => (
 
-                <div key={q._id}>
+                <div
+                  key={q._id}
+                  className="break-inside-avoid"
+                >
 
                   {/* QUESTION */}
                   <h2 className={`
                     font-bold
+                    text-justify
 
                     ${pdfCompact
-                      ? "text-[8px] leading-3 mb-[2px]"
-                      : "text-[11px] leading-4 mb-1"}
+                      ? "text-[9px] leading-4 mb-[2px]"
+                      : "text-sm leading-5 mb-1"}
                   `}>
 
                     {i + 1}. {q.question}
@@ -669,9 +656,11 @@ function Builder() {
 
                   {/* OPTIONS */}
                   <div className={`
+                    grid grid-cols-2
+
                     ${pdfCompact
-                      ? "text-[7px] leading-3 space-y-0"
-                      : "text-[10px] leading-4 space-y-[1px]"}
+                      ? "gap-y-[2px] gap-x-2 text-[8px] leading-4"
+                      : "gap-y-1 gap-x-4 text-[11px] leading-5"}
                   `}>
 
                     {q.options?.map((opt, idx) => {
@@ -680,8 +669,20 @@ function Builder() {
                         ["ক", "খ", "গ", "ঘ"];
 
                       return (
-                        <div key={idx}>
-                          {labels[idx]}. {opt}
+
+                        <div
+                          key={idx}
+                          className="flex items-start gap-1"
+                        >
+
+                          <span className="font-semibold">
+                            {labels[idx]}.
+                          </span>
+
+                          <span className="flex-1">
+                            {opt}
+                          </span>
+
                         </div>
                       );
                     })}
