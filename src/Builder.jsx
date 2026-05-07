@@ -15,7 +15,7 @@ function Builder() {
     subject: "ICT",
     className: "HSC",
     version: "Bangla Medium",
-    marks: "100"
+    marks: "20"
   });
 
   // FETCH QUESTIONS
@@ -41,13 +41,29 @@ function Builder() {
     }
   };
 
-  // SELECT QUESTION
+  // SELECT QUESTION WITH LIMIT
   const toggleSelect = (id) => {
-    setSelected((prev) =>
-      prev.includes(id)
-        ? prev.filter((q) => q !== id)
-        : [...prev, id]
-    );
+
+    // REMOVE
+    if (selected.includes(id)) {
+      setSelected((prev) =>
+        prev.filter((q) => q !== id)
+      );
+      return;
+    }
+
+    // LIMIT
+    const limit = Number(examData.marks);
+
+    if (selected.length >= limit) {
+      alert(
+        `আপনি সর্বোচ্চ ${limit} টি প্রশ্ন সিলেক্ট করতে পারবেন`
+      );
+      return;
+    }
+
+    // ADD
+    setSelected((prev) => [...prev, id]);
   };
 
   // CREATE EXAM
@@ -87,7 +103,7 @@ function Builder() {
 
       setExamCode(data.examCode);
 
-      alert("Exam Created");
+      alert("Exam Created Successfully");
 
     } catch {
       alert("Create Failed");
@@ -96,6 +112,7 @@ function Builder() {
 
   // COPY LINK
   const copyLink = () => {
+
     navigator.clipboard.writeText(
       `${window.location.origin}/exam/${examCode}`
     );
@@ -245,15 +262,16 @@ function Builder() {
                 type="text"
                 name="title"
                 placeholder="যেমন: HSC ICT Model Test"
+                value={examData.title}
                 onChange={handleChange}
                 className="w-full border rounded-xl p-4 text-lg"
               />
             </div>
 
-            {/* MARKS */}
+            {/* QUESTION LIMIT */}
             <div>
               <label className="font-semibold block mb-2 text-lg">
-                পূর্ণমান
+                প্রশ্ন সংখ্যা
               </label>
 
               <input
@@ -292,6 +310,11 @@ function Builder() {
 
           <p className="text-gray-500 text-lg">
             প্রশ্নগুলো সিলেক্ট করে সাবমিট করলেই প্রশ্ন তৈরি হয়ে যাবে।
+          </p>
+
+          {/* SELECT COUNT */}
+          <p className="text-green-600 text-2xl font-bold mt-4">
+            Selected: {selected.length} / {examData.marks}
           </p>
 
         </div>
@@ -347,23 +370,6 @@ function Builder() {
               </div>
             );
           })}
-
-        </div>
-
-        {/* PAGINATION */}
-        <div className="flex items-center justify-center gap-5 mt-12">
-
-          <button className="bg-white border px-6 py-3 rounded-xl text-lg">
-            ← পূর্ববর্তী
-          </button>
-
-          <div className="text-2xl font-bold">
-            1 / 2
-          </div>
-
-          <button className="bg-white border px-6 py-3 rounded-xl text-lg">
-            পরবর্তী →
-          </button>
 
         </div>
 
