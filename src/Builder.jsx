@@ -484,93 +484,94 @@ function Builder() {
         )}
 
         {/* PRINTABLE QUESTION PAPER */}
-        <div
-          id="question-paper"
-          className="
-            bg-white
-            mt-20
-            p-6
-            shadow-xl
-            max-w-5xl
-            mx-auto
-          "
-        >
+       {/* PRINTABLE QUESTION PAPER */}
+<div
+  id="question-paper"
+  className="
+    bg-white
+    mt-10
+    p-4
+    shadow-xl
+    max-w-5xl
+    mx-auto
+  "
+>
 
-          {/* HEADER */}
-          <div className="text-center mb-6">
+  {/* HEADER */}
+  <div className="text-center mb-3">
 
-            <div className="inline-block bg-black px-8 py-2">
+    <div className="inline-block bg-black px-5 py-1">
 
-              <h1 className="text-white text-3xl font-bold">
-                {examData.subject}
-              </h1>
+      <h1 className="text-white text-xl font-bold">
+        {examData.subject}
+      </h1>
 
-            </div>
+    </div>
 
-            <h2 className="text-2xl font-bold mt-4">
-              {examData.academy}
-            </h2>
+    <h2 className="text-lg font-bold mt-2">
+      {examData.academy}
+    </h2>
 
-            <p className="text-lg mt-2">
-              {examData.title}
-            </p>
+    <p className="text-sm mt-1">
+      {examData.title}
+    </p>
 
-          </div>
+  </div>
 
-          {/* INFO */}
-          <div className="flex justify-between text-sm border-b pb-2 mb-5">
+  {/* INFO */}
+  <div className="flex justify-between text-[11px] border-b pb-1 mb-3">
 
-            <p>
-              সময়: {examData.duration} মিনিট
-            </p>
+    <p>
+      সময়: {examData.duration} মিনিট
+    </p>
 
-            <p>
-              পূর্ণমান: {examData.marks}
-            </p>
+    <p>
+      পূর্ণমান: {examData.marks}
+    </p>
 
-          </div>
+  </div>
 
-          {/* QUESTIONS */}
-          <div className="grid grid-cols-2 gap-x-8 gap-y-5">
+  {/* QUESTIONS */}
+  <div className="grid grid-cols-2 gap-x-6 gap-y-3">
 
-            {allQuestions
-              .filter((q) =>
-                selected.includes(q._id)
-              )
-              .map((q, i) => (
+    {allQuestions
+      .filter((q) =>
+        selected.includes(q._id)
+      )
+      .map((q, i) => (
 
-                <div key={q._id}>
+        <div key={q._id}>
 
-                  {/* QUESTION */}
-                  <h2 className="text-sm font-bold leading-5 mb-2">
+          {/* QUESTION */}
+          <h2 className="text-[11px] font-bold leading-4 mb-1">
 
-                    {i + 1}. {q.question}
+            {i + 1}. {q.question}
 
-                  </h2>
+          </h2>
 
-                  {/* OPTIONS */}
-                  <div className="space-y-1 text-xs">
+          {/* OPTIONS */}
+          <div className="space-y-[1px] text-[10px] leading-4">
 
-                    {q.options?.map((opt, idx) => {
+            {q.options?.map((opt, idx) => {
 
-                      const labels =
-                        ["ক", "খ", "গ", "ঘ"];
+              const labels =
+                ["ক", "খ", "গ", "ঘ"];
 
-                      return (
-                        <div key={idx}>
-                          {labels[idx]}. {opt}
-                        </div>
-                      );
-                    })}
-
-                  </div>
-
+              return (
+                <div key={idx}>
+                  {labels[idx]}. {opt}
                 </div>
-              ))}
+              );
+            })}
 
           </div>
 
         </div>
+      ))}
+
+  </div>
+
+</div>
 
       </div>
 
