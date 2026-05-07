@@ -1,374 +1,325 @@
-import { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
+if (score !== null && reviewData) {
 
-const API = import.meta.env.VITE_API_URL;
+  const wrong =
+    reviewData.questions.length - score;
 
-function ExamPage() {
-  const { code } = useParams();
+  const percentage = Math.round(
+    (score / reviewData.questions.length) * 100
+  );
 
-  const [exam, setExam] = useState(null);
-  const [answers, setAnswers] = useState({});
-  const [score, setScore] = useState(null);
-  const [reviewData, setReviewData] = useState(null);
-  const [name, setName] = useState("");
-  const [roll, setRoll] = useState("");
-  const [current, setCurrent] = useState(0);
+  const downloadResult = () => {
 
-  // ================= LOAD EXAM =================
-  useEffect(() => {
-    fetch(`${API}/api/exams/${code}`)
-      .then(res => res.json())
-      .then(data => setExam(data));
-  }, [code]);
+    const printContents =
+      document.getElementById("result-sheet").innerHTML;
 
-  // ================= BLOCK CLOSE =================
-  useEffect(() => {
-    const block = (e) => {
-      e.preventDefault();
-      e.returnValue = "";
-    };
+    const win = window.open("", "", "width=1000,height=700");
 
-    window.addEventListener("beforeunload", block);
-    return () => window.removeEventListener("beforeunload", block);
-  }, []);
+    win.document.write(`
+      <html>
+      <head>
+        <title>Exam Result</title>
 
-  // ================= BLOCK BACK =================
-  useEffect(() => {
-    window.history.pushState(null, "", window.location.href);
+        <style>
 
-    const handlePop = () => {
-      window.history.pushState(null, "", window.location.href);
-    };
+          body{
+            font-family: Arial;
+            padding:20px;
+            background:#f8fafc;
+          }
 
-    window.addEventListener("popstate", handlePop);
-    return () => window.removeEventListener("popstate", handlePop);
-  }, []);
+          .card{
+            background:white;
+            padding:20px;
+            border-radius:12px;
+            margin-bottom:20px;
+            box-shadow:0 5px 15px rgba(0,0,0,0.08);
+          }
 
-  // ================= SELECT =================
-  const selectAnswer = (qid, option) => {
-    setAnswers({ ...answers, [qid]: option });
+          .correct{
+            background:#dcfce7;
+            padding:10px;
+            border-radius:8px;
+            margin-top:8px;
+          }
+
+          .wrong{
+            background:#fee2e2;
+            padding:10px;
+            border-radius:8px;
+            margin-top:8px;
+          }
+
+        </style>
+
+      </head>
+
+      <body>
+
+        ${printContents}
+
+      </body>
+
+      </html>
+    `);
+
+    win.document.close();
+
+    setTimeout(() => {
+      win.print();
+    }, 500);
   };
 
-  // ================= SUBMIT =================
-  const submitExam = async () => {
-    if (Object.keys(answers).length === 0) {
-      alert("Please answer at least one question!");
-      return;
-    }
+  return (
 
-    if (!window.confirm("Submit exam?")) return;
-    if (!window.confirm("Final confirm? You can't change later!")) return;
-
-    const res = await fetch(`${API}/api/exams/submit`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        examCode: exam.examCode,
-        name,
-        roll,
-        answers
-      })
-    });
-
-    const data = await res.json();
-
-    setScore(data.score);
-    setReviewData(data);
-  };
-
-  // ================= LOCK + REVIEW =================
-  if (score !== null && reviewData) {
-    return (
-      <div style={{
+    <div
+      style={{
         minHeight: "100vh",
-        padding: 20,
         background: "#0f172a",
-        color: "white"
-      }}>
-        <h1>✅ Exam Submitted</h1>
-        <h2>🎯 Score: {score} / {reviewData.questions.length}</h2>
+        padding: 20
+      }}
+    >
 
-        <p style={{ color: "#f87171" }}>
-          🚫 You cannot leave this page
-        </p>
+      <div
+        id="result-sheet"
+        style={{
+          maxWidth: 1000,
+          margin: "auto"
+        }}
+      >
 
-        <h3 style={{ marginTop: 20 }}>📊 Review</h3>
+        {/* TOP */}
+        <div
+          style={{
+            background: "linear-gradient(135deg,#2563eb,#7c3aed)",
+            borderRadius: 24,
+            padding: 30,
+            color: "white",
+            marginBottom: 25,
+            boxShadow: "0 10px 30px rgba(0,0,0,0.25)"
+          }}
+        >
 
+          <h1
+            style={{
+              fontSize: 40,
+              marginBottom: 10
+            }}
+          >
+            🎉 Exam Completed
+          </h1>
+
+          <h2>
+            {exam.title}
+          </h2>
+
+          <div
+            style={{
+              display: "flex",
+              gap: 20,
+              flexWrap: "wrap",
+              marginTop: 25
+            }}
+          >
+
+            {/* SCORE */}
+            <div
+              style={{
+                flex: 1,
+                minWidth: 200,
+                background: "rgba(255,255,255,0.12)",
+                padding: 20,
+                borderRadius: 18
+              }}
+            >
+              <p style={{ opacity: 0.8 }}>
+                Score
+              </p>
+
+              <h1 style={{ fontSize: 45 }}>
+                {score}/{reviewData.questions.length}
+              </h1>
+            </div>
+
+            {/* CORRECT */}
+            <div
+              style={{
+                flex: 1,
+                minWidth: 200,
+                background: "rgba(34,197,94,0.2)",
+                padding: 20,
+                borderRadius: 18
+              }}
+            >
+              <p>Correct</p>
+
+              <h1 style={{ fontSize: 45 }}>
+                ✅ {score}
+              </h1>
+            </div>
+
+            {/* WRONG */}
+            <div
+              style={{
+                flex: 1,
+                minWidth: 200,
+                background: "rgba(239,68,68,0.2)",
+                padding: 20,
+                borderRadius: 18
+              }}
+            >
+              <p>Wrong</p>
+
+              <h1 style={{ fontSize: 45 }}>
+                ❌ {wrong}
+              </h1>
+            </div>
+
+            {/* PERCENT */}
+            <div
+              style={{
+                flex: 1,
+                minWidth: 200,
+                background: "rgba(255,255,255,0.12)",
+                padding: 20,
+                borderRadius: 18
+              }}
+            >
+              <p>Percentage</p>
+
+              <h1 style={{ fontSize: 45 }}>
+                {percentage}%
+              </h1>
+            </div>
+
+          </div>
+
+        </div>
+
+        {/* DOWNLOAD */}
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "center",
+            marginBottom: 30
+          }}
+        >
+
+          <button
+            onClick={downloadResult}
+            style={{
+              padding: "14px 28px",
+              border: "none",
+              borderRadius: 14,
+              background: "#22c55e",
+              color: "white",
+              fontSize: 18,
+              fontWeight: "bold",
+              cursor: "pointer",
+              boxShadow: "0 8px 20px rgba(0,0,0,0.2)"
+            }}
+          >
+            📄 Download Result
+          </button>
+
+        </div>
+
+        {/* REVIEW */}
         {reviewData.questions.map((q, index) => {
-          const userAns = reviewData.answers[q._id];
-          const correct = q.correctAnswer;
+
+          const userAns =
+            reviewData.answers[q._id];
+
+          const correct =
+            q.correctAnswer;
+
+          const isCorrect =
+            userAns === correct;
 
           return (
-            <div key={index} style={{
-              marginBottom: 20,
-              padding: 15,
-              background: "#1e293b",
-              borderRadius: 10
-            }}>
-              <p>Q{index + 1}: {q.question}</p>
 
+            <div
+              key={index}
+              className="card"
+              style={{
+                background: "white",
+                padding: 25,
+                borderRadius: 20,
+                marginBottom: 20,
+                boxShadow: "0 10px 25px rgba(0,0,0,0.08)"
+              }}
+            >
+
+              {/* QUESTION */}
+              <h2
+                style={{
+                  fontSize: 22,
+                  marginBottom: 18,
+                  color: "#0f172a"
+                }}
+              >
+                Q{index + 1}. {q.question}
+              </h2>
+
+              {/* OPTIONS */}
               {q.options.map((opt, i) => {
-                let bg = "#334155";
 
-                if (opt === correct) bg = "#16a34a";
-                if (opt === userAns && opt !== correct) bg = "#dc2626";
+                let bg = "#f8fafc";
+                let border = "#e2e8f0";
+
+                // correct
+                if (opt === correct) {
+                  bg = "#dcfce7";
+                  border = "#16a34a";
+                }
+
+                // wrong
+                if (
+                  opt === userAns &&
+                  opt !== correct
+                ) {
+                  bg = "#fee2e2";
+                  border = "#dc2626";
+                }
 
                 return (
-                  <div key={i} style={{
-                    marginTop: 8,
-                    padding: 10,
-                    borderRadius: 6,
-                    background: bg
-                  }}>
+
+                  <div
+                    key={i}
+                    style={{
+                      padding: 14,
+                      borderRadius: 12,
+                      marginTop: 10,
+                      background: bg,
+                      border: `2px solid ${border}`,
+                      fontSize: 16,
+                      fontWeight: 500
+                    }}
+                  >
                     {opt}
+
+                    {opt === correct && (
+                      <span>
+                        {" "}✅ Correct
+                      </span>
+                    )}
+
+                    {opt === userAns &&
+                      opt !== correct && (
+                      <span>
+                        {" "}❌ Your Answer
+                      </span>
+                    )}
+
                   </div>
                 );
               })}
+
             </div>
           );
         })}
-      </div>
-    );
-  }
 
-  // ================= LOADING =================
-  if (!exam || !exam.questions)
-    return <h2 style={{ textAlign: "center" }}>Loading...</h2>;
-
-  const q = exam.questions[current];
-  const progress = Math.round(
-    (Object.keys(answers).length / exam.questions.length) * 100
-  );
-
-  // ================= UI =================
-  return (
-    <div style={{ padding: 20, maxWidth: 800, margin: "auto" }}>
-
-      {/* HEADER */}
-      <div style={{
-        position: "sticky",
-        top: 0,
-        background: "#0f172a",
-        padding: 15,
-        borderRadius: 10,
-        marginBottom: 20,
-        color: "white"
-      }}>
-        <h2>{exam.title}</h2>
-
-        <div style={{
-          height: 8,
-          background: "#334155",
-          borderRadius: 10
-        }}>
-          <div style={{
-            width: `${progress}%`,
-            background: "#22c55e",
-            height: "100%"
-          }} />
-        </div>
-
-        <p>{progress}% Completed</p>
       </div>
 
-      {/* USER INFO */}
-      <div style={{ marginBottom: 25 }}>
-        <input
-          placeholder="👤 Enter your name"
-          onChange={e => setName(e.target.value)}
-          style={{
-            width: "100%",
-            padding: 14,
-            marginBottom: 10,
-            borderRadius: 10,
-            border: "1px solid #ccc",
-            fontSize: 16
-          }}
-        />
-
-        <input
-          placeholder="🎫 Enter your roll"
-          onChange={e => setRoll(e.target.value)}
-          style={{
-            width: "100%",
-            padding: 14,
-            borderRadius: 10,
-            border: "1px solid #ccc",
-            fontSize: 16
-          }}
-        />
-      </div>
-
-      {/* QUESTION NAV */}
-      <div style={{ marginBottom: 20 }}>
-        {exam.questions.map((_, i) => (
-          <button
-            key={i}
-            onClick={() => setCurrent(i)}
-            style={{
-              margin: 4,
-              padding: "6px 12px",
-              borderRadius: 6,
-              border: "none",
-              background:
-                answers[exam.questions[i]._id]
-                  ? "#22c55e"
-                  : i === current
-                  ? "#3b82f6"
-                  : "#94a3b8",
-              color: "white"
-            }}
-          >
-            {i + 1}
-          </button>
-        ))}
-      </div>
-
-      {/* QUESTION */}
-      <div style={{
-        padding: 20,
-        borderRadius: 12,
-        background: "#f1f5f9",
-        boxShadow: "0 5px 15px rgba(0,0,0,0.1)"
-      }}>
-        <h3>Q{current + 1}: {q.question}</h3>
-
-        {q.options.map((opt, i) => (
-          <div
-            key={i}
-            onClick={() => selectAnswer(q._id, opt)}
-            style={{
-              padding: 14,
-              marginTop: 12,
-              borderRadius: 10,
-              cursor: "pointer",
-              border: "2px solid",
-              borderColor:
-                answers[q._id] === opt ? "#3b82f6" : "#cbd5f5",
-              background:
-                answers[q._id] === opt ? "#3b82f6" : "#ffffff",
-              color:
-                answers[q._id] === opt ? "white" : "#111",
-              fontWeight: 500,
-              transition: "all 0.2s ease"
-            }}
-          >
-            👉 {opt}
-          </div>
-        ))}
-      </div>
-
-      {/* NAV */}
-     {/* NAV */}
-<div style={{ marginTop: 20 }}>
-
-  <div style={{
-    display: "flex",
-    gap: 12,
-    marginTop: 5
-  }}>
-
-    {/* PREVIOUS */}
-    <button
-      disabled={current === 0}
-      onClick={() => setCurrent(prev => Math.max(prev - 1, 0))}
-      onMouseEnter={(e) => {
-        if (current !== 0) {
-          e.target.style.transform = "scale(1.05)";
-          e.target.style.background = "#4f46e5";
-        }
-      }}
-      onMouseLeave={(e) => {
-        e.target.style.transform = "scale(1)";
-        e.target.style.background =
-          current === 0 ? "#cbd5f5" : "#6366f1";
-      }}
-      onMouseDown={(e) => e.target.style.transform = "scale(0.95)"}
-      onMouseUp={(e) => e.target.style.transform = "scale(1.05)"}
-      style={{
-        flex: 1,
-        padding: "14px",
-        borderRadius: 14,
-        border: "none",
-        background: current === 0 ? "#cbd5f5" : "#6366f1",
-        color: "white",
-        fontSize: 16,
-        fontWeight: "bold",
-        cursor: current === 0 ? "not-allowed" : "pointer",
-        transition: "all 0.2s ease",
-        boxShadow: "0 6px 15px rgba(0,0,0,0.15)"
-      }}
-    >
-      ⬅ Previous
-    </button>
-
-    {/* NEXT */}
-    <button
-      onClick={() =>
-        setCurrent(prev =>
-          Math.min(prev + 1, exam.questions.length - 1)
-        )
-      }
-      onMouseEnter={(e) => {
-        e.target.style.transform = "scale(1.05)";
-        e.target.style.background = "#16a34a";
-      }}
-      onMouseLeave={(e) => {
-        e.target.style.transform = "scale(1)";
-        e.target.style.background = "#22c55e";
-      }}
-      onMouseDown={(e) => e.target.style.transform = "scale(0.95)"}
-      onMouseUp={(e) => e.target.style.transform = "scale(1.05)"}
-      style={{
-        flex: 1,
-        padding: "14px",
-        borderRadius: 14,
-        border: "none",
-        background: "#22c55e",
-        color: "white",
-        fontSize: 16,
-        fontWeight: "bold",
-        cursor: "pointer",
-        transition: "all 0.2s ease",
-        boxShadow: "0 6px 15px rgba(0,0,0,0.15)"
-      }}
-    >
-      Next ➡
-    </button>
-
-  </div>
-
-</div>
-
-      {/* SUBMIT */}
-      <div style={{ marginTop: 20 }}>
-        <button
-          onClick={submitExam}
-          disabled={Object.keys(answers).length === 0}
-          style={{
-            padding: "12px 25px",
-            background:
-              Object.keys(answers).length === 0
-                ? "#9ca3af"
-                : "#16a34a",
-            color: "white",
-            borderRadius: 10,
-            border: "none",
-            cursor:
-              Object.keys(answers).length === 0
-                ? "not-allowed"
-                : "pointer",
-            fontSize: 16,
-            fontWeight: "bold"
-          }}
-        >
-          🚀 Submit Exam
-        </button>
-      </div>
     </div>
   );
 }
-
-export default ExamPage;
