@@ -652,6 +652,15 @@ function Builder() {
                   {q.question}
                 </h2>
 
+{q.image && (
+  <img
+    src={q.image}
+    alt="question"
+    className="my-4 max-w-sm rounded-xl border"
+  />
+)}
+
+
                 {/* OPTIONS */}
                 <div className="grid grid-cols-2 gap-y-5 gap-x-10 text-xl text-gray-700">
 
@@ -905,6 +914,11 @@ function Builder() {
           </div>
 
           {/* QUESTIONS */}
+
+
+          <h2 className="text-2xl font-bold text-gray-800 mb-6 leading-10">
+  {q.question}
+</h2>
           <div
             style={{
               columnCount: 2,
