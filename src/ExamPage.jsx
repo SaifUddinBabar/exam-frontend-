@@ -133,7 +133,7 @@ function ExamPage() {
   // ==============================
   const autoSubmit = () => {
 
-    alert("সময় শেষ! Auto Submit হচ্ছে");
+    alert("সময় শেষ! Auto Submit হচ্ছে");
 
     submitExam();
   };
@@ -151,10 +151,8 @@ function ExamPage() {
         "result-sheet"
       );
 
-    // PDF MODE
     element.classList.add("pdf-mode");
 
-    // wait render
     await new Promise((resolve) =>
       setTimeout(resolve, 300)
     );
@@ -172,22 +170,15 @@ function ExamPage() {
       },
 
       html2canvas: {
-
         scale: 2,
-
         useCORS: true,
-
         backgroundColor: "#071028",
-
         scrollY: 0
       },
 
       jsPDF: {
-
         unit: "mm",
-
         format: "a4",
-
         orientation: "portrait"
       },
 
@@ -201,7 +192,6 @@ function ExamPage() {
       .from(element)
       .save();
 
-    // remove mode
     element.classList.remove("pdf-mode");
   };
 
@@ -227,24 +217,21 @@ function ExamPage() {
         }}
       >
 
-        {/* PDF STYLE */}
         <style>
           {`
-
-            .pdf-mode{
-              background:#071028 !important;
-              padding:20px !important;
+            .pdf-mode {
+              background: #071028 !important;
+              padding: 20px !important;
             }
 
-            .pdf-mode *{
-              box-sizing:border-box;
+            .pdf-mode * {
+              box-sizing: border-box;
             }
 
-            .pdf-mode .question{
+            .pdf-mode .question {
               page-break-inside: avoid !important;
               break-inside: avoid !important;
             }
-
           `}
         </style>
 
@@ -269,7 +256,6 @@ function ExamPage() {
             }}
           >
 
-            {/* TITLE */}
             <div
               style={{
                 display: "flex",
@@ -293,7 +279,6 @@ function ExamPage() {
 
             </div>
 
-            {/* EXAM TITLE */}
             <h2
               style={{
                 fontSize: "clamp(16px,3vw,28px)",
@@ -304,7 +289,6 @@ function ExamPage() {
               {exam.title}
             </h2>
 
-            {/* STATS */}
             <div
               style={{
                 display: "grid",
@@ -317,122 +301,59 @@ function ExamPage() {
               {/* SCORE */}
               <div
                 style={{
-                  background:
-                    "rgba(255,255,255,0.12)",
+                  background: "rgba(255,255,255,0.12)",
                   padding: 20,
                   borderRadius: 20
                 }}
               >
-
-                <p
-                  style={{
-                    opacity: 0.9,
-                    marginBottom: 10,
-                    fontSize: 16
-                  }}
-                >
+                <p style={{ opacity: 0.9, marginBottom: 10, fontSize: 16 }}>
                   Score
                 </p>
-
-                <h1
-                  style={{
-                    fontSize: "clamp(30px,5vw,50px)",
-                    margin: 0
-                  }}
-                >
+                <h1 style={{ fontSize: "clamp(30px,5vw,50px)", margin: 0 }}>
                   {score}/{reviewData.questions.length}
                 </h1>
-
               </div>
 
               {/* CORRECT */}
               <div
                 style={{
-                  background:
-                    "rgba(34,197,94,0.18)",
+                  background: "rgba(34,197,94,0.18)",
                   padding: 20,
                   borderRadius: 20
                 }}
               >
-
-                <p
-                  style={{
-                    marginBottom: 10,
-                    fontSize: 16
-                  }}
-                >
-                  Correct
-                </p>
-
-                <h1
-                  style={{
-                    fontSize: "clamp(30px,5vw,50px)",
-                    margin: 0
-                  }}
-                >
+                <p style={{ marginBottom: 10, fontSize: 16 }}>Correct</p>
+                <h1 style={{ fontSize: "clamp(30px,5vw,50px)", margin: 0 }}>
                   ✅ {score}
                 </h1>
-
               </div>
 
               {/* WRONG */}
               <div
                 style={{
-                  background:
-                    "rgba(239,68,68,0.18)",
+                  background: "rgba(239,68,68,0.18)",
                   padding: 20,
                   borderRadius: 20
                 }}
               >
-
-                <p
-                  style={{
-                    marginBottom: 10,
-                    fontSize: 16
-                  }}
-                >
-                  Wrong
-                </p>
-
-                <h1
-                  style={{
-                    fontSize: "clamp(30px,5vw,50px)",
-                    margin: 0
-                  }}
-                >
+                <p style={{ marginBottom: 10, fontSize: 16 }}>Wrong</p>
+                <h1 style={{ fontSize: "clamp(30px,5vw,50px)", margin: 0 }}>
                   ❌ {wrong}
                 </h1>
-
               </div>
 
               {/* PERCENT */}
               <div
                 style={{
-                  background:
-                    "rgba(255,255,255,0.12)",
+                  background: "rgba(255,255,255,0.12)",
                   padding: 20,
                   borderRadius: 20
                 }}
               >
-
-                <p
-                  style={{
-                    marginBottom: 10,
-                    fontSize: 16
-                  }}
-                >
-                  Percentage
-                </p>
-
-                <h1
-                  style={{
-                    fontSize: "clamp(30px,5vw,50px)",
-                    margin: 0
-                  }}
-                >
+                <p style={{ marginBottom: 10, fontSize: 16 }}>Percentage</p>
+                <h1 style={{ fontSize: "clamp(30px,5vw,50px)", margin: 0 }}>
                   {percentage}%
                 </h1>
-
               </div>
 
             </div>
@@ -497,7 +418,7 @@ function ExamPage() {
                 <h2
                   style={{
                     fontSize: "clamp(18px,3vw,28px)",
-                    marginBottom: 18,
+                    marginBottom: 12,
                     color: "#0f172a",
                     lineHeight: 1.5,
                     wordBreak: "break-word"
@@ -506,26 +427,35 @@ function ExamPage() {
                   Q{index + 1}. {q.question}
                 </h2>
 
+                {/* IMAGE */}
+                {q.image && (
+
+                  <img
+                    src={q.image}
+                    alt="question"
+                    style={{
+                      maxWidth: "320px",
+                      borderRadius: "12px",
+                      border: "1px solid #e2e8f0",
+                      marginBottom: "16px",
+                      display: "block"
+                    }}
+                  />
+                )}
+
                 {/* OPTIONS */}
-                <div
-                  style={{
-                    display: "grid",
-                    gap: 12
-                  }}
-                >
+                <div style={{ display: "grid", gap: 12 }}>
 
                   {q.options.map((opt, i) => {
 
                     let bg = "#f1f5f9";
                     let border = "#cbd5e1";
 
-                    // correct
                     if (opt === correct) {
                       bg = "#dcfce7";
                       border = "#16a34a";
                     }
 
-                    // wrong
                     if (
                       opt === userAns &&
                       opt !== correct
@@ -543,8 +473,7 @@ function ExamPage() {
                           borderRadius: 14,
                           background: bg,
                           border: `2px solid ${border}`,
-                          fontSize:
-                            "clamp(15px,2.7vw,20px)",
+                          fontSize: "clamp(15px,2.7vw,20px)",
                           fontWeight: 500,
                           lineHeight: 1.6,
                           wordBreak: "break-word"
@@ -553,19 +482,13 @@ function ExamPage() {
 
                         {opt}
 
-                        {/* CORRECT */}
                         {opt === correct && (
-                          <span>
-                            {" "}✅ Correct
-                          </span>
+                          <span> ✅ Correct</span>
                         )}
 
-                        {/* WRONG */}
                         {opt === userAns &&
                           opt !== correct && (
-                          <span>
-                            {" "}❌ Your Answer
-                          </span>
+                          <span> ❌ Your Answer</span>
                         )}
 
                       </div>
@@ -648,11 +571,7 @@ function ExamPage() {
             📝 {exam.title}
           </h1>
 
-          <p
-            style={{
-              fontSize: "clamp(18px,3vw,24px)"
-            }}
-          >
+          <p style={{ fontSize: "clamp(18px,3vw,24px)" }}>
             ⏰ Time Left: {formatTime()}
           </p>
 
@@ -732,7 +651,7 @@ function ExamPage() {
             <h2
               style={{
                 fontSize: "clamp(20px,3vw,30px)",
-                marginBottom: 20,
+                marginBottom: 16,
                 color: "#0f172a",
                 lineHeight: 1.5
               }}
@@ -740,13 +659,24 @@ function ExamPage() {
               {index + 1}. {q.question}
             </h2>
 
+            {/* IMAGE */}
+            {q.image && (
+
+              <img
+                src={q.image}
+                alt="question"
+                style={{
+                  maxWidth: "320px",
+                  borderRadius: "12px",
+                  border: "1px solid #e2e8f0",
+                  marginBottom: "16px",
+                  display: "block"
+                }}
+              />
+            )}
+
             {/* OPTIONS */}
-            <div
-              style={{
-                display: "grid",
-                gap: 14
-              }}
-            >
+            <div style={{ display: "grid", gap: 14 }}>
 
               {q.options.map((opt, i) => (
 
@@ -768,8 +698,7 @@ function ExamPage() {
                         : "#f8fafc",
                     cursor: "pointer",
                     textAlign: "left",
-                    fontSize:
-                      "clamp(15px,2.7vw,20px)",
+                    fontSize: "clamp(15px,2.7vw,20px)",
                     fontWeight: 500,
                     lineHeight: 1.6,
                     width: "100%",
