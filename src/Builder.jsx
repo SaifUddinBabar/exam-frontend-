@@ -17,6 +17,12 @@ function Builder() {
   const [chapter, setChapter] = useState("");
   const [examCode, setExamCode] = useState("");
 
+  const [boardYear, setBoardYear] =
+    useState("");
+
+  const [boardName, setBoardName] =
+    useState("");
+
   // PDF compact mode
   const [pdfCompact, setPdfCompact] = useState(false);
 
@@ -36,39 +42,115 @@ function Builder() {
   // ==============================
   useEffect(() => {
 
-    if (!chapter) return;
+    if (!chapter) {
+
+      setQuestions([]);
+
+      return;
+    }
+
+    const params =
+      new URLSearchParams();
+
+    params.append(
+      "subject",
+      examData.subject
+    );
+
+    params.append(
+      "chapter",
+      chapter
+    );
+
+    // BOARD QUESTION
+    if (
+      chapter ===
+      "Board Questions"
+    ) {
+
+      if (!boardYear) {
+
+        setQuestions([]);
+
+        return;
+      }
+
+      params.append(
+        "questionType",
+        "board"
+      );
+
+      params.append(
+        "boardYear",
+        boardYear
+      );
+
+      if (boardName) {
+
+        params.append(
+          "boardName",
+          boardName
+        );
+      }
+
+    }
+
+    // NORMAL QUESTION
+    else {
+
+      params.append(
+        "questionType",
+        "normal"
+      );
+    }
 
     fetch(
-      `${API}/api/questions?chapter=${encodeURIComponent(chapter)}`
+      `${API}/api/questions?${params.toString()}`
     )
-      .then((res) => res.json())
+      .then((res) =>
+        res.json()
+      )
       .then((data) => {
 
         setQuestions(data || []);
 
-        // merge all chapter questions
-        setAllQuestions((prev) => {
+        setAllQuestions(
+          (prev) => {
 
-          const merged = [...prev];
+            const merged =
+              [...prev];
 
-          data.forEach((q) => {
+            data.forEach(
+              (q) => {
 
-            const exists = merged.find(
-              (item) => item._id === q._id
+                const exists =
+                  merged.find(
+                    (item) =>
+                      item._id ===
+                      q._id
+                  );
+
+                if (!exists) {
+                  merged.push(q);
+                }
+              }
             );
 
-            if (!exists) {
-              merged.push(q);
-            }
-          });
-
-          return merged;
-        });
+            return merged;
+          }
+        );
 
       })
-      .catch(() => setQuestions([]));
+      .catch(() =>
+        setQuestions([])
+      );
 
-  }, [chapter]);
+  }, [
+    chapter,
+    boardYear,
+    boardName,
+    examData.subject
+  ]);
 
   // ==============================
   // HANDLE INPUT
@@ -126,7 +208,7 @@ function Builder() {
     }
 
     if (!chapter) {
-      return alert("অধ্যায় নির্বাচন করুন");
+      return alert("অধ্যায় নির্বাচন করুন");
     }
 
     if (selected.length === 0) {
@@ -167,16 +249,9 @@ function Builder() {
   // ==============================
   const copyLink = () => {
 
-    
-
-
     navigator.clipboard.writeText(
       `${window.location.origin}/exam/${examCode}`
     );
-
-
-
-
 
     alert("Link Copied");
   };
@@ -318,7 +393,7 @@ function Builder() {
             <div>
 
               <label className="font-semibold block mb-2 text-lg">
-                বিষয়
+                বিষয়
               </label>
 
               <input
@@ -335,7 +410,7 @@ function Builder() {
             <div>
 
               <label className="font-semibold block mb-2 text-lg">
-                অধ্যায়
+                অধ্যায়
               </label>
 
               <select
@@ -347,7 +422,7 @@ function Builder() {
               >
 
                 <option value="">
-                  অধ্যায় নির্বাচন করুন
+                  অধ্যায় নির্বাচন করুন
                 </option>
 
                 <option value="Introduction to ICT">
@@ -370,7 +445,118 @@ function Builder() {
                   Chapter 5 - Programming
                 </option>
 
+                <option value="Board Questions">
+                  Board Questions
+                </option>
+
               </select>
+
+              {chapter ===
+              "Board Questions" && (
+
+                <div className="mt-5">
+
+                  <label className="font-semibold block mb-2 text-lg">
+                    Board Year
+                  </label>
+
+                  <select
+                    value={boardYear}
+                    onChange={(e) =>
+                      setBoardYear(
+                        e.target.value
+                      )
+                    }
+                    className="
+                      w-full
+                      border
+                      rounded-xl
+                      p-4
+                      text-lg
+                      bg-white
+                    "
+                  >
+
+                    <option value="">
+                      Select Year
+                    </option>
+
+                    <option value="2025">
+                      2025
+                    </option>
+
+                    <option value="2024">
+                      2024
+                    </option>
+
+                    <option value="2023">
+                      2023
+                    </option>
+
+                    <option value="2022">
+                      2022
+                    </option>
+
+                  </select>
+
+                </div>
+              )}
+
+              {chapter ===
+              "Board Questions" &&
+              boardYear && (
+
+                <div className="mt-5">
+
+                  <label className="font-semibold block mb-2 text-lg">
+                    Board Name
+                  </label>
+
+                  <select
+                    value={boardName}
+                    onChange={(e) =>
+                      setBoardName(
+                        e.target.value
+                      )
+                    }
+                    className="
+                      w-full
+                      border
+                      rounded-xl
+                      p-4
+                      text-lg
+                      bg-white
+                    "
+                  >
+
+                    <option value="">
+                      All Board
+                    </option>
+
+                    <option value="Dhaka">
+                      Dhaka
+                    </option>
+
+                    <option value="Chittagong">
+                      Chittagong
+                    </option>
+
+                    <option value="Rajshahi">
+                      Rajshahi
+                    </option>
+
+                    <option value="Cumilla">
+                      Cumilla
+                    </option>
+
+                    <option value="Jessore">
+                      Jessore
+                    </option>
+
+                  </select>
+
+                </div>
+              )}
 
             </div>
 
@@ -395,7 +581,7 @@ function Builder() {
             <div>
 
               <label className="font-semibold block mb-2 text-lg">
-                সময় (মিনিট)
+                সময় (মিনিট)
               </label>
 
               <input
@@ -571,7 +757,7 @@ function Builder() {
             {/* RANKING BUTTON */}
             <div className="flex justify-center mt-5">
 
-              <a
+           <a   
                 href={`/ranking/${examCode}`}
                 target="_blank"
                 rel="noreferrer"
@@ -707,7 +893,7 @@ function Builder() {
             >
 
               <p>
-                সময়: {examData.duration} মিনিট
+                সময়: {examData.duration} মিনিট
               </p>
 
               <p>
@@ -820,7 +1006,7 @@ function Builder() {
       </div>
 
     </div>
-  );
+  )
 }
 
 export default Builder;
