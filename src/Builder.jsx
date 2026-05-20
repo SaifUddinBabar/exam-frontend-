@@ -652,14 +652,15 @@ function Builder() {
                   {q.question}
                 </h2>
 
-{q.image && (
-  <img
-    src={q.image}
-    alt="question"
-    className="my-4 max-w-sm rounded-xl border"
-  />
-)}
+                {/* IMAGE */}
+                {q.image && (
 
+                  <img
+                    src={q.image}
+                    alt="question"
+                    className="my-4 max-w-sm rounded-xl border"
+                  />
+                )}
 
                 {/* OPTIONS */}
                 <div className="grid grid-cols-2 gap-y-5 gap-x-10 text-xl text-gray-700">
@@ -766,8 +767,8 @@ function Builder() {
             {/* RANKING BUTTON */}
             <div className="flex justify-center mt-5">
 
-           <a   
-                href={`/ranking/${examCode}`}
+              
+        <a        href={`/ranking/${examCode}`}
                 target="_blank"
                 rel="noreferrer"
                 className="
@@ -914,11 +915,6 @@ function Builder() {
           </div>
 
           {/* QUESTIONS */}
-
-
-          <h2 className="text-2xl font-bold text-gray-800 mb-6 leading-10">
-  {q.question}
-</h2>
           <div
             style={{
               columnCount: 2,
@@ -958,6 +954,19 @@ function Builder() {
                     {i + 1}. {q.question}
 
                   </h2>
+
+                  {/* IMAGE IN PDF */}
+                  {q.image && (
+
+                    <img
+                      src={q.image}
+                      alt="question"
+                      style={{
+                        maxWidth: "100%",
+                        marginBottom: "4px"
+                      }}
+                    />
+                  )}
 
                   {/* OPTIONS */}
                   <div
