@@ -1,10 +1,10 @@
 import { useState, useEffect } from "react";
 import html2pdf from "html2pdf.js";
-
+ 
 const API = import.meta.env.VITE_API_URL;
-
+ 
 function Builder() {
-
+ 
   // ==============================
   // STATES
   // ==============================
@@ -13,15 +13,15 @@ function Builder() {
   const [selected, setSelected] = useState([]);
   const [chapter, setChapter] = useState("");
   const [examCode, setExamCode] = useState("");
-
+ 
   const [boardYear, setBoardYear] =
     useState("");
-
+ 
   const [boardName, setBoardName] =
     useState("");
-
+ 
   const [pdfCompact, setPdfCompact] = useState(false);
-
+ 
   const [examData, setExamData] = useState({
     academy: "",
     title: "",
@@ -29,7 +29,7 @@ function Builder() {
     subject: "ICT",
     marks: "25"
   });
-
+ 
   // ==============================
   // EXAM LIST STATES
   // ==============================
@@ -37,152 +37,163 @@ function Builder() {
   const [stats, setStats] = useState(null);
   const [loadingExams, setLoadingExams] = useState(false);
   const [activeTab, setActiveTab] = useState("builder");
-
+ 
   // ==============================
   // FETCH EXAM LIST
   // ==============================
   const fetchExamList = async () => {
-
+ 
     setLoadingExams(true);
-
+ 
     try {
-
+ 
       const [examsRes, statsRes] = await Promise.all([
         fetch(`${API}/api/exams/list`),
         fetch(`${API}/api/exams/stats`)
       ]);
-
+ 
       const examsData = await examsRes.json();
       const statsData = await statsRes.json();
-
+ 
       setExamList(examsData || []);
       setStats(statsData);
-
+ 
     } catch {
-
+ 
       setExamList([]);
-
+ 
     } finally {
-
+ 
       setLoadingExams(false);
     }
   };
-
+ 
   useEffect(() => {
-
+ 
     if (activeTab === "exams") {
       fetchExamList();
     }
-
+ 
   }, [activeTab]);
-
+ 
   // ==============================
   // DELETE EXAM
   // ==============================
   const deleteExam = async (examCode) => {
-
+ 
     const confirm = window.confirm(
       "এই exam এবং সব submissions delete হয়ে যাবে। নিশ্চিত?"
     );
-
+ 
     if (!confirm) return;
-
+ 
     try {
-
+ 
       await fetch(
         `${API}/api/exams/${examCode}`,
         { method: "DELETE" }
       );
-
+ 
       setExamList((prev) =>
         prev.filter((e) => e.examCode !== examCode)
       );
-
+ 
       fetchExamList();
-
+ 
     } catch {
-
+ 
       alert("Delete failed");
     }
   };
-
+ 
   // ==============================
   // FETCH QUESTIONS
   // ==============================
   useEffect(() => {
-
+ 
     if (!chapter) {
       setQuestions([]);
+      // ✅ FIX: chapter clear হলে allQuestions ও selected reset করো
+      setAllQuestions([]);
+      setSelected([]);
       return;
     }
-
+ 
     const params = new URLSearchParams();
-
+ 
     params.append("subject", examData.subject);
     params.append("chapter", chapter);
-
+ 
     if (chapter === "Board Questions") {
-
+ 
       if (!boardYear || !boardName) {
         setQuestions([]);
         return;
       }
-
+ 
       params.append("questionType", "board");
       params.append("boardYear", boardYear);
       params.append("boardName", boardName);
-
+ 
     } else {
-
+ 
       params.append("questionType", "normal");
     }
-
+ 
     fetch(`${API}/api/questions?${params.toString()}`)
       .then((res) => res.json())
       .then((data) => {
-
+ 
         const fetched = data || [];
-
+ 
         setQuestions(fetched);
-
+ 
         if (chapter === "Board Questions") {
-
+ 
+          // ✅ FIX: Board questions এর ক্ষেত্রে শুধু
+          // এই board এর questions দিয়ে allQuestions replace করো
+          // যাতে আগের board এর questions মিশে না থাকে
+          setAllQuestions(fetched);
+ 
           setSelected(fetched.map((q) => q._id));
-
+ 
           setExamData((prev) => ({
             ...prev,
             marks: String(fetched.length)
           }));
-        }
-
-        setAllQuestions((prev) => {
-
-          const merged = [...prev];
-
-          fetched.forEach((q) => {
-
-            const exists = merged.find(
-              (item) => item._id === q._id
-            );
-
-            if (!exists) {
-              merged.push(q);
-            }
+ 
+        } else {
+ 
+          // Normal chapter হলে merge করো (আগের মতো)
+          setAllQuestions((prev) => {
+ 
+            const merged = [...prev];
+ 
+            fetched.forEach((q) => {
+ 
+              const exists = merged.find(
+                (item) => item._id === q._id
+              );
+ 
+              if (!exists) {
+                merged.push(q);
+              }
+            });
+ 
+            return merged;
           });
-
-          return merged;
-        });
-
+        }
+ 
       })
       .catch(() => setQuestions([]));
-
+ 
   }, [
     chapter,
     boardYear,
     boardName,
     examData.subject
   ]);
-
+ 
   // ==============================
   // HANDLE INPUT
   // ==============================
@@ -192,56 +203,63 @@ function Builder() {
       [e.target.name]: e.target.value
     });
   };
-
+ 
   // ==============================
   // SELECT QUESTION
   // ==============================
   const toggleSelect = (id) => {
-
+ 
     if (selected.includes(id)) {
       setSelected((prev) =>
         prev.filter((q) => q !== id)
       );
       return;
     }
-
+ 
     const limit = Number(examData.marks);
-
+ 
     if (selected.length >= limit) {
       alert(`আপনি সর্বোচ্চ ${limit} টি প্রশ্ন সিলেক্ট করতে পারবেন`);
       return;
     }
-
+ 
     setSelected((prev) => [...prev, id]);
   };
-
+ 
   // ==============================
   // SELECT ALL / DESELECT ALL
   // ==============================
   const selectAll = () => {
-    setSelected(questions.map((q) => q._id));
-    setExamData((prev) => ({
-      ...prev,
-      marks: String(questions.length)
-    }));
+    // ✅ FIX: শুধু current questions এর IDs select করো
+    // marks কে override করো না — user যা দিয়েছে সেটাই থাকবে
+    const currentIds = questions.map((q) => q._id);
+    setSelected(currentIds);
+ 
+    // ✅ শুধু board questions এর ক্ষেত্রে marks update করো
+    if (chapter === "Board Questions") {
+      setExamData((prev) => ({
+        ...prev,
+        marks: String(questions.length)
+      }));
+    }
   };
-
+ 
   const deselectAll = () => {
     setSelected([]);
   };
-
+ 
   // ==============================
   // CREATE EXAM
   // ==============================
   const createExam = async () => {
-
+ 
     if (!examData.academy) return alert("একাডেমির নাম লিখুন");
     if (!examData.title) return alert("পরীক্ষার নাম লিখুন");
     if (!chapter) return alert("অধ্যায় নির্বাচন করুন");
     if (selected.length === 0) return alert("প্রশ্ন সিলেক্ট করুন");
-
+ 
     try {
-
+ 
       const res = await fetch(`${API}/api/exams/create`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -251,16 +269,16 @@ function Builder() {
           questions: selected
         })
       });
-
+ 
       const data = await res.json();
       setExamCode(data.examCode);
       alert("Exam Created Successfully");
-
+ 
     } catch {
       alert("Create Failed");
     }
   };
-
+ 
   // ==============================
   // COPY LINK
   // ==============================
@@ -270,25 +288,25 @@ function Builder() {
     );
     alert("Link Copied!");
   };
-
+ 
   // ==============================
   // PDF DOWNLOAD
   // ==============================
   const downloadPDF = async () => {
-
+ 
     if (selected.length > 20) {
       setPdfCompact(true);
     } else {
       setPdfCompact(false);
     }
-
+ 
     await new Promise((resolve) =>
       setTimeout(resolve, 300)
     );
-
+ 
     const element =
       document.getElementById("question-paper");
-
+ 
     const options = {
       margin: 0,
       filename: `${examData.title || "question-paper"}.pdf`,
@@ -297,17 +315,17 @@ function Builder() {
       jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
       pagebreak: { mode: ["avoid-all", "css", "legacy"] }
     };
-
+ 
     await html2pdf().set(options).from(element).save();
-
+ 
     setPdfCompact(false);
   };
-
+ 
   // ==============================
   // RENDER
   // ==============================
   return (
-
+ 
     <div
       className="min-h-screen"
       style={{
@@ -316,7 +334,7 @@ function Builder() {
           "linear-gradient(135deg, #0f0c29, #302b63, #24243e)"
       }}
     >
-
+ 
       {/* ==============================
           TOPBAR
       ============================== */}
@@ -330,11 +348,11 @@ function Builder() {
           zIndex: 100
         }}
       >
-
+ 
         <div className="max-w-6xl mx-auto px-6 py-4 flex justify-between items-center">
-
+ 
           <div className="flex items-center gap-3">
-
+ 
             <div
               style={{
                 background:
@@ -347,7 +365,7 @@ function Builder() {
                 📝
               </span>
             </div>
-
+ 
             <div>
               <h1 className="text-white text-2xl font-bold tracking-wide">
                 প্রশ্নব্যাংক
@@ -361,12 +379,12 @@ function Builder() {
                 Question Bank Builder
               </p>
             </div>
-
+ 
           </div>
-
+ 
           {/* TAB BUTTONS */}
           <div className="flex items-center gap-3">
-
+ 
             <button
               onClick={() => setActiveTab("builder")}
               style={{
@@ -385,7 +403,7 @@ function Builder() {
             >
               📝 Builder
             </button>
-
+ 
             <button
               onClick={() => setActiveTab("exams")}
               style={{
@@ -404,23 +422,23 @@ function Builder() {
             >
               📋 Exam List
             </button>
-
+ 
           </div>
-
+ 
         </div>
-
+ 
       </div>
-
+ 
       {/* ==============================
           EXAM LIST TAB
       ============================== */}
       {activeTab === "exams" && (
-
+ 
         <div className="max-w-6xl mx-auto px-6 py-8">
-
+ 
           {/* STATS */}
           {stats && (
-
+ 
             <div
               style={{
                 display: "grid",
@@ -430,7 +448,7 @@ function Builder() {
                 marginBottom: "32px"
               }}
             >
-
+ 
               {[
                 {
                   label: "মোট Exam",
@@ -451,7 +469,7 @@ function Builder() {
                   color: "#f5576c"
                 }
               ].map((s, i) => (
-
+ 
                 <div
                   key={i}
                   style={{
@@ -463,7 +481,7 @@ function Builder() {
                     textAlign: "center"
                   }}
                 >
-
+ 
                   <div
                     style={{
                       fontSize: "32px",
@@ -472,7 +490,7 @@ function Builder() {
                   >
                     {s.icon}
                   </div>
-
+ 
                   <div
                     style={{
                       color: s.color,
@@ -483,7 +501,7 @@ function Builder() {
                   >
                     {s.value}
                   </div>
-
+ 
                   <div
                     style={{
                       color: "rgba(255,255,255,0.5)",
@@ -492,13 +510,13 @@ function Builder() {
                   >
                     {s.label}
                   </div>
-
+ 
                 </div>
               ))}
-
+ 
             </div>
           )}
-
+ 
           {/* EXAM LIST HEADER */}
           <div
             style={{
@@ -510,7 +528,7 @@ function Builder() {
               gap: "12px"
             }}
           >
-
+ 
             <h2
               style={{
                 color: "white",
@@ -520,7 +538,7 @@ function Builder() {
             >
               সব Exam তালিকা
             </h2>
-
+ 
             <button
               onClick={fetchExamList}
               style={{
@@ -536,12 +554,12 @@ function Builder() {
             >
               🔄 Refresh
             </button>
-
+ 
           </div>
-
+ 
           {/* LOADING */}
           {loadingExams && (
-
+ 
             <div
               style={{
                 textAlign: "center",
@@ -553,10 +571,10 @@ function Builder() {
               Loading...
             </div>
           )}
-
+ 
           {/* EXAM CARDS */}
           {!loadingExams && examList.length === 0 && (
-
+ 
             <div
               style={{
                 textAlign: "center",
@@ -568,16 +586,16 @@ function Builder() {
               কোনো Exam পাওয়া যায়নি
             </div>
           )}
-
+ 
           <div
             style={{
               display: "grid",
               gap: "16px"
             }}
           >
-
+ 
             {examList.map((exam) => (
-
+ 
               <div
                 key={exam._id}
                 style={{
@@ -593,10 +611,10 @@ function Builder() {
                   gap: "16px"
                 }}
               >
-
+ 
                 {/* LEFT INFO */}
                 <div style={{ flex: 1 }}>
-
+ 
                   <h3
                     style={{
                       color: "white",
@@ -607,7 +625,7 @@ function Builder() {
                   >
                     {exam.title}
                   </h3>
-
+ 
                   <div
                     style={{
                       display: "flex",
@@ -615,7 +633,7 @@ function Builder() {
                       gap: "12px"
                     }}
                   >
-
+ 
                     <span
                       style={{
                         background: "rgba(102,126,234,0.2)",
@@ -630,7 +648,7 @@ function Builder() {
                     >
                       🔑 {exam.examCode}
                     </span>
-
+ 
                     <span
                       style={{
                         background: "rgba(17,153,142,0.2)",
@@ -645,7 +663,7 @@ function Builder() {
                     >
                       ❓ {exam.questions?.length || 0} প্রশ্ন
                     </span>
-
+ 
                     <span
                       style={{
                         background: "rgba(245,87,108,0.15)",
@@ -660,7 +678,7 @@ function Builder() {
                     >
                       ✅ {exam.submissionCount || 0} Submission
                     </span>
-
+ 
                     <span
                       style={{
                         background: "rgba(255,255,255,0.08)",
@@ -672,11 +690,11 @@ function Builder() {
                     >
                       ⏱️ {exam.duration} মিনিট
                     </span>
-
+ 
                   </div>
-
+ 
                 </div>
-
+ 
                 {/* RIGHT BUTTONS */}
                 <div
                   style={{
@@ -685,7 +703,7 @@ function Builder() {
                     flexWrap: "wrap"
                   }}
                 >
-
+ 
                   {/* COPY LINK */}
                   <button
                     onClick={() => {
@@ -709,7 +727,7 @@ function Builder() {
                   >
                     📋 Link Copy
                   </button>
-
+ 
                   {/* RANKING */}
                  <a 
                     href={`/ranking/${exam.examCode}`}
@@ -732,7 +750,7 @@ function Builder() {
                   >
                     🏆 Ranking
                   </a>
-
+ 
                   {/* DELETE */}
                   <button
                     onClick={() =>
@@ -753,24 +771,24 @@ function Builder() {
                   >
                     🗑️ Delete
                   </button>
-
+ 
                 </div>
-
+ 
               </div>
             ))}
-
+ 
           </div>
-
+ 
         </div>
       )}
-
+ 
       {/* ==============================
           BUILDER TAB
       ============================== */}
       {activeTab === "builder" && (
-
+ 
         <div className="max-w-6xl mx-auto px-6 py-8">
-
+ 
           {/* FORM CARD */}
           <div
             style={{
@@ -782,13 +800,13 @@ function Builder() {
               marginBottom: "32px"
             }}
           >
-
+ 
             <div className="text-center mb-8">
-
+ 
               <h2 className="text-white text-3xl font-bold mb-2">
                 পরীক্ষার তথ্য পূরণ করুন
               </h2>
-
+ 
               <p
                 style={{
                   color: "rgba(255,255,255,0.5)"
@@ -796,14 +814,14 @@ function Builder() {
               >
                 নিচের তথ্যগুলো সঠিকভাবে পূরণ করুন
               </p>
-
+ 
             </div>
-
+ 
             <div className="grid md:grid-cols-2 gap-5">
-
+ 
               {/* ACADEMY */}
               <div>
-
+ 
                 <label
                   style={{
                     color: "rgba(255,255,255,0.7)",
@@ -815,7 +833,7 @@ function Builder() {
                 >
                   🏫 একাডেমি / কলেজের নাম
                 </label>
-
+ 
                 <input
                   type="text"
                   name="academy"
@@ -835,12 +853,12 @@ function Builder() {
                     boxSizing: "border-box"
                   }}
                 />
-
+ 
               </div>
-
+ 
               {/* EXAM TITLE */}
               <div>
-
+ 
                 <label
                   style={{
                     color: "rgba(255,255,255,0.7)",
@@ -852,7 +870,7 @@ function Builder() {
                 >
                   📋 পরীক্ষার নাম
                 </label>
-
+ 
                 <input
                   type="text"
                   name="title"
@@ -872,12 +890,12 @@ function Builder() {
                     boxSizing: "border-box"
                   }}
                 />
-
+ 
               </div>
-
+ 
               {/* SUBJECT */}
               <div>
-
+ 
                 <label
                   style={{
                     color: "rgba(255,255,255,0.7)",
@@ -889,7 +907,7 @@ function Builder() {
                 >
                   📚 বিষয়
                 </label>
-
+ 
                 <input
                   type="text"
                   name="subject"
@@ -908,12 +926,12 @@ function Builder() {
                     boxSizing: "border-box"
                   }}
                 />
-
+ 
               </div>
-
+ 
               {/* CHAPTER */}
               <div>
-
+ 
                 <label
                   style={{
                     color: "rgba(255,255,255,0.7)",
@@ -925,12 +943,14 @@ function Builder() {
                 >
                   📖 অধ্যায়
                 </label>
-
+ 
                 <select
                   value={chapter}
                   onChange={(e) => {
                     setChapter(e.target.value);
                     setSelected([]);
+                    // ✅ FIX: chapter change হলে allQuestions reset করো
+                    setAllQuestions([]);
                     setBoardYear("");
                     setBoardName("");
                   }}
@@ -969,12 +989,12 @@ function Builder() {
                     🏆 Board Questions
                   </option>
                 </select>
-
+ 
                 {/* BOARD YEAR */}
                 {chapter === "Board Questions" && (
-
+ 
                   <div className="mt-4">
-
+ 
                     <label
                       style={{
                         color: "rgba(255,255,255,0.7)",
@@ -986,12 +1006,14 @@ function Builder() {
                     >
                       📅 Board Year
                     </label>
-
+ 
                     <select
                       value={boardYear}
                       onChange={(e) => {
                         setBoardYear(e.target.value);
                         setSelected([]);
+                        // ✅ FIX: year change হলে allQuestions ও reset করো
+                        setAllQuestions([]);
                         setBoardName("");
                       }}
                       style={{
@@ -1013,16 +1035,16 @@ function Builder() {
                       <option value="2023">2023</option>
                       <option value="2022">2022</option>
                     </select>
-
+ 
                   </div>
                 )}
-
+ 
                 {/* BOARD NAME */}
                 {chapter === "Board Questions" &&
                   boardYear && (
-
+ 
                   <div className="mt-4">
-
+ 
                     <label
                       style={{
                         color: "rgba(255,255,255,0.7)",
@@ -1034,12 +1056,16 @@ function Builder() {
                     >
                       🏛️ Board Name
                     </label>
-
+ 
                     <select
                       value={boardName}
-                      onChange={(e) =>
-                        setBoardName(e.target.value)
-                      }
+                      onChange={(e) => {
+                        // ✅ FIX: board name change হলে আগের board এর
+                        // questions ও selected clear করো
+                        setSelected([]);
+                        setAllQuestions([]);
+                        setBoardName(e.target.value);
+                      }}
                       style={{
                         width: "100%",
                         background: "rgba(30,25,60,0.95)",
@@ -1060,15 +1086,15 @@ function Builder() {
                       <option value="Cumilla">Cumilla</option>
                       <option value="Jessore">Jessore</option>
                     </select>
-
+ 
                   </div>
                 )}
-
+ 
               </div>
-
+ 
               {/* MARKS */}
               <div>
-
+ 
                 <label
                   style={{
                     color: "rgba(255,255,255,0.7)",
@@ -1080,7 +1106,7 @@ function Builder() {
                 >
                   🎯 প্রশ্ন সংখ্যা
                 </label>
-
+ 
                 <input
                   type="number"
                   name="marks"
@@ -1099,12 +1125,12 @@ function Builder() {
                     boxSizing: "border-box"
                   }}
                 />
-
+ 
               </div>
-
+ 
               {/* DURATION */}
               <div>
-
+ 
                 <label
                   style={{
                     color: "rgba(255,255,255,0.7)",
@@ -1116,7 +1142,7 @@ function Builder() {
                 >
                   ⏱️ সময় (মিনিট)
                 </label>
-
+ 
                 <input
                   type="number"
                   name="duration"
@@ -1135,16 +1161,16 @@ function Builder() {
                     boxSizing: "border-box"
                   }}
                 />
-
+ 
               </div>
-
+ 
             </div>
-
+ 
           </div>
-
+ 
           {/* QUESTION HEADER */}
           {questions.length > 0 && (
-
+ 
             <div
               style={{
                 background: "rgba(255,255,255,0.07)",
@@ -1161,13 +1187,13 @@ function Builder() {
                 gap: "16px"
               }}
             >
-
+ 
               <div>
-
+ 
                 <h2 className="text-white text-2xl font-bold mb-1">
                   প্রশ্ন সিলেক্ট করুন
                 </h2>
-
+ 
                 <p
                   style={{
                     color: "rgba(255,255,255,0.5)",
@@ -1176,11 +1202,11 @@ function Builder() {
                 >
                   মোট {questions.length}টি প্রশ্ন পাওয়া গেছে
                 </p>
-
+ 
               </div>
-
+ 
               <div className="flex items-center gap-4">
-
+ 
                 <div
                   style={{
                     background:
@@ -1194,7 +1220,7 @@ function Builder() {
                 >
                   ✅ {selected.length} / {examData.marks}
                 </div>
-
+ 
                 <button
                   onClick={selectAll}
                   style={{
@@ -1211,7 +1237,7 @@ function Builder() {
                 >
                   সব Select
                 </button>
-
+ 
                 <button
                   onClick={deselectAll}
                   style={{
@@ -1228,21 +1254,21 @@ function Builder() {
                 >
                   সব Deselect
                 </button>
-
+ 
               </div>
-
+ 
             </div>
           )}
-
+ 
           {/* QUESTIONS UI */}
           <div className="space-y-4">
-
+ 
             {questions.map((q, index) => {
-
+ 
               const active = selected.includes(q._id);
-
+ 
               return (
-
+ 
                 <div
                   key={q._id}
                   onClick={() => toggleSelect(q._id)}
@@ -1263,9 +1289,9 @@ function Builder() {
                       : "none"
                   }}
                 >
-
+ 
                   <div className="flex items-start gap-4">
-
+ 
                     {/* NUMBER BADGE */}
                     <div
                       style={{
@@ -1286,9 +1312,9 @@ function Builder() {
                     >
                       {active ? "✓" : index + 1}
                     </div>
-
+ 
                     <div style={{ flex: 1 }}>
-
+ 
                       {/* QUESTION */}
                       <h2
                         style={{
@@ -1301,10 +1327,10 @@ function Builder() {
                       >
                         {q.question}
                       </h2>
-
+ 
                       {/* IMAGE */}
                       {q.image && (
-
+ 
                         <img
                           src={q.image}
                           alt="question"
@@ -1317,7 +1343,7 @@ function Builder() {
                           }}
                         />
                       )}
-
+ 
                       {/* OPTIONS */}
                       <div
                         style={{
@@ -1326,14 +1352,14 @@ function Builder() {
                           gap: "10px"
                         }}
                       >
-
+ 
                         {q.options?.map((opt, idx) => {
-
+ 
                           const labels =
                             ["ক", "খ", "গ", "ঘ"];
-
+ 
                           return (
-
+ 
                             <div
                               key={idx}
                               style={{
@@ -1348,7 +1374,7 @@ function Builder() {
                                 gap: "8px"
                               }}
                             >
-
+ 
                               <span
                                 style={{
                                   color: "#a78bfa",
@@ -1358,28 +1384,28 @@ function Builder() {
                               >
                                 {labels[idx]}.
                               </span>
-
+ 
                               <span>{opt}</span>
-
+ 
                             </div>
                           );
                         })}
-
+ 
                       </div>
-
+ 
                     </div>
-
+ 
                   </div>
-
+ 
                 </div>
               );
             })}
-
+ 
           </div>
-
+ 
           {/* ACTION BUTTONS */}
           {questions.length > 0 && (
-
+ 
             <div
               style={{
                 display: "flex",
@@ -1389,7 +1415,7 @@ function Builder() {
                 flexWrap: "wrap"
               }}
             >
-
+ 
               <button
                 onClick={createExam}
                 style={{
@@ -1408,7 +1434,7 @@ function Builder() {
               >
                 🚀 অনলাইনে পরীক্ষা নিন
               </button>
-
+ 
               <button
                 onClick={downloadPDF}
                 style={{
@@ -1427,13 +1453,13 @@ function Builder() {
               >
                 📄 PDF Download
               </button>
-
+ 
             </div>
           )}
-
+ 
           {/* STUDENT LINK */}
           {examCode && (
-
+ 
             <div
               style={{
                 background: "rgba(255,255,255,0.07)",
@@ -1446,7 +1472,7 @@ function Builder() {
                 textAlign: "center"
               }}
             >
-
+ 
               <div
                 style={{
                   width: "64px",
@@ -1463,7 +1489,7 @@ function Builder() {
               >
                 ✅
               </div>
-
+ 
               <h2
                 style={{
                   color: "white",
@@ -1474,7 +1500,7 @@ function Builder() {
               >
                 Exam তৈরি সফল হয়েছে!
               </h2>
-
+ 
               <p
                 style={{
                   color: "rgba(255,255,255,0.5)",
@@ -1484,7 +1510,7 @@ function Builder() {
               >
                 নিচের লিংকটি স্টুডেন্টদের দিন
               </p>
-
+ 
               <div
                 style={{
                   background: "rgba(0,0,0,0.3)",
@@ -1500,7 +1526,7 @@ function Builder() {
               >
                 {window.location.origin}/exam/{examCode}
               </div>
-
+ 
               <div
                 style={{
                   display: "flex",
@@ -1509,7 +1535,7 @@ function Builder() {
                   flexWrap: "wrap"
                 }}
               >
-
+ 
                 <button
                   onClick={copyLink}
                   style={{
@@ -1526,7 +1552,7 @@ function Builder() {
                 >
                   📋 Link Copy করুন
                 </button>
-
+ 
               <a  
                   href={`/ranking/${examCode}`}
                   target="_blank"
@@ -1545,18 +1571,18 @@ function Builder() {
                 >
                   🏆 View Ranking
                 </a>
-
+ 
               </div>
-
+ 
             </div>
           )}
-
+ 
           {/* PRINTABLE QUESTION PAPER */}
           <div
             id="question-paper"
             className="bg-white mt-10 shadow-xl mx-auto preview-paper"
           >
-
+ 
             <style>
               {`
                 .preview-paper {
@@ -1567,31 +1593,31 @@ function Builder() {
                   box-sizing: border-box;
                   overflow: hidden;
                 }
-
+ 
                 .preview-paper * {
                   box-sizing: border-box;
                   word-break: break-word;
                   overflow-wrap: break-word;
                 }
-
+ 
                 .question-block {
                   width: 100%;
                   margin-bottom: 12px;
                   page-break-inside: avoid;
                   break-inside: avoid;
                 }
-
+ 
                 .question-title {
                   font-weight: 700;
                   text-align: justify;
                 }
-
+ 
                 .option-line {
                   display: flex;
                   gap: 4px;
                   align-items: flex-start;
                 }
-
+ 
                 @media screen and (max-width: 900px) {
                   .preview-paper {
                     width: 100%;
@@ -1600,10 +1626,10 @@ function Builder() {
                 }
               `}
             </style>
-
+ 
             {/* HEADER */}
             <div className="text-center border-b pb-3 mb-4">
-
+ 
               <div className="inline-block bg-black px-5 py-1 mb-2">
                 <h1
                   className={`text-white font-bold ${pdfCompact ? "text-base" : "text-2xl"}`}
@@ -1611,28 +1637,28 @@ function Builder() {
                   {examData.subject}
                 </h1>
               </div>
-
+ 
               <h2
                 className={`font-bold ${pdfCompact ? "text-sm" : "text-xl"}`}
               >
                 {examData.academy}
               </h2>
-
+ 
               <p
                 className={`text-gray-700 mt-1 ${pdfCompact ? "text-[10px]" : "text-sm"}`}
               >
                 {examData.title}
               </p>
-
+ 
               <div
                 className={`flex justify-between mt-3 border-t pt-2 ${pdfCompact ? "text-[9px]" : "text-sm"}`}
               >
                 <p>সময়: {examData.duration} মিনিট</p>
                 <p>পূর্ণমান: {examData.marks}</p>
               </div>
-
+ 
             </div>
-
+ 
             {/* PDF QUESTIONS */}
             <div
               style={{
@@ -1640,18 +1666,18 @@ function Builder() {
                 columnGap: pdfCompact ? "14px" : "28px"
               }}
             >
-
+ 
               {allQuestions
                 .filter((q) =>
                   selected.includes(q._id)
                 )
                 .map((q, i) => (
-
+ 
                   <div
                     key={q._id}
                     className="question-block"
                   >
-
+ 
                     <h2
                       className="question-title"
                       style={{
@@ -1666,7 +1692,7 @@ function Builder() {
                     >
                       {i + 1}. {q.question}
                     </h2>
-
+ 
                     {q.image && (
                       <img
                         src={q.image}
@@ -1677,7 +1703,7 @@ function Builder() {
                         }}
                       />
                     )}
-
+ 
                     <div
                       style={{
                         display: "grid",
@@ -1693,12 +1719,12 @@ function Builder() {
                           : "15px"
                       }}
                     >
-
+ 
                       {q.options?.map((opt, idx) => {
-
+ 
                         const labels =
                           ["ক", "খ", "গ", "ঘ"];
-
+ 
                         return (
                           <div
                             key={idx}
@@ -1715,21 +1741,21 @@ function Builder() {
                           </div>
                         );
                       })}
-
+ 
                     </div>
-
+ 
                   </div>
                 ))}
-
+ 
             </div>
-
+ 
           </div>
-
+ 
         </div>
       )}
-
+ 
     </div>
   );
 }
-
+ 
 export default Builder;
