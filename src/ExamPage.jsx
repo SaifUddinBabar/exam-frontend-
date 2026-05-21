@@ -16,6 +16,7 @@ function ExamPage() {
   const [roll, setRoll] = useState("");
   const [score, setScore] = useState(null);
   const [reviewData, setReviewData] = useState(null);
+  const [submitted, setSubmitted] = useState(false);
 
   // TIMER
   const [timeLeft, setTimeLeft] = useState(null);
@@ -28,9 +29,7 @@ function ExamPage() {
     fetch(`${API}/api/exams/${code}`)
       .then((res) => res.json())
       .then((data) => {
-
         setExam(data);
-
         if (data.duration) {
           setTimeLeft(data.duration * 60);
         }
@@ -39,64 +38,58 @@ function ExamPage() {
   }, [code]);
 
   // ==============================
-  // TIMER
+  // TIMER — FIXED
   // ==============================
   useEffect(() => {
 
     if (timeLeft === null) return;
 
+    // ✅ submit হলে timer বন্ধ
+    if (submitted) return;
+
     if (timeLeft <= 0) {
-
       autoSubmit();
-
       return;
     }
 
     const timer = setInterval(() => {
-
       setTimeLeft((prev) => prev - 1);
-
     }, 1000);
 
     return () => clearInterval(timer);
 
-  }, [timeLeft]);
+  }, [timeLeft, submitted]);
 
   // ==============================
   // FORMAT TIME
   // ==============================
   const formatTime = () => {
-
-    const minutes =
-      Math.floor(timeLeft / 60);
-
-    const seconds =
-      timeLeft % 60;
-
-    return `${minutes}:${seconds
-      .toString()
-      .padStart(2, "0")}`;
+    const minutes = Math.floor(timeLeft / 60);
+    const seconds = timeLeft % 60;
+    return `${minutes}:${seconds.toString().padStart(2, "0")}`;
   };
 
   // ==============================
   // ANSWER
   // ==============================
   const handleAnswer = (qid, option) => {
-
-    setAnswers({
-      ...answers,
-      [qid]: option
-    });
+    setAnswers({ ...answers, [qid]: option });
   };
 
   // ==============================
-  // SUBMIT
+  // SUBMIT — FIXED
   // ==============================
   const submitExam = async () => {
+
+    // ✅ double submit বন্ধ
+    if (submitted) return;
 
     if (!name || !roll) {
       return alert("Name & Roll Required");
     }
+
+    // ✅ সাথে সাথে submitted true করো
+    setSubmitted(true);
 
     try {
 
@@ -119,19 +112,22 @@ function ExamPage() {
       const data = await res.json();
 
       setScore(data.score);
-
       setReviewData(data);
 
     } catch {
-
+      // ✅ error হলে submitted reset করো
+      setSubmitted(false);
       alert("Submit Failed");
     }
   };
 
   // ==============================
-  // AUTO SUBMIT
+  // AUTO SUBMIT — FIXED
   // ==============================
   const autoSubmit = () => {
+
+    // ✅ আগেই submit হলে বন্ধ
+    if (submitted) return;
 
     alert("সময় শেষ! Auto Submit হচ্ছে");
 
@@ -143,54 +139,33 @@ function ExamPage() {
   // ==============================
   const downloadResult = async () => {
 
-    const html2pdf =
-      (await import("html2pdf.js")).default;
+    const html2pdf = (await import("html2pdf.js")).default;
 
-    const element =
-      document.getElementById(
-        "result-sheet"
-      );
+    const element = document.getElementById("result-sheet");
 
     element.classList.add("pdf-mode");
 
-    await new Promise((resolve) =>
-      setTimeout(resolve, 300)
-    );
+    await new Promise((resolve) => setTimeout(resolve, 300));
 
     const options = {
-
       margin: [5, 5, 5, 5],
-
-      filename:
-        `${exam.title || "exam-result"}.pdf`,
-
-      image: {
-        type: "jpeg",
-        quality: 1
-      },
-
+      filename: `${exam.title || "exam-result"}.pdf`,
+      image: { type: "jpeg", quality: 1 },
       html2canvas: {
         scale: 2,
         useCORS: true,
         backgroundColor: "#071028",
         scrollY: 0
       },
-
       jsPDF: {
         unit: "mm",
         format: "a4",
         orientation: "portrait"
       },
-
-      pagebreak: {
-        mode: ["avoid-all", "css", "legacy"]
-      }
+      pagebreak: { mode: ["avoid-all", "css", "legacy"] }
     };
 
-    await html2pdf()
-      .set(options)
-      .from(element)
-      .save();
+    await html2pdf().set(options).from(element).save();
 
     element.classList.remove("pdf-mode");
   };
@@ -200,8 +175,7 @@ function ExamPage() {
   // ==============================
   if (score !== null && reviewData) {
 
-    const wrong =
-      reviewData.questions.length - score;
+    const wrong = reviewData.questions.length - score;
 
     const percentage = Math.round(
       (score / reviewData.questions.length) * 100
@@ -223,11 +197,9 @@ function ExamPage() {
               background: #071028 !important;
               padding: 20px !important;
             }
-
             .pdf-mode * {
               box-sizing: border-box;
             }
-
             .pdf-mode .question {
               page-break-inside: avoid !important;
               break-inside: avoid !important;
@@ -237,18 +209,13 @@ function ExamPage() {
 
         <div
           id="result-sheet"
-          style={{
-            maxWidth: 1200,
-            margin: "auto",
-            width: "100%"
-          }}
+          style={{ maxWidth: 1200, margin: "auto", width: "100%" }}
         >
 
           {/* TOP CARD */}
           <div
             style={{
-              background:
-                "linear-gradient(135deg,#2563eb,#7c3aed)",
+              background: "linear-gradient(135deg,#2563eb,#7c3aed)",
               borderRadius: 28,
               padding: "25px 18px",
               color: "white",
@@ -265,7 +232,6 @@ function ExamPage() {
                 marginBottom: 15
               }}
             >
-
               <h1
                 style={{
                   fontSize: "clamp(28px,5vw,55px)",
@@ -276,7 +242,6 @@ function ExamPage() {
               >
                 🎉 Exam Completed
               </h1>
-
             </div>
 
             <h2
@@ -292,8 +257,7 @@ function ExamPage() {
             <div
               style={{
                 display: "grid",
-                gridTemplateColumns:
-                  "repeat(auto-fit,minmax(160px,1fr))",
+                gridTemplateColumns: "repeat(auto-fit,minmax(160px,1fr))",
                 gap: 16
               }}
             >
@@ -368,7 +332,6 @@ function ExamPage() {
               marginBottom: 30
             }}
           >
-
             <button
               onClick={downloadResult}
               style={{
@@ -386,17 +349,13 @@ function ExamPage() {
             >
               📄 Download Result PDF
             </button>
-
           </div>
 
           {/* REVIEW */}
           {reviewData.questions.map((q, index) => {
 
-            const userAns =
-              reviewData.answers[q._id];
-
-            const correct =
-              q.correctAnswer;
+            const userAns = reviewData.answers[q._id];
+            const correct = q.correctAnswer;
 
             return (
 
@@ -408,8 +367,7 @@ function ExamPage() {
                   padding: "18px",
                   borderRadius: 24,
                   marginBottom: 22,
-                  boxShadow:
-                    "0 10px 25px rgba(0,0,0,0.08)",
+                  boxShadow: "0 10px 25px rgba(0,0,0,0.08)",
                   overflow: "hidden"
                 }}
               >
@@ -429,7 +387,6 @@ function ExamPage() {
 
                 {/* IMAGE */}
                 {q.image && (
-
                   <img
                     src={q.image}
                     alt="question"
@@ -456,16 +413,12 @@ function ExamPage() {
                       border = "#16a34a";
                     }
 
-                    if (
-                      opt === userAns &&
-                      opt !== correct
-                    ) {
+                    if (opt === userAns && opt !== correct) {
                       bg = "#fee2e2";
                       border = "#dc2626";
                     }
 
                     return (
-
                       <div
                         key={i}
                         style={{
@@ -479,18 +432,13 @@ function ExamPage() {
                           wordBreak: "break-word"
                         }}
                       >
-
                         {opt}
-
                         {opt === correct && (
                           <span> ✅ Correct</span>
                         )}
-
-                        {opt === userAns &&
-                          opt !== correct && (
+                        {opt === userAns && opt !== correct && (
                           <span> ❌ Your Answer</span>
                         )}
-
                       </div>
                     );
                   })}
@@ -511,7 +459,6 @@ function ExamPage() {
   // LOADING
   // ==============================
   if (!exam) {
-
     return (
       <div
         style={{
@@ -536,31 +483,23 @@ function ExamPage() {
     <div
       style={{
         minHeight: "100vh",
-        background:
-          "linear-gradient(135deg,#0f172a,#1e293b)",
+        background: "linear-gradient(135deg,#0f172a,#1e293b)",
         padding: 14
       }}
     >
 
-      <div
-        style={{
-          maxWidth: 1100,
-          margin: "auto"
-        }}
-      >
+      <div style={{ maxWidth: 1100, margin: "auto" }}>
 
         {/* TOP */}
         <div
           style={{
-            background:
-              "linear-gradient(135deg,#2563eb,#7c3aed)",
+            background: "linear-gradient(135deg,#2563eb,#7c3aed)",
             borderRadius: 28,
             padding: "25px 18px",
             color: "white",
             marginBottom: 25
           }}
         >
-
           <h1
             style={{
               fontSize: "clamp(28px,5vw,55px)",
@@ -570,11 +509,9 @@ function ExamPage() {
           >
             📝 {exam.title}
           </h1>
-
           <p style={{ fontSize: "clamp(18px,3vw,24px)" }}>
             ⏰ Time Left: {formatTime()}
           </p>
-
         </div>
 
         {/* USER INFO */}
@@ -586,23 +523,18 @@ function ExamPage() {
             marginBottom: 25
           }}
         >
-
           <div
             style={{
               display: "grid",
-              gridTemplateColumns:
-                "repeat(auto-fit,minmax(220px,1fr))",
+              gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))",
               gap: 16
             }}
           >
-
             <input
               type="text"
               placeholder="Your Name"
               value={name}
-              onChange={(e) =>
-                setName(e.target.value)
-              }
+              onChange={(e) => setName(e.target.value)}
               style={{
                 padding: 16,
                 borderRadius: 14,
@@ -612,14 +544,11 @@ function ExamPage() {
                 boxSizing: "border-box"
               }}
             />
-
             <input
               type="text"
               placeholder="Your Roll"
               value={roll}
-              onChange={(e) =>
-                setRoll(e.target.value)
-              }
+              onChange={(e) => setRoll(e.target.value)}
               style={{
                 padding: 16,
                 borderRadius: 14,
@@ -629,9 +558,7 @@ function ExamPage() {
                 boxSizing: "border-box"
               }}
             />
-
           </div>
-
         </div>
 
         {/* QUESTIONS */}
@@ -661,7 +588,6 @@ function ExamPage() {
 
             {/* IMAGE */}
             {q.image && (
-
               <img
                 src={q.image}
                 alt="question"
@@ -682,9 +608,7 @@ function ExamPage() {
 
                 <button
                   key={i}
-                  onClick={() =>
-                    handleAnswer(q._id, opt)
-                  }
+                  onClick={() => handleAnswer(q._id, opt)}
                   style={{
                     padding: "16px 18px",
                     borderRadius: 16,
@@ -724,25 +648,24 @@ function ExamPage() {
             marginTop: 35
           }}
         >
-
           <button
             onClick={submitExam}
+            disabled={submitted}
             style={{
               padding: "18px 28px",
               border: "none",
               borderRadius: 18,
-              background: "#22c55e",
+              background: submitted ? "#94a3b8" : "#22c55e",
               color: "white",
               fontSize: 20,
               fontWeight: "700",
-              cursor: "pointer",
+              cursor: submitted ? "not-allowed" : "pointer",
               width: "100%",
               maxWidth: 350
             }}
           >
-            🚀 Submit Exam
+            {submitted ? "⏳ Submitting..." : "🚀 Submit Exam"}
           </button>
-
         </div>
 
       </div>
