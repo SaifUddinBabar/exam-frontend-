@@ -3,6 +3,11 @@ import { useParams } from "react-router-dom";
 
 const API = import.meta.env.VITE_API_URL;
 
+// ==============================
+// LOCALSTORAGE KEY HELPER
+// ==============================
+const getStorageKey = (code) => `exam_progress_${code}`;
+
 function ExamPage() {
 
   const { code } = useParams();
@@ -30,28 +35,18 @@ function ExamPage() {
   // ==============================
   useEffect(() => {
 
-    // Block right-click
     const handleContextMenu = (e) => e.preventDefault();
 
-    // Block keyboard shortcuts
     const handleKeyDown = (e) => {
-
       const key = e.key.toLowerCase();
-
-      // Ctrl+C, Ctrl+U, Ctrl+S, Ctrl+A, Ctrl+P, Ctrl+X
       if (e.ctrlKey && ["c","u","s","a","p","x"].includes(key)) {
         e.preventDefault();
         return;
       }
-
-      // Windows Snipping Tool: Win+Shift+S → we can't fully block Win key,
-      // but block Shift+S when Meta or block common combos
       if (e.shiftKey && e.metaKey) {
         e.preventDefault();
         return;
       }
-
-      // PrintScreen / SnapShot key → show block overlay
       if (
         e.key === "PrintScreen" ||
         e.key === "F12" ||
@@ -64,22 +59,15 @@ function ExamPage() {
       }
     };
 
-    // Block copy event
     const handleCopy = (e) => e.preventDefault();
-
-    // Block cut event
     const handleCut = (e) => e.preventDefault();
-
-    // Block drag
     const handleDragStart = (e) => e.preventDefault();
 
-    // Block print
     const handleBeforePrint = (e) => {
       e.preventDefault();
       triggerBlock();
     };
 
-    // Visibility change — when user switches tab (possible screenshot tool)
     const handleVisibilityChange = () => {
       if (document.hidden) {
         triggerBlock();
@@ -105,7 +93,6 @@ function ExamPage() {
     };
   }, []);
 
-  // Show red block overlay briefly when screenshot attempt detected
   const triggerBlock = () => {
     setBlocked(true);
     if (blockTimeoutRef.current) clearTimeout(blockTimeoutRef.current);
@@ -113,7 +100,7 @@ function ExamPage() {
   };
 
   // ==============================
-  // FETCH EXAM
+  // FETCH EXAM + RESTORE PROGRESS
   // ==============================
   useEffect(() => {
 
@@ -121,12 +108,63 @@ function ExamPage() {
       .then((res) => res.json())
       .then((data) => {
         setExam(data);
-        if (data.duration) {
-          setTimeLeft(data.duration * 60);
+
+        // Try restoring saved progress from localStorage
+        const storageKey = getStorageKey(code);
+        const saved = localStorage.getItem(storageKey);
+
+        if (saved) {
+          try {
+            const progress = JSON.parse(saved);
+
+            // Restore name & roll
+            if (progress.name) setName(progress.name);
+            if (progress.roll) setRoll(progress.roll);
+
+            // Restore answers
+            if (progress.answers) setAnswers(progress.answers);
+
+            // Restore remaining time (if saved, use it; otherwise use exam duration)
+            if (progress.timeLeft !== undefined && progress.timeLeft > 0) {
+              setTimeLeft(progress.timeLeft);
+            } else if (data.duration) {
+              setTimeLeft(data.duration * 60);
+            }
+
+          } catch {
+            // Corrupted data — start fresh
+            localStorage.removeItem(storageKey);
+            if (data.duration) setTimeLeft(data.duration * 60);
+          }
+        } else {
+          // No saved progress — start fresh
+          if (data.duration) setTimeLeft(data.duration * 60);
         }
       });
 
   }, [code]);
+
+  // ==============================
+  // SAVE PROGRESS TO LOCALSTORAGE
+  // whenever answers / name / roll / timeLeft changes
+  // ==============================
+  useEffect(() => {
+
+    // Don't save if exam not loaded yet, or already submitted
+    if (!exam || submitted) return;
+
+    const storageKey = getStorageKey(code);
+
+    const progress = {
+      answers,
+      name,
+      roll,
+      timeLeft,
+    };
+
+    localStorage.setItem(storageKey, JSON.stringify(progress));
+
+  }, [answers, name, roll, timeLeft, exam, submitted, code]);
 
   // ==============================
   // TIMER
@@ -166,6 +204,13 @@ function ExamPage() {
   };
 
   // ==============================
+  // CLEAR SAVED PROGRESS
+  // ==============================
+  const clearProgress = () => {
+    localStorage.removeItem(getStorageKey(code));
+  };
+
+  // ==============================
   // SUBMIT
   // ==============================
   const submitExam = async () => {
@@ -190,6 +235,10 @@ function ExamPage() {
       );
 
       const data = await res.json();
+
+      // Clear saved progress after successful submit
+      clearProgress();
+
       setScore(data.score);
       setReviewData(data);
 
@@ -289,7 +338,6 @@ function ExamPage() {
       >
         <style>{globalStyles}</style>
 
-        {/* BLOCK OVERLAY */}
         {blocked && (
           <div style={{
             position: "fixed",
@@ -314,7 +362,6 @@ function ExamPage() {
 
         <div id="result-sheet" style={{ maxWidth: 1200, margin: "auto", width: "100%" }}>
 
-          {/* TOP CARD */}
           <div
             style={{
               background: "linear-gradient(135deg,#2563eb,#7c3aed)",
@@ -361,7 +408,6 @@ function ExamPage() {
             </div>
           </div>
 
-          {/* DOWNLOAD */}
           <div style={{ display: "flex", justifyContent: "center", marginBottom: 30 }}>
             <button
               onClick={downloadResult}
@@ -382,7 +428,6 @@ function ExamPage() {
             </button>
           </div>
 
-          {/* REVIEW */}
           {reviewData.questions.map((q, index) => {
 
             const userAns = reviewData.answers[q._id];
@@ -499,10 +544,8 @@ function ExamPage() {
         padding: 14
       }}
     >
-      {/* GLOBAL ANTI-COPY STYLES */}
       <style>{globalStyles}</style>
 
-      {/* BLOCK OVERLAY — shown when screenshot attempt detected */}
       {blocked && (
         <div style={{
           position: "fixed",
