@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useParams } from "react-router-dom";
 
 const API = import.meta.env.VITE_API_URL;
@@ -21,6 +21,97 @@ function ExamPage() {
   // TIMER
   const [timeLeft, setTimeLeft] = useState(null);
 
+  // ANTI-SCREENSHOT OVERLAY
+  const [blocked, setBlocked] = useState(false);
+  const blockTimeoutRef = useRef(null);
+
+  // ==============================
+  // ANTI-COPY / ANTI-SCREENSHOT PROTECTION
+  // ==============================
+  useEffect(() => {
+
+    // Block right-click
+    const handleContextMenu = (e) => e.preventDefault();
+
+    // Block keyboard shortcuts
+    const handleKeyDown = (e) => {
+
+      const key = e.key.toLowerCase();
+
+      // Ctrl+C, Ctrl+U, Ctrl+S, Ctrl+A, Ctrl+P, Ctrl+X
+      if (e.ctrlKey && ["c","u","s","a","p","x"].includes(key)) {
+        e.preventDefault();
+        return;
+      }
+
+      // Windows Snipping Tool: Win+Shift+S → we can't fully block Win key,
+      // but block Shift+S when Meta or block common combos
+      if (e.shiftKey && e.metaKey) {
+        e.preventDefault();
+        return;
+      }
+
+      // PrintScreen / SnapShot key → show block overlay
+      if (
+        e.key === "PrintScreen" ||
+        e.key === "F12" ||
+        (e.ctrlKey && e.shiftKey && ["i","j","c"].includes(key))
+      ) {
+        e.preventDefault();
+        navigator.clipboard.writeText("").catch(() => {});
+        triggerBlock();
+        return;
+      }
+    };
+
+    // Block copy event
+    const handleCopy = (e) => e.preventDefault();
+
+    // Block cut event
+    const handleCut = (e) => e.preventDefault();
+
+    // Block drag
+    const handleDragStart = (e) => e.preventDefault();
+
+    // Block print
+    const handleBeforePrint = (e) => {
+      e.preventDefault();
+      triggerBlock();
+    };
+
+    // Visibility change — when user switches tab (possible screenshot tool)
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        triggerBlock();
+      }
+    };
+
+    document.addEventListener("contextmenu", handleContextMenu);
+    document.addEventListener("keydown", handleKeyDown);
+    document.addEventListener("copy", handleCopy);
+    document.addEventListener("cut", handleCut);
+    document.addEventListener("dragstart", handleDragStart);
+    window.addEventListener("beforeprint", handleBeforePrint);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener("contextmenu", handleContextMenu);
+      document.removeEventListener("keydown", handleKeyDown);
+      document.removeEventListener("copy", handleCopy);
+      document.removeEventListener("cut", handleCut);
+      document.removeEventListener("dragstart", handleDragStart);
+      window.removeEventListener("beforeprint", handleBeforePrint);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, []);
+
+  // Show red block overlay briefly when screenshot attempt detected
+  const triggerBlock = () => {
+    setBlocked(true);
+    if (blockTimeoutRef.current) clearTimeout(blockTimeoutRef.current);
+    blockTimeoutRef.current = setTimeout(() => setBlocked(false), 2000);
+  };
+
   // ==============================
   // FETCH EXAM
   // ==============================
@@ -38,13 +129,11 @@ function ExamPage() {
   }, [code]);
 
   // ==============================
-  // TIMER — FIXED
+  // TIMER
   // ==============================
   useEffect(() => {
 
     if (timeLeft === null) return;
-
-    // ✅ submit হলে timer বন্ধ
     if (submitted) return;
 
     if (timeLeft <= 0) {
@@ -77,18 +166,16 @@ function ExamPage() {
   };
 
   // ==============================
-  // SUBMIT — FIXED
+  // SUBMIT
   // ==============================
   const submitExam = async () => {
 
-    // ✅ double submit বন্ধ
     if (submitted) return;
 
     if (!name || !roll) {
       return alert("Name & Roll Required");
     }
 
-    // ✅ সাথে সাথে submitted true করো
     setSubmitted(true);
 
     try {
@@ -97,40 +184,27 @@ function ExamPage() {
         `${API}/api/exams/submit`,
         {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
-            examCode: code,
-            name,
-            roll,
-            answers
-          })
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ examCode: code, name, roll, answers })
         }
       );
 
       const data = await res.json();
-
       setScore(data.score);
       setReviewData(data);
 
     } catch {
-      // ✅ error হলে submitted reset করো
       setSubmitted(false);
       alert("Submit Failed");
     }
   };
 
   // ==============================
-  // AUTO SUBMIT — FIXED
+  // AUTO SUBMIT
   // ==============================
   const autoSubmit = () => {
-
-    // ✅ আগেই submit হলে বন্ধ
     if (submitted) return;
-
     alert("সময় শেষ! Auto Submit হচ্ছে");
-
     submitExam();
   };
 
@@ -140,11 +214,9 @@ function ExamPage() {
   const downloadResult = async () => {
 
     const html2pdf = (await import("html2pdf.js")).default;
-
     const element = document.getElementById("result-sheet");
 
     element.classList.add("pdf-mode");
-
     await new Promise((resolve) => setTimeout(resolve, 300));
 
     const options = {
@@ -157,18 +229,47 @@ function ExamPage() {
         backgroundColor: "#071028",
         scrollY: 0
       },
-      jsPDF: {
-        unit: "mm",
-        format: "a4",
-        orientation: "portrait"
-      },
+      jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
       pagebreak: { mode: ["avoid-all", "css", "legacy"] }
     };
 
     await html2pdf().set(options).from(element).save();
-
     element.classList.remove("pdf-mode");
   };
+
+  // ==============================
+  // GLOBAL STYLES
+  // ==============================
+  const globalStyles = `
+    * {
+      user-select: none !important;
+      -webkit-user-select: none !important;
+      -moz-user-select: none !important;
+      -ms-user-select: none !important;
+    }
+    input, textarea {
+      user-select: text !important;
+      -webkit-user-select: text !important;
+    }
+    img {
+      pointer-events: none !important;
+      -webkit-user-drag: none !important;
+    }
+    @media print {
+      body { display: none !important; }
+    }
+    .pdf-mode {
+      background: #071028 !important;
+      padding: 20px !important;
+    }
+    .pdf-mode * {
+      box-sizing: border-box;
+    }
+    .pdf-mode .question {
+      page-break-inside: avoid !important;
+      break-inside: avoid !important;
+    }
+  `;
 
   // ==============================
   // RESULT PAGE
@@ -176,13 +277,9 @@ function ExamPage() {
   if (score !== null && reviewData) {
 
     const wrong = reviewData.questions.length - score;
-
-    const percentage = Math.round(
-      (score / reviewData.questions.length) * 100
-    );
+    const percentage = Math.round((score / reviewData.questions.length) * 100);
 
     return (
-
       <div
         style={{
           minHeight: "100vh",
@@ -190,27 +287,32 @@ function ExamPage() {
           padding: "14px"
         }}
       >
+        <style>{globalStyles}</style>
 
-        <style>
-          {`
-            .pdf-mode {
-              background: #071028 !important;
-              padding: 20px !important;
-            }
-            .pdf-mode * {
-              box-sizing: border-box;
-            }
-            .pdf-mode .question {
-              page-break-inside: avoid !important;
-              break-inside: avoid !important;
-            }
-          `}
-        </style>
+        {/* BLOCK OVERLAY */}
+        {blocked && (
+          <div style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.97)",
+            zIndex: 99999,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            color: "white"
+          }}>
+            <div style={{ fontSize: "64px", marginBottom: "20px" }}>🚫</div>
+            <h2 style={{ fontSize: "28px", fontWeight: "700", marginBottom: "10px" }}>
+              Screenshot Blocked
+            </h2>
+            <p style={{ color: "rgba(255,255,255,0.6)", fontSize: "16px" }}>
+              এই পরীক্ষায় screenshot নেওয়া নিষিদ্ধ
+            </p>
+          </div>
+        )}
 
-        <div
-          id="result-sheet"
-          style={{ maxWidth: 1200, margin: "auto", width: "100%" }}
-        >
+        <div id="result-sheet" style={{ maxWidth: 1200, margin: "auto", width: "100%" }}>
 
           {/* TOP CARD */}
           <div
@@ -222,116 +324,45 @@ function ExamPage() {
               marginBottom: 30
             }}
           >
-
-            <div
-              style={{
-                display: "flex",
-                flexWrap: "wrap",
-                alignItems: "center",
-                gap: 12,
-                marginBottom: 15
-              }}
-            >
-              <h1
-                style={{
-                  fontSize: "clamp(28px,5vw,55px)",
-                  margin: 0,
-                  fontWeight: "700",
-                  lineHeight: 1.2
-                }}
-              >
+            <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 12, marginBottom: 15 }}>
+              <h1 style={{ fontSize: "clamp(28px,5vw,55px)", margin: 0, fontWeight: "700", lineHeight: 1.2 }}>
                 🎉 Exam Completed
               </h1>
             </div>
 
-            <h2
-              style={{
-                fontSize: "clamp(16px,3vw,28px)",
-                marginBottom: 25,
-                wordBreak: "break-word"
-              }}
-            >
+            <h2 style={{ fontSize: "clamp(16px,3vw,28px)", marginBottom: 25, wordBreak: "break-word" }}>
               {exam.title}
             </h2>
 
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit,minmax(160px,1fr))",
-                gap: 16
-              }}
-            >
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(160px,1fr))", gap: 16 }}>
 
-              {/* SCORE */}
-              <div
-                style={{
-                  background: "rgba(255,255,255,0.12)",
-                  padding: 20,
-                  borderRadius: 20
-                }}
-              >
-                <p style={{ opacity: 0.9, marginBottom: 10, fontSize: 16 }}>
-                  Score
-                </p>
+              <div style={{ background: "rgba(255,255,255,0.12)", padding: 20, borderRadius: 20 }}>
+                <p style={{ opacity: 0.9, marginBottom: 10, fontSize: 16 }}>Score</p>
                 <h1 style={{ fontSize: "clamp(30px,5vw,50px)", margin: 0 }}>
                   {score}/{reviewData.questions.length}
                 </h1>
               </div>
 
-              {/* CORRECT */}
-              <div
-                style={{
-                  background: "rgba(34,197,94,0.18)",
-                  padding: 20,
-                  borderRadius: 20
-                }}
-              >
+              <div style={{ background: "rgba(34,197,94,0.18)", padding: 20, borderRadius: 20 }}>
                 <p style={{ marginBottom: 10, fontSize: 16 }}>Correct</p>
-                <h1 style={{ fontSize: "clamp(30px,5vw,50px)", margin: 0 }}>
-                  ✅ {score}
-                </h1>
+                <h1 style={{ fontSize: "clamp(30px,5vw,50px)", margin: 0 }}>✅ {score}</h1>
               </div>
 
-              {/* WRONG */}
-              <div
-                style={{
-                  background: "rgba(239,68,68,0.18)",
-                  padding: 20,
-                  borderRadius: 20
-                }}
-              >
+              <div style={{ background: "rgba(239,68,68,0.18)", padding: 20, borderRadius: 20 }}>
                 <p style={{ marginBottom: 10, fontSize: 16 }}>Wrong</p>
-                <h1 style={{ fontSize: "clamp(30px,5vw,50px)", margin: 0 }}>
-                  ❌ {wrong}
-                </h1>
+                <h1 style={{ fontSize: "clamp(30px,5vw,50px)", margin: 0 }}>❌ {wrong}</h1>
               </div>
 
-              {/* PERCENT */}
-              <div
-                style={{
-                  background: "rgba(255,255,255,0.12)",
-                  padding: 20,
-                  borderRadius: 20
-                }}
-              >
+              <div style={{ background: "rgba(255,255,255,0.12)", padding: 20, borderRadius: 20 }}>
                 <p style={{ marginBottom: 10, fontSize: 16 }}>Percentage</p>
-                <h1 style={{ fontSize: "clamp(30px,5vw,50px)", margin: 0 }}>
-                  {percentage}%
-                </h1>
+                <h1 style={{ fontSize: "clamp(30px,5vw,50px)", margin: 0 }}>{percentage}%</h1>
               </div>
 
             </div>
-
           </div>
 
           {/* DOWNLOAD */}
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "center",
-              marginBottom: 30
-            }}
-          >
+          <div style={{ display: "flex", justifyContent: "center", marginBottom: 30 }}>
             <button
               onClick={downloadResult}
               style={{
@@ -358,7 +389,6 @@ function ExamPage() {
             const correct = q.correctAnswer;
 
             return (
-
               <div
                 key={index}
                 className="question"
@@ -371,8 +401,6 @@ function ExamPage() {
                   overflow: "hidden"
                 }}
               >
-
-                {/* QUESTION */}
                 <h2
                   style={{
                     fontSize: "clamp(18px,3vw,28px)",
@@ -385,7 +413,6 @@ function ExamPage() {
                   Q{index + 1}. {q.question}
                 </h2>
 
-                {/* IMAGE */}
                 {q.image && (
                   <img
                     src={q.image}
@@ -400,23 +427,14 @@ function ExamPage() {
                   />
                 )}
 
-                {/* OPTIONS */}
                 <div style={{ display: "grid", gap: 12 }}>
-
                   {q.options.map((opt, i) => {
 
                     let bg = "#f1f5f9";
                     let border = "#cbd5e1";
 
-                    if (opt === correct) {
-                      bg = "#dcfce7";
-                      border = "#16a34a";
-                    }
-
-                    if (opt === userAns && opt !== correct) {
-                      bg = "#fee2e2";
-                      border = "#dc2626";
-                    }
+                    if (opt === correct) { bg = "#dcfce7"; border = "#16a34a"; }
+                    if (opt === userAns && opt !== correct) { bg = "#fee2e2"; border = "#dc2626"; }
 
                     return (
                       <div
@@ -433,16 +451,11 @@ function ExamPage() {
                         }}
                       >
                         {opt}
-                        {opt === correct && (
-                          <span> ✅ Correct</span>
-                        )}
-                        {opt === userAns && opt !== correct && (
-                          <span> ❌ Your Answer</span>
-                        )}
+                        {opt === correct && <span> ✅ Correct</span>}
+                        {opt === userAns && opt !== correct && <span> ❌ Your Answer</span>}
                       </div>
                     );
                   })}
-
                 </div>
 
               </div>
@@ -450,7 +463,6 @@ function ExamPage() {
           })}
 
         </div>
-
       </div>
     );
   }
@@ -487,6 +499,31 @@ function ExamPage() {
         padding: 14
       }}
     >
+      {/* GLOBAL ANTI-COPY STYLES */}
+      <style>{globalStyles}</style>
+
+      {/* BLOCK OVERLAY — shown when screenshot attempt detected */}
+      {blocked && (
+        <div style={{
+          position: "fixed",
+          inset: 0,
+          background: "rgba(0,0,0,0.97)",
+          zIndex: 99999,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          color: "white"
+        }}>
+          <div style={{ fontSize: "64px", marginBottom: "20px" }}>🚫</div>
+          <h2 style={{ fontSize: "28px", fontWeight: "700", marginBottom: "10px" }}>
+            Screenshot Blocked
+          </h2>
+          <p style={{ color: "rgba(255,255,255,0.6)", fontSize: "16px" }}>
+            এই পরীক্ষায় screenshot নেওয়া নিষিদ্ধ
+          </p>
+        </div>
+      )}
 
       <div style={{ maxWidth: 1100, margin: "auto" }}>
 
@@ -500,13 +537,7 @@ function ExamPage() {
             marginBottom: 25
           }}
         >
-          <h1
-            style={{
-              fontSize: "clamp(28px,5vw,55px)",
-              marginBottom: 14,
-              lineHeight: 1.2
-            }}
-          >
+          <h1 style={{ fontSize: "clamp(28px,5vw,55px)", marginBottom: 14, lineHeight: 1.2 }}>
             📝 {exam.title}
           </h1>
           <p style={{ fontSize: "clamp(18px,3vw,24px)" }}>
@@ -515,14 +546,7 @@ function ExamPage() {
         </div>
 
         {/* USER INFO */}
-        <div
-          style={{
-            background: "white",
-            borderRadius: 22,
-            padding: 20,
-            marginBottom: 25
-          }}
-        >
+        <div style={{ background: "white", borderRadius: 22, padding: 20, marginBottom: 25 }}>
           <div
             style={{
               display: "grid",
@@ -566,15 +590,9 @@ function ExamPage() {
 
           <div
             key={q._id}
-            style={{
-              background: "white",
-              borderRadius: 24,
-              padding: 20,
-              marginBottom: 22
-            }}
+            style={{ background: "white", borderRadius: 24, padding: 20, marginBottom: 22 }}
           >
 
-            {/* QUESTION */}
             <h2
               style={{
                 fontSize: "clamp(20px,3vw,30px)",
@@ -586,7 +604,6 @@ function ExamPage() {
               {index + 1}. {q.question}
             </h2>
 
-            {/* IMAGE */}
             {q.image && (
               <img
                 src={q.image}
@@ -601,25 +618,16 @@ function ExamPage() {
               />
             )}
 
-            {/* OPTIONS */}
             <div style={{ display: "grid", gap: 14 }}>
-
               {q.options.map((opt, i) => (
-
                 <button
                   key={i}
                   onClick={() => handleAnswer(q._id, opt)}
                   style={{
                     padding: "16px 18px",
                     borderRadius: 16,
-                    border:
-                      answers[q._id] === opt
-                        ? "2px solid #2563eb"
-                        : "2px solid #e2e8f0",
-                    background:
-                      answers[q._id] === opt
-                        ? "#dbeafe"
-                        : "#f8fafc",
+                    border: answers[q._id] === opt ? "2px solid #2563eb" : "2px solid #e2e8f0",
+                    background: answers[q._id] === opt ? "#dbeafe" : "#f8fafc",
                     cursor: "pointer",
                     textAlign: "left",
                     fontSize: "clamp(15px,2.7vw,20px)",
@@ -631,23 +639,14 @@ function ExamPage() {
                 >
                   {opt}
                 </button>
-
               ))}
-
             </div>
 
           </div>
-
         ))}
 
         {/* SUBMIT */}
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "center",
-            marginTop: 35
-          }}
-        >
+        <div style={{ display: "flex", justifyContent: "center", marginTop: 35 }}>
           <button
             onClick={submitExam}
             disabled={submitted}
