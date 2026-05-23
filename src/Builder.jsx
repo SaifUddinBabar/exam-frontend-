@@ -6,6 +6,47 @@ const API = import.meta.env.VITE_API_URL;
 function Builder() {
  
   // ==============================
+  // ANTI-COPY / ANTI-SCREENSHOT PROTECTION
+  // ==============================
+  useEffect(() => {
+    // Disable right-click
+    const handleContextMenu = (e) => e.preventDefault();
+
+    // Disable copy, cut, select all shortcuts
+    const handleKeyDown = (e) => {
+      if (
+        e.ctrlKey &&
+        ["c", "u", "s", "a", "p"].includes(e.key.toLowerCase())
+      ) {
+        e.preventDefault();
+      }
+      // PrintScreen key
+      if (e.key === "PrintScreen") {
+        e.preventDefault();
+        navigator.clipboard.writeText("");
+      }
+    };
+
+    // Disable drag
+    const handleDragStart = (e) => e.preventDefault();
+
+    // Disable print (Ctrl+P)
+    const handleBeforePrint = (e) => e.preventDefault();
+
+    document.addEventListener("contextmenu", handleContextMenu);
+    document.addEventListener("keydown", handleKeyDown);
+    document.addEventListener("dragstart", handleDragStart);
+    window.addEventListener("beforeprint", handleBeforePrint);
+
+    return () => {
+      document.removeEventListener("contextmenu", handleContextMenu);
+      document.removeEventListener("keydown", handleKeyDown);
+      document.removeEventListener("dragstart", handleDragStart);
+      window.removeEventListener("beforeprint", handleBeforePrint);
+    };
+  }, []);
+
+  // ==============================
   // STATES
   // ==============================
   const [questions, setQuestions] = useState([]);
@@ -113,7 +154,6 @@ function Builder() {
  
     if (!chapter) {
       setQuestions([]);
-      // ✅ FIX: chapter clear হলে allQuestions ও selected reset করো
       setAllQuestions([]);
       setSelected([]);
       return;
@@ -150,9 +190,6 @@ function Builder() {
  
         if (chapter === "Board Questions") {
  
-          // ✅ FIX: Board questions এর ক্ষেত্রে শুধু
-          // এই board এর questions দিয়ে allQuestions replace করো
-          // যাতে আগের board এর questions মিশে না থাকে
           setAllQuestions(fetched);
  
           setSelected(fetched.map((q) => q._id));
@@ -164,7 +201,6 @@ function Builder() {
  
         } else {
  
-          // Normal chapter হলে merge করো (আগের মতো)
           setAllQuestions((prev) => {
  
             const merged = [...prev];
@@ -230,12 +266,9 @@ function Builder() {
   // SELECT ALL / DESELECT ALL
   // ==============================
   const selectAll = () => {
-    // ✅ FIX: শুধু current questions এর IDs select করো
-    // marks কে override করো না — user যা দিয়েছে সেটাই থাকবে
     const currentIds = questions.map((q) => q._id);
     setSelected(currentIds);
  
-    // ✅ শুধু board questions এর ক্ষেত্রে marks update করো
     if (chapter === "Board Questions") {
       setExamData((prev) => ({
         ...prev,
@@ -331,9 +364,37 @@ function Builder() {
       style={{
         background: "#0f0c29",
         backgroundImage:
-          "linear-gradient(135deg, #0f0c29, #302b63, #24243e)"
+          "linear-gradient(135deg, #0f0c29, #302b63, #24243e)",
+        // ✅ ANTI-COPY: disable text selection on entire page
+        userSelect: "none",
+        WebkitUserSelect: "none",
+        MozUserSelect: "none",
+        msUserSelect: "none"
       }}
     >
+
+      {/* ==============================
+          GLOBAL ANTI-COPY STYLES
+      ============================== */}
+      <style>{`
+        * {
+          user-select: none !important;
+          -webkit-user-select: none !important;
+          -moz-user-select: none !important;
+          -ms-user-select: none !important;
+        }
+        input, textarea, select {
+          user-select: text !important;
+          -webkit-user-select: text !important;
+        }
+        img {
+          pointer-events: none !important;
+          -webkit-user-drag: none !important;
+        }
+        @media print {
+          body { display: none !important; }
+        }
+      `}</style>
  
       {/* ==============================
           TOPBAR
@@ -949,7 +1010,6 @@ function Builder() {
                   onChange={(e) => {
                     setChapter(e.target.value);
                     setSelected([]);
-                    // ✅ FIX: chapter change হলে allQuestions reset করো
                     setAllQuestions([]);
                     setBoardYear("");
                     setBoardName("");
@@ -1012,7 +1072,6 @@ function Builder() {
                       onChange={(e) => {
                         setBoardYear(e.target.value);
                         setSelected([]);
-                        // ✅ FIX: year change হলে allQuestions ও reset করো
                         setAllQuestions([]);
                         setBoardName("");
                       }}
@@ -1060,8 +1119,6 @@ function Builder() {
                     <select
                       value={boardName}
                       onChange={(e) => {
-                        // ✅ FIX: board name change হলে আগের board এর
-                        // questions ও selected clear করো
                         setSelected([]);
                         setAllQuestions([]);
                         setBoardName(e.target.value);
