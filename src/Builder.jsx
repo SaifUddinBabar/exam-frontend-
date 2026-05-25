@@ -1142,7 +1142,6 @@ function Builder() {
                       <option value="Rajshahi">Rajshahi</option>
                       <option value="Cumilla">Cumilla</option>
                       <option value="Jessore">Jessore</option>
-                      <option value="Dinajpur">Dinajpur</option>
                     </select>
  
                   </div>
