@@ -627,33 +627,75 @@ function ExamPage() {
         width: "calc(100% - 32px)", maxWidth: 560,
         animation: "warningSlide 0.4s cubic-bezier(0.34,1.56,0.64,1) forwards",
       }}>
-       <div style={{
-  position: "fixed",          // স্ক্রিনের সাপেক্ষে পজিশন করবে
-  top: 0, 
-  left: 0, 
-  right: 0, 
-  bottom: 0,                  // চারপাশ থেকে জিরো
-  margin: "auto",             // অটো মার্জিন দিলে একদম সেন্টারে চলে আসবে
-  width: "90%",               // মোবাইলের জন্য উইডথ
-  maxWidth: "400px",          // বড় স্ক্রিনের জন্য ম্যাক্স উইডথ
-  height: "fit-content",      // কন্টেন্টের সাইজ অনুযায়ী হাইট নিবে
-  zIndex: 999999,             // সবকিছুর উপরে দেখাবে
-  background: tabSwitchCountRef.current >= 3
-    ? "linear-gradient(135deg,#7f1d1d,#991b1b)"
-    : tabSwitchCountRef.current === 2
-    ? "linear-gradient(135deg,#92400e,#b45309)"
-    : "linear-gradient(135deg,#1e3a8a,#1d4ed8)",
-  borderRadius: 18,
-  padding: "20px",
-  color: "white",
-  fontSize: "clamp(14px, 4vw, 18px)",
-  fontWeight: 600,
-  textAlign: "center",
-  boxShadow: "0 20px 50px rgba(0,0,0,0.5)",
-}}>
-  {tabWarningMsg}
+       <div
+  style={{
+    position: "fixed",
+    top: "50%",
+    left: "50%",
+    transform: "translate(-50%, -50%)",
+
+    width: "90%",
+    maxWidth: "400px",
+    zIndex: 999999,
+
+    background:
+      tabSwitchCountRef.current >= 3
+        ? "linear-gradient(135deg,#7f1d1d,#991b1b)"
+        : tabSwitchCountRef.current === 2
+        ? "linear-gradient(135deg,#92400e,#b45309)"
+        : "linear-gradient(135deg,#1e3a8a,#1d4ed8)",
+
+    borderRadius: "22px",
+    padding: "24px 22px",
+
+    color: "white",
+    textAlign: "center",
+
+    fontSize: "clamp(15px,4vw,18px)",
+    fontWeight: 600,
+    lineHeight: 1.7,
+
+    boxShadow:
+      "0 25px 60px rgba(0,0,0,0.35), 0 8px 25px rgba(0,0,0,0.2)",
+
+    border: "1px solid rgba(255,255,255,0.15)",
+    backdropFilter: "blur(18px)",
+
+    animation:
+      "scaleIn 0.35s cubic-bezier(0.34,1.56,0.64,1)",
+  }}
+>
+  <div
+    style={{
+      fontSize: "clamp(22px,6vw,32px)",
+      marginBottom: "12px",
+    }}
+  >
+    {tabSwitchCountRef.current >= 3
+      ? "🚫"
+      : tabSwitchCountRef.current === 2
+      ? "⚠️"
+      : "🔔"}
+  </div>
+
+  <div>{tabWarningMsg}</div>
+
   {tabSwitchCountRef.current < 3 && (
-    <div style={{ fontSize: 12, opacity: 0.8, marginTop: 10 }}>
+    <div
+      style={{
+        marginTop: "14px",
+        padding: "8px 14px",
+        borderRadius: "999px",
+
+        background: "rgba(255,255,255,0.14)",
+        border: "1px solid rgba(255,255,255,0.16)",
+
+        fontSize: "13px",
+        fontWeight: 500,
+        opacity: 0.92,
+        display: "inline-block",
+      }}
+    >
       ট্যাব পরিবর্তন সংখ্যা: {tabSwitchCountRef.current}/2
     </div>
   )}
