@@ -628,25 +628,36 @@ function ExamPage() {
         animation: "warningSlide 0.4s cubic-bezier(0.34,1.56,0.64,1) forwards",
       }}>
         <div style={{
-          background: tabSwitchCountRef.current >= 3
-            ? "linear-gradient(135deg,#7f1d1d,#991b1b)"
-            : tabSwitchCountRef.current === 2
-            ? "linear-gradient(135deg,#92400e,#b45309)"
-            : "linear-gradient(135deg,#1e3a8a,#1d4ed8)",
-          borderRadius: 18, padding: "16px 20px", color: "white",
-          fontSize: "clamp(13px,2vw,16px)", fontWeight: 600, lineHeight: 1.7,
-          boxShadow: "0 16px 48px rgba(0,0,0,0.4)",
-          border: "1px solid rgba(255,255,255,0.15)",
-          textAlign: "center",
-          fontFamily: "'Hind Siliguri', sans-serif",
-        }}>
-          {tabWarningMsg}
-          {tabSwitchCountRef.current < 3 && (
-            <div style={{ fontSize: 12, opacity: 0.7, marginTop: 6, fontFamily: "'Sora', sans-serif" }}>
-              ট্যাব পরিবর্তন সংখ্যা: {tabSwitchCountRef.current}/2
-            </div>
-          )}
-        </div>
+  position: "fixed",         // এটি স্ক্রিনের যেখানে ইচ্ছা পজিশন করতে সাহায্য করবে
+  top: "50%",                // উপর থেকে ৫০%
+  left: "50%",               // বাম থেকে ৫০%
+  transform: "translate(-50%, -50%)", // এটি এলিমেন্টটিকে ঠিক মাঝখানে নিয়ে আসবে
+  width: "90%",              // মোবাইলে স্ক্রিনের ৯০% জায়গা দখল করবে
+  maxWidth: "400px",         // বড় স্ক্রিনে যেন অনেক বড় না হয়ে যায়
+  zIndex: 99999,             // সবকিছুর উপরে থাকবে
+  background: tabSwitchCountRef.current >= 3
+    ? "linear-gradient(135deg,#7f1d1d,#991b1b)"
+    : tabSwitchCountRef.current === 2
+    ? "linear-gradient(135deg,#92400e,#b45309)"
+    : "linear-gradient(135deg,#1e3a8a,#1d4ed8)",
+  borderRadius: 18, 
+  padding: "20px", 
+  color: "white",
+  fontSize: "clamp(14px, 4vw, 18px)", 
+  fontWeight: 600, 
+  lineHeight: 1.7,
+  boxShadow: "0 20px 50px rgba(0,0,0,0.5)",
+  border: "1px solid rgba(255,255,255,0.2)",
+  textAlign: "center",
+  fontFamily: "'Hind Siliguri', sans-serif",
+}}>
+  {tabWarningMsg}
+  {tabSwitchCountRef.current < 3 && (
+    <div style={{ fontSize: 12, opacity: 0.8, marginTop: 10, fontFamily: "'Sora', sans-serif" }}>
+      ট্যাব পরিবর্তন সংখ্যা: {tabSwitchCountRef.current}/2
+    </div>
+  )}
+</div>
       </div>
     ) : null;
 
