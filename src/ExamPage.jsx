@@ -627,37 +627,47 @@ function ExamPage() {
         width: "calc(100% - 32px)", maxWidth: 560,
         animation: "warningSlide 0.4s cubic-bezier(0.34,1.56,0.64,1) forwards",
       }}>
-        <div style={{
-  position: "fixed",         // এটি স্ক্রিনের যেখানে ইচ্ছা পজিশন করতে সাহায্য করবে
-  top: "50%",                // উপর থেকে ৫০%
-  left: "50%",               // বাম থেকে ৫০%
-  transform: "translate(-50%, -50%)", // এটি এলিমেন্টটিকে ঠিক মাঝখানে নিয়ে আসবে
-  width: "90%",              // মোবাইলে স্ক্রিনের ৯০% জায়গা দখল করবে
-  maxWidth: "400px",         // বড় স্ক্রিনে যেন অনেক বড় না হয়ে যায়
-  zIndex: 99999,             // সবকিছুর উপরে থাকবে
-  background: tabSwitchCountRef.current >= 3
-    ? "linear-gradient(135deg,#7f1d1d,#991b1b)"
-    : tabSwitchCountRef.current === 2
-    ? "linear-gradient(135deg,#92400e,#b45309)"
-    : "linear-gradient(135deg,#1e3a8a,#1d4ed8)",
-  borderRadius: 18, 
-  padding: "20px", 
-  color: "white",
-  fontSize: "clamp(14px, 4vw, 18px)", 
-  fontWeight: 600, 
-  lineHeight: 1.7,
-  boxShadow: "0 20px 50px rgba(0,0,0,0.5)",
-  border: "1px solid rgba(255,255,255,0.2)",
-  textAlign: "center",
-  fontFamily: "'Hind Siliguri', sans-serif",
-}}>
-  {tabWarningMsg}
-  {tabSwitchCountRef.current < 3 && (
-    <div style={{ fontSize: 12, opacity: 0.8, marginTop: 10, fontFamily: "'Sora', sans-serif" }}>
-      ট্যাব পরিবর্তন সংখ্যা: {tabSwitchCountRef.current}/2
-    </div>
-  )}
-</div>
+        // ... আপনার কোডের উপরে ...
+
+return (
+  <div style={{ minHeight: "100vh", position: "relative" }}> 
+    {/* আপনার অ্যাপের অন্যান্য কন্টেন্ট এখানে থাকবে */}
+
+    {/* ওয়ার্নিং মেসেজটি এখানে দিন */}
+    {tabWarningMsg && (
+      <div style={{
+        position: "fixed",
+        top: "50%",
+        left: "50%",
+        transform: "translate(-50%, -50%)",
+        width: "90%",
+        maxWidth: "400px",
+        zIndex: 999999, // সবচেয়ে উপরে রাখার জন্য
+        background: tabSwitchCountRef.current >= 3
+          ? "linear-gradient(135deg,#7f1d1d,#991b1b)"
+          : tabSwitchCountRef.current === 2
+          ? "linear-gradient(135deg,#92400e,#b45309)"
+          : "linear-gradient(135deg,#1e3a8a,#1d4ed8)",
+        borderRadius: 18,
+        padding: "20px",
+        color: "white",
+        fontSize: "clamp(14px, 4vw, 18px)",
+        fontWeight: 600,
+        textAlign: "center",
+        boxShadow: "0 20px 50px rgba(0,0,0,0.5)",
+      }}>
+        {tabWarningMsg}
+        {tabSwitchCountRef.current < 3 && (
+          <div style={{ fontSize: 12, opacity: 0.8, marginTop: 10 }}>
+            ট্যাব পরিবর্তন সংখ্যা: {tabSwitchCountRef.current}/2
+          </div>
+        )}
+      </div>
+    )}
+
+    {/* অ্যাপের বাকি পার্ট */}
+  </div>
+);
       </div>
     ) : null;
 
