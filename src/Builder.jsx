@@ -1143,7 +1143,7 @@ function Builder() {
                       <option value="Cumilla">Cumilla</option>
                       <option value="Jessore">Jessore</option>
                       <option value="Dinajpur">Dinajpur</option>
-                      <option value="sylhet">sylhet</option>
+                      <option value="Sylhet">Sylhet</option>
                     </select>
  
                   </div>
