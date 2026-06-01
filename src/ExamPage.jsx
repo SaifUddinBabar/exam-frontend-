@@ -618,7 +618,129 @@ function ExamPage() {
   /* ══════════════════════════════════════════
      NEW: TAB WARNING BANNER
      ══════════════════════════════════════════ */
-  const TabWarningBanner = () =>
+  /* ══════════════════════════════════════════
+   TAB WARNING BANNER (CENTERED + RESPONSIVE)
+   ══════════════════════════════════════════ */
+const TabWarningBanner = () =>
+  showTabWarning ? (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 999999,
+
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+
+        padding: "20px",
+        background: "rgba(0,0,0,0.15)",
+        backdropFilter: "blur(6px)",
+      }}
+    >
+      <div
+        style={{
+          width: "90%",
+          maxWidth: "420px",
+
+          background:
+            tabSwitchCountRef.current >= 3
+              ? "linear-gradient(135deg,#7f1d1d,#991b1b)"
+              : tabSwitchCountRef.current === 2
+              ? "linear-gradient(135deg,#92400e,#b45309)"
+              : "linear-gradient(135deg,#1e3a8a,#1d4ed8)",
+
+          borderRadius: "24px",
+          padding: "28px 22px",
+
+          color: "white",
+          textAlign: "center",
+
+          boxShadow:
+            "0 30px 80px rgba(0,0,0,0.45), 0 8px 30px rgba(0,0,0,0.25)",
+
+          border: "1px solid rgba(255,255,255,0.16)",
+          backdropFilter: "blur(18px)",
+
+          animation:
+            "scaleIn 0.35s cubic-bezier(0.34,1.56,0.64,1)",
+
+          overflow: "hidden",
+        }}
+      >
+        {/* Icon */}
+        <div
+          style={{
+            fontSize: "clamp(34px,8vw,52px)",
+            marginBottom: "14px",
+          }}
+        >
+          {tabSwitchCountRef.current >= 3
+            ? "🚫"
+            : tabSwitchCountRef.current === 2
+            ? "⚠️"
+            : "🔔"}
+        </div>
+
+        {/* Title */}
+        <h2
+          style={{
+            margin: "0 0 12px",
+            fontSize: "clamp(18px,5vw,24px)",
+            fontWeight: 800,
+            lineHeight: 1.3,
+            fontFamily: "'Sora', sans-serif",
+          }}
+        >
+          {tabSwitchCountRef.current >= 3
+            ? "পরীক্ষা জমা হচ্ছে"
+            : tabSwitchCountRef.current === 2
+            ? "শেষ সতর্কতা!"
+            : "সতর্কতা"}
+        </h2>
+
+        {/* Message */}
+        <div
+          style={{
+            fontSize: "clamp(14px,4vw,18px)",
+            fontWeight: 500,
+            lineHeight: 1.8,
+            opacity: 0.96,
+            fontFamily: "'Hind Siliguri', sans-serif",
+          }}
+        >
+          {tabWarningMsg}
+        </div>
+
+        {/* Counter */}
+        {tabSwitchCountRef.current < 3 && (
+          <div
+            style={{
+              marginTop: "18px",
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+
+              padding: "10px 18px",
+              borderRadius: "999px",
+
+              background: "rgba(255,255,255,0.14)",
+              border: "1px solid rgba(255,255,255,0.18)",
+
+              fontSize: "13px",
+              fontWeight: 600,
+              letterSpacing: "0.3px",
+              color: "rgba(255,255,255,0.95)",
+              fontFamily: "'Sora', sans-serif",
+            }}
+          >
+            ⚠️ ট্যাব পরিবর্তন সংখ্যা:{" "}
+            {tabSwitchCountRef.current}/2
+          </div>
+        )}
+      </div>
+    </div>
+  ) : null;
     showTabWarning ? (
       <div style={{
         position: "fixed", top: 64, left: "50%",
