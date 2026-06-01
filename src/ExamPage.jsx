@@ -3,14 +3,8 @@ import { useParams } from "react-router-dom";
 
 const API = import.meta.env.VITE_API_URL;
 
-// ==============================
-// LOCALSTORAGE KEY HELPER
-// ==============================
 const getStorageKey = (code) => `exam_progress_${code}`;
 
-// ==============================
-// SCORE COMMENT
-// ==============================
 const getScoreComment = (score, name) => {
   const n = name || "বন্ধু";
   if (score >= 1 && score <= 5)  return `😔 ${n}, এবার ফলাফল একটু কম হয়েছে — কিন্তু এটাই শেষ কথা নয়! প্রতিটা ব্যর্থতা সাফল্যের প্রথম ধাপ। আবার চেষ্টা করো, তুমি অবশ্যই পারবে! 💪`;
@@ -22,12 +16,8 @@ const getScoreComment = (score, name) => {
 };
 
 function ExamPage() {
-
   const { code } = useParams();
 
-  // ==============================
-  // STATES
-  // ==============================
   const [exam, setExam] = useState(null);
   const [answers, setAnswers] = useState({});
   const [name, setName] = useState("");
@@ -35,61 +25,33 @@ function ExamPage() {
   const [score, setScore] = useState(null);
   const [reviewData, setReviewData] = useState(null);
   const [submitted, setSubmitted] = useState(false);
-
-  // TIMER
   const [timeLeft, setTimeLeft] = useState(null);
-
-  // ANTI-SCREENSHOT OVERLAY
   const [blocked, setBlocked] = useState(false);
   const blockTimeoutRef = useRef(null);
-
-  // TOAST
   const [showToast, setShowToast] = useState(false);
   const [toastVisible, setToastVisible] = useState(false);
 
   // ==============================
-  // ANTI-COPY / ANTI-SCREENSHOT PROTECTION
+  // ANTI-COPY / ANTI-SCREENSHOT
   // ==============================
   useEffect(() => {
-
     const handleContextMenu = (e) => e.preventDefault();
-
     const handleKeyDown = (e) => {
       const key = e.key.toLowerCase();
-      if (e.ctrlKey && ["c","u","s","a","p","x"].includes(key)) {
-        e.preventDefault();
-        return;
-      }
-      if (e.shiftKey && e.metaKey) {
-        e.preventDefault();
-        return;
-      }
-      if (
-        e.key === "PrintScreen" ||
-        e.key === "F12" ||
-        (e.ctrlKey && e.shiftKey && ["i","j","c"].includes(key))
-      ) {
+      if (e.ctrlKey && ["c","u","s","a","p","x"].includes(key)) { e.preventDefault(); return; }
+      if (e.shiftKey && e.metaKey) { e.preventDefault(); return; }
+      if (e.key === "PrintScreen" || e.key === "F12" || (e.ctrlKey && e.shiftKey && ["i","j","c"].includes(key))) {
         e.preventDefault();
         navigator.clipboard.writeText("").catch(() => {});
         triggerBlock();
         return;
       }
     };
-
     const handleCopy = (e) => e.preventDefault();
     const handleCut = (e) => e.preventDefault();
     const handleDragStart = (e) => e.preventDefault();
-
-    const handleBeforePrint = (e) => {
-      e.preventDefault();
-      triggerBlock();
-    };
-
-    const handleVisibilityChange = () => {
-      if (document.hidden) {
-        triggerBlock();
-      }
-    };
+    const handleBeforePrint = (e) => { e.preventDefault(); triggerBlock(); };
+    const handleVisibilityChange = () => { if (document.hidden) triggerBlock(); };
 
     document.addEventListener("contextmenu", handleContextMenu);
     document.addEventListener("keydown", handleKeyDown);
@@ -120,15 +82,12 @@ function ExamPage() {
   // FETCH EXAM + RESTORE PROGRESS
   // ==============================
   useEffect(() => {
-
     fetch(`${API}/api/exams/${code}`)
       .then((res) => res.json())
       .then((data) => {
         setExam(data);
-
         const storageKey = getStorageKey(code);
         const saved = localStorage.getItem(storageKey);
-
         if (saved) {
           try {
             const progress = JSON.parse(saved);
@@ -148,45 +107,35 @@ function ExamPage() {
           if (data.duration) setTimeLeft(data.duration * 60);
         }
       });
-
   }, [code]);
 
   // ==============================
-  // SAVE PROGRESS TO LOCALSTORAGE
+  // SAVE PROGRESS
   // ==============================
   useEffect(() => {
     if (!exam || submitted) return;
     const storageKey = getStorageKey(code);
-    const progress = { answers, name, roll, timeLeft };
-    localStorage.setItem(storageKey, JSON.stringify(progress));
+    localStorage.setItem(storageKey, JSON.stringify({ answers, name, roll, timeLeft }));
   }, [answers, name, roll, timeLeft, exam, submitted, code]);
 
   // ==============================
   // TIMER
   // ==============================
   useEffect(() => {
-    if (timeLeft === null) return;
-    if (submitted) return;
-    if (timeLeft <= 0) {
-      autoSubmit();
-      return;
-    }
-    const timer = setInterval(() => {
-      setTimeLeft((prev) => prev - 1);
-    }, 1000);
+    if (timeLeft === null || submitted) return;
+    if (timeLeft <= 0) { autoSubmit(); return; }
+    const timer = setInterval(() => setTimeLeft((prev) => prev - 1), 1000);
     return () => clearInterval(timer);
   }, [timeLeft, submitted]);
 
   // ==============================
-  // TOAST TRIGGER — after result loads
+  // TOAST TRIGGER
   // ==============================
   useEffect(() => {
     if (score !== null && reviewData) {
-      // slight delay so result page renders first
       setTimeout(() => {
         setShowToast(true);
         setTimeout(() => setToastVisible(true), 50);
-        // auto hide after 6 seconds
         setTimeout(() => {
           setToastVisible(false);
           setTimeout(() => setShowToast(false), 600);
@@ -195,40 +144,20 @@ function ExamPage() {
     }
   }, [score, reviewData]);
 
-  // ==============================
-  // FORMAT TIME
-  // ==============================
   const formatTime = () => {
     const minutes = Math.floor(timeLeft / 60);
     const seconds = timeLeft % 60;
     return `${minutes}:${seconds.toString().padStart(2, "0")}`;
   };
 
-  // timer color — red when <= 60s
   const timerColor = timeLeft !== null && timeLeft <= 60 ? "#ff4444" : "white";
 
-  // ==============================
-  // ANSWER
-  // ==============================
-  const handleAnswer = (qid, option) => {
-    setAnswers({ ...answers, [qid]: option });
-  };
+  const handleAnswer = (qid, option) => setAnswers({ ...answers, [qid]: option });
+  const clearProgress = () => localStorage.removeItem(getStorageKey(code));
 
-  // ==============================
-  // CLEAR SAVED PROGRESS
-  // ==============================
-  const clearProgress = () => {
-    localStorage.removeItem(getStorageKey(code));
-  };
-
-  // ==============================
-  // SUBMIT
-  // ==============================
   const submitExam = async () => {
     if (submitted) return;
-    if (!name || !roll) {
-      return alert("Name & Roll Required");
-    }
+    if (!name || !roll) return alert("Name & Roll Required");
     setSubmitted(true);
     try {
       const res = await fetch(`${API}/api/exams/submit`, {
@@ -246,18 +175,12 @@ function ExamPage() {
     }
   };
 
-  // ==============================
-  // AUTO SUBMIT
-  // ==============================
   const autoSubmit = () => {
     if (submitted) return;
     alert("সময় শেষ! Auto Submit হচ্ছে");
     submitExam();
   };
 
-  // ==============================
-  // DOWNLOAD RESULT PDF
-  // ==============================
   const downloadResult = async () => {
     const html2pdf = (await import("html2pdf.js")).default;
     const element = document.getElementById("result-sheet");
@@ -267,7 +190,7 @@ function ExamPage() {
       margin: [5, 5, 5, 5],
       filename: `${exam.title || "exam-result"}.pdf`,
       image: { type: "jpeg", quality: 1 },
-      html2canvas: { scale: 2, useCORS: true, backgroundColor: "#071028", scrollY: 0 },
+      html2canvas: { scale: 2, useCORS: true, backgroundColor: "#f8fafc", scrollY: 0 },
       jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
       pagebreak: { mode: ["avoid-all", "css", "legacy"] }
     };
@@ -279,11 +202,14 @@ function ExamPage() {
   // GLOBAL STYLES
   // ==============================
   const globalStyles = `
+    @import url('https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=Sora:wght@400;500;600;700;800&display=swap');
+
     * {
       user-select: none !important;
       -webkit-user-select: none !important;
       -moz-user-select: none !important;
       -ms-user-select: none !important;
+      box-sizing: border-box;
     }
     input, textarea {
       user-select: text !important;
@@ -297,188 +223,271 @@ function ExamPage() {
       body { display: none !important; }
     }
     .pdf-mode {
-      background: #071028 !important;
+      background: #f8fafc !important;
       padding: 20px !important;
-    }
-    .pdf-mode * {
-      box-sizing: border-box;
     }
     .pdf-mode .question {
       page-break-inside: avoid !important;
       break-inside: avoid !important;
     }
+
     @keyframes timerPulse {
       0% { transform: scale(1); }
-      50% { transform: scale(1.08); }
+      50% { transform: scale(1.06); }
       100% { transform: scale(1); }
     }
-    @keyframes toastSlideIn {
-      0% { transform: translateY(120px); opacity: 0; }
-      100% { transform: translateY(0); opacity: 1; }
+
+    /* FIXED TOAST — uses translateX(-50%) for centering, translateY for slide */
+    @keyframes toastIn {
+      0%   { transform: translateX(-50%) translateY(100px); opacity: 0; }
+      100% { transform: translateX(-50%) translateY(0);     opacity: 1; }
     }
-    @keyframes toastSlideOut {
-      0% { transform: translateY(0); opacity: 1; }
-      100% { transform: translateY(120px); opacity: 0; }
+    @keyframes toastOut {
+      0%   { transform: translateX(-50%) translateY(0);     opacity: 1; }
+      100% { transform: translateX(-50%) translateY(100px); opacity: 0; }
+    }
+
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(24px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes scaleIn {
+      from { opacity: 0; transform: scale(0.92); }
+      to   { opacity: 1; transform: scale(1); }
+    }
+
+    .stat-card {
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .stat-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 16px 40px rgba(0,0,0,0.15) !important;
+    }
+    .option-btn {
+      transition: all 0.18s ease;
+    }
+    .option-btn:hover {
+      transform: translateX(4px);
+    }
+    .review-question {
+      animation: fadeInUp 0.4s ease both;
     }
   `;
+
+  // ==============================
+  // BLOCKED OVERLAY (shared)
+  // ==============================
+  const BlockedOverlay = () => blocked ? (
+    <div style={{
+      position: "fixed", inset: 0, background: "rgba(0,0,0,0.97)",
+      zIndex: 99999, display: "flex", flexDirection: "column",
+      alignItems: "center", justifyContent: "center", color: "white"
+    }}>
+      <div style={{ fontSize: 64, marginBottom: 20 }}>🚫</div>
+      <h2 style={{ fontSize: 28, fontWeight: 700, marginBottom: 10, fontFamily: "'Sora', sans-serif" }}>Screenshot Blocked</h2>
+      <p style={{ color: "rgba(255,255,255,0.6)", fontSize: 16, fontFamily: "'Hind Siliguri', sans-serif" }}>এই পরীক্ষায় screenshot নেওয়া নিষিদ্ধ</p>
+    </div>
+  ) : null;
 
   // ==============================
   // RESULT PAGE
   // ==============================
   if (score !== null && reviewData) {
-
     const wrong = reviewData.questions.length - score;
     const percentage = Math.round((score / reviewData.questions.length) * 100);
 
     return (
-      <div style={{ minHeight: "100vh", background: "#071028", padding: "14px" }}>
+      <div style={{
+        minHeight: "100vh",
+        background: "#f0f4ff",
+        padding: "14px",
+        fontFamily: "'Sora', 'Hind Siliguri', sans-serif"
+      }}>
         <style>{globalStyles}</style>
+        <BlockedOverlay />
 
-        {/* BLOCKED OVERLAY */}
-        {blocked && (
-          <div style={{
-            position: "fixed", inset: 0, background: "rgba(0,0,0,0.97)",
-            zIndex: 99999, display: "flex", flexDirection: "column",
-            alignItems: "center", justifyContent: "center", color: "white"
-          }}>
-            <div style={{ fontSize: "64px", marginBottom: "20px" }}>🚫</div>
-            <h2 style={{ fontSize: "28px", fontWeight: "700", marginBottom: "10px" }}>Screenshot Blocked</h2>
-            <p style={{ color: "rgba(255,255,255,0.6)", fontSize: "16px" }}>এই পরীক্ষায় screenshot নেওয়া নিষিদ্ধ</p>
-          </div>
-        )}
-
-        {/* TOAST */}
+        {/* ── TOAST (FIXED CENTERED) ── */}
         {showToast && (
           <div style={{
             position: "fixed",
             bottom: 28,
-            left: "50%",
-            transform: "translateX(-50%)",
+            left: "50%",               /* anchor at center */
+            transform: "translateX(-50%)", /* pull back half-width */
             zIndex: 99998,
-            width: "90%",
-            maxWidth: 520,
+            width: "calc(100% - 32px)",  /* full width minus side padding */
+            maxWidth: 540,
             animation: toastVisible
-              ? "toastSlideIn 0.5s cubic-bezier(0.34,1.56,0.64,1) forwards"
-              : "toastSlideOut 0.5s ease forwards",
+              ? "toastIn 0.5s cubic-bezier(0.34,1.56,0.64,1) forwards"
+              : "toastOut 0.45s ease forwards",
           }}>
             <div style={{
-              background: "linear-gradient(135deg,#1e3a8a,#4c1d95)",
-              borderRadius: 22,
-              padding: "20px 24px",
+              background: "linear-gradient(135deg,#1e3a8a 0%,#4c1d95 100%)",
+              borderRadius: 20,
+              padding: "18px 22px",
               color: "white",
-              fontSize: "clamp(14px,2.2vw,18px)",
-              fontWeight: "600",
+              fontSize: "clamp(13px,2vw,17px)",
+              fontWeight: 600,
               lineHeight: 1.8,
-              boxShadow: "0 20px 60px rgba(0,0,0,0.5)",
-              border: "1px solid rgba(255,255,255,0.15)",
+              boxShadow: "0 24px 64px rgba(30,58,138,0.45), 0 4px 16px rgba(0,0,0,0.3)",
+              border: "1px solid rgba(255,255,255,0.18)",
               textAlign: "center",
-              backdropFilter: "blur(10px)",
+              backdropFilter: "blur(12px)",
+              fontFamily: "'Hind Siliguri', sans-serif",
             }}>
               {getScoreComment(score, name)}
             </div>
           </div>
         )}
 
-        <div id="result-sheet" style={{ maxWidth: 1200, margin: "auto", width: "100%" }}>
+        <div id="result-sheet" style={{ maxWidth: 860, margin: "0 auto", width: "100%" }}>
 
+          {/* ── HERO RESULT CARD ── */}
           <div style={{
-            background: "linear-gradient(135deg,#2563eb,#7c3aed)",
-            borderRadius: 28, padding: "25px 18px", color: "white", marginBottom: 30
+            background: "linear-gradient(135deg,#2563eb 0%,#7c3aed 100%)",
+            borderRadius: 28,
+            padding: "28px 22px",
+            color: "white",
+            marginBottom: 28,
+            boxShadow: "0 20px 60px rgba(37,99,235,0.35), 0 4px 20px rgba(0,0,0,0.15)",
+            animation: "scaleIn 0.5s ease both",
           }}>
-            <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 12, marginBottom: 15 }}>
-              <h1 style={{ fontSize: "clamp(28px,5vw,55px)", margin: 0, fontWeight: "700", lineHeight: 1.2 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 6 }}>
+              <h1 style={{
+                fontSize: "clamp(26px,5vw,48px)",
+                margin: 0, fontWeight: 800, lineHeight: 1.2,
+                fontFamily: "'Sora', sans-serif", letterSpacing: "-0.5px"
+              }}>
                 🎉 Exam Completed
               </h1>
             </div>
-
-            <h2 style={{ fontSize: "clamp(16px,3vw,28px)", marginBottom: 25, wordBreak: "break-word" }}>
+            <h2 style={{
+              fontSize: "clamp(15px,2.5vw,22px)", marginBottom: 24, marginTop: 6,
+              opacity: 0.85, fontWeight: 500, wordBreak: "break-word"
+            }}>
               {exam.title}
             </h2>
 
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(160px,1fr))", gap: 16 }}>
-              <div style={{ background: "rgba(255,255,255,0.12)", padding: 20, borderRadius: 20 }}>
-                <p style={{ opacity: 0.9, marginBottom: 10, fontSize: 16 }}>Score</p>
-                <h1 style={{ fontSize: "clamp(30px,5vw,50px)", margin: 0 }}>{score}/{reviewData.questions.length}</h1>
-              </div>
-              <div style={{ background: "rgba(34,197,94,0.18)", padding: 20, borderRadius: 20 }}>
-                <p style={{ marginBottom: 10, fontSize: 16 }}>Correct</p>
-                <h1 style={{ fontSize: "clamp(30px,5vw,50px)", margin: 0 }}>✅ {score}</h1>
-              </div>
-              <div style={{ background: "rgba(239,68,68,0.18)", padding: 20, borderRadius: 20 }}>
-                <p style={{ marginBottom: 10, fontSize: 16 }}>Wrong</p>
-                <h1 style={{ fontSize: "clamp(30px,5vw,50px)", margin: 0 }}>❌ {wrong}</h1>
-              </div>
-              <div style={{ background: "rgba(255,255,255,0.12)", padding: 20, borderRadius: 20 }}>
-                <p style={{ marginBottom: 10, fontSize: 16 }}>Percentage</p>
-                <h1 style={{ fontSize: "clamp(30px,5vw,50px)", margin: 0 }}>{percentage}%</h1>
-              </div>
+            {/* STAT CARDS */}
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))", gap: 14 }}>
+              {[
+                { label: "Score", value: `${score}/${reviewData.questions.length}`, bg: "rgba(255,255,255,0.15)", border: "rgba(255,255,255,0.25)" },
+                { label: "Correct", value: `✅ ${score}`, bg: "rgba(34,197,94,0.2)", border: "rgba(34,197,94,0.4)" },
+                { label: "Wrong", value: `❌ ${wrong}`, bg: "rgba(239,68,68,0.18)", border: "rgba(239,68,68,0.35)" },
+                { label: "Percentage", value: `${percentage}%`, bg: "rgba(255,255,255,0.12)", border: "rgba(255,255,255,0.22)" },
+              ].map((s, i) => (
+                <div key={i} className="stat-card" style={{
+                  background: s.bg, padding: "18px 16px", borderRadius: 18,
+                  border: `1.5px solid ${s.border}`,
+                  boxShadow: "0 4px 16px rgba(0,0,0,0.1)",
+                }}>
+                  <p style={{ opacity: 0.8, marginBottom: 8, fontSize: 13, fontWeight: 600, letterSpacing: "0.5px", textTransform: "uppercase" }}>{s.label}</p>
+                  <p style={{ fontSize: "clamp(26px,4.5vw,44px)", margin: 0, fontWeight: 800, lineHeight: 1, fontFamily: "'Sora', sans-serif" }}>{s.value}</p>
+                </div>
+              ))}
             </div>
 
-            {/* SCORE COMMENT — inside result card */}
+            {/* SCORE COMMENT INSIDE CARD */}
             <div style={{
-              background: "rgba(255,255,255,0.15)",
-              borderRadius: 20, padding: "20px 24px", marginTop: 18,
-              fontSize: "clamp(15px,2.4vw,21px)", fontWeight: "600",
-              textAlign: "center", lineHeight: 1.8, letterSpacing: "0.3px",
-              border: "1px solid rgba(255,255,255,0.25)"
+              background: "rgba(255,255,255,0.13)",
+              borderRadius: 18, padding: "18px 20px", marginTop: 18,
+              fontSize: "clamp(14px,2.2vw,19px)", fontWeight: 600,
+              textAlign: "center", lineHeight: 1.9, letterSpacing: "0.2px",
+              border: "1px solid rgba(255,255,255,0.22)",
+              fontFamily: "'Hind Siliguri', sans-serif",
+              backdropFilter: "blur(4px)",
             }}>
               {getScoreComment(score, name)}
             </div>
-
           </div>
 
-          <div style={{ display: "flex", justifyContent: "center", marginBottom: 30 }}>
+          {/* ── DOWNLOAD BUTTON ── */}
+          <div style={{ display: "flex", justifyContent: "center", marginBottom: 28 }}>
             <button
               onClick={downloadResult}
               style={{
-                padding: "16px 28px", border: "none", borderRadius: 18,
-                background: "#22c55e", color: "white", fontSize: 18,
-                fontWeight: "700", cursor: "pointer", width: "100%", maxWidth: 350
+                padding: "15px 28px", border: "none", borderRadius: 16,
+                background: "linear-gradient(135deg,#16a34a,#15803d)",
+                color: "white", fontSize: 17, fontWeight: 700,
+                cursor: "pointer", width: "100%", maxWidth: 340,
+                boxShadow: "0 8px 24px rgba(22,163,74,0.35)",
+                fontFamily: "'Sora', sans-serif", letterSpacing: "0.3px",
+                transition: "transform 0.15s ease, box-shadow 0.15s ease",
               }}
+              onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 12px 32px rgba(22,163,74,0.45)"; }}
+              onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "0 8px 24px rgba(22,163,74,0.35)"; }}
             >
               📄 Download Result PDF
             </button>
           </div>
 
+          {/* ── QUESTION REVIEW ── */}
           {reviewData.questions.map((q, index) => {
             const userAns = reviewData.answers[q._id];
             const correct = q.correctAnswer;
             return (
               <div
                 key={index}
-                className="question"
+                className="review-question"
                 style={{
-                  background: "white", padding: "18px", borderRadius: 24,
-                  marginBottom: 22, boxShadow: "0 10px 25px rgba(0,0,0,0.08)", overflow: "hidden"
+                  background: "white",
+                  padding: "22px 20px",
+                  borderRadius: 22,
+                  marginBottom: 18,
+                  /* ← Smooth multi-layer shadow on white */
+                  boxShadow: "0 2px 8px rgba(37,99,235,0.06), 0 8px 28px rgba(37,99,235,0.10), 0 1px 3px rgba(0,0,0,0.05)",
+                  border: "1px solid rgba(226,232,240,0.8)",
+                  overflow: "hidden",
+                  animationDelay: `${index * 0.04}s`,
                 }}
               >
-                <h2 style={{
-                  fontSize: "clamp(18px,3vw,28px)", marginBottom: 12,
-                  color: "#0f172a", lineHeight: 1.5, wordBreak: "break-word"
+                {/* Question header stripe */}
+                <div style={{
+                  display: "inline-flex", alignItems: "center",
+                  background: "linear-gradient(135deg,#eff6ff,#f5f3ff)",
+                  borderRadius: 10, padding: "4px 12px", marginBottom: 12,
+                  border: "1px solid #e0e7ff",
                 }}>
-                  Q{index + 1}. {q.question}
+                  <span style={{ fontSize: 13, fontWeight: 700, color: "#3730a3", fontFamily: "'Sora', sans-serif" }}>
+                    Q{index + 1}
+                  </span>
+                </div>
+
+                <h2 style={{
+                  fontSize: "clamp(16px,2.6vw,24px)", marginBottom: 14,
+                  color: "#0f172a", lineHeight: 1.6, wordBreak: "break-word",
+                  fontFamily: "'Hind Siliguri', 'Sora', sans-serif", fontWeight: 600,
+                  margin: "0 0 14px 0",
+                }}>
+                  {q.question}
                 </h2>
+
                 {q.image && (
                   <img src={q.image} alt="question" style={{
-                    maxWidth: "320px", borderRadius: "12px",
-                    border: "1px solid #e2e8f0", marginBottom: "16px", display: "block"
+                    maxWidth: "300px", borderRadius: "12px",
+                    border: "1px solid #e2e8f0", marginBottom: "16px", display: "block",
+                    boxShadow: "0 4px 12px rgba(0,0,0,0.08)"
                   }} />
                 )}
-                <div style={{ display: "grid", gap: 12 }}>
+
+                <div style={{ display: "grid", gap: 10 }}>
                   {q.options.map((opt, i) => {
-                    let bg = "#f1f5f9";
-                    let border = "#cbd5e1";
-                    if (opt === correct) { bg = "#dcfce7"; border = "#16a34a"; }
-                    if (opt === userAns && opt !== correct) { bg = "#fee2e2"; border = "#dc2626"; }
+                    const isCorrect = opt === correct;
+                    const isWrong = opt === userAns && opt !== correct;
+                    let bg = "#f8fafc", border = "#e2e8f0", color = "#334155";
+                    if (isCorrect) { bg = "#f0fdf4"; border = "#86efac"; color = "#14532d"; }
+                    if (isWrong)   { bg = "#fff1f2"; border = "#fca5a5"; color = "#7f1d1d"; }
                     return (
                       <div key={i} style={{
-                        padding: "15px 14px", borderRadius: 14, background: bg,
-                        border: `2px solid ${border}`, fontSize: "clamp(15px,2.7vw,20px)",
-                        fontWeight: 500, lineHeight: 1.6, wordBreak: "break-word"
+                        padding: "13px 16px", borderRadius: 14, background: bg,
+                        border: `1.5px solid ${border}`, color,
+                        fontSize: "clamp(14px,2.4vw,18px)", fontWeight: 500,
+                        lineHeight: 1.6, wordBreak: "break-word",
+                        fontFamily: "'Hind Siliguri', sans-serif",
+                        display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8,
                       }}>
-                        {opt}
-                        {opt === correct && <span> ✅ Correct</span>}
-                        {opt === userAns && opt !== correct && <span> ❌ Your Answer</span>}
+                        <span>{opt}</span>
+                        {isCorrect && <span style={{ fontSize: 13, fontWeight: 700, color: "#16a34a", whiteSpace: "nowrap", background: "#dcfce7", padding: "2px 10px", borderRadius: 20 }}>✅ Correct</span>}
+                        {isWrong   && <span style={{ fontSize: 13, fontWeight: 700, color: "#dc2626", whiteSpace: "nowrap", background: "#fee2e2", padding: "2px 10px", borderRadius: 20 }}>❌ Your Answer</span>}
                       </div>
                     );
                   })}
@@ -500,7 +509,9 @@ function ExamPage() {
       <div style={{
         minHeight: "100vh", display: "flex",
         justifyContent: "center", alignItems: "center",
-        fontSize: 30, fontWeight: "bold"
+        fontSize: 28, fontWeight: "bold",
+        background: "linear-gradient(135deg,#0f172a,#1e293b)", color: "white",
+        fontFamily: "'Sora', sans-serif"
       }}>
         Loading...
       </div>
@@ -513,164 +524,177 @@ function ExamPage() {
   return (
     <div style={{
       minHeight: "100vh",
-      background: "linear-gradient(135deg,#0f172a,#1e293b)",
-      padding: 14
+      background: "linear-gradient(160deg,#0f172a 0%,#1e293b 100%)",
+      padding: 14,
+      fontFamily: "'Sora', 'Hind Siliguri', sans-serif"
     }}>
       <style>{globalStyles}</style>
-
-      {/* BLOCKED OVERLAY */}
-      {blocked && (
-        <div style={{
-          position: "fixed", inset: 0, background: "rgba(0,0,0,0.97)",
-          zIndex: 99999, display: "flex", flexDirection: "column",
-          alignItems: "center", justifyContent: "center", color: "white"
-        }}>
-          <div style={{ fontSize: "64px", marginBottom: "20px" }}>🚫</div>
-          <h2 style={{ fontSize: "28px", fontWeight: "700", marginBottom: "10px" }}>Screenshot Blocked</h2>
-          <p style={{ color: "rgba(255,255,255,0.6)", fontSize: "16px" }}>এই পরীক্ষায় screenshot নেওয়া নিষিদ্ধ</p>
-        </div>
-      )}
+      <BlockedOverlay />
 
       {/* STICKY TIMER */}
       <div style={{
-        position: "fixed",
-        top: 0,
-        left: 0,
-        right: 0,
-        zIndex: 1000,
-        display: "flex",
-        justifyContent: "center",
+        position: "fixed", top: 0, left: 0, right: 0, zIndex: 1000,
+        display: "flex", justifyContent: "center",
         padding: "10px 16px",
-        background: "rgba(15,23,42,0.85)",
-        backdropFilter: "blur(12px)",
-        borderBottom: "1px solid rgba(255,255,255,0.08)",
-        boxShadow: "0 4px 20px rgba(0,0,0,0.4)"
+        background: "rgba(15,23,42,0.88)",
+        backdropFilter: "blur(14px)",
+        borderBottom: "1px solid rgba(255,255,255,0.07)",
+        boxShadow: "0 4px 24px rgba(0,0,0,0.4)"
       }}>
         <div style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 10,
-          background: timeLeft !== null && timeLeft <= 60
-            ? "rgba(255,68,68,0.15)"
-            : "rgba(37,99,235,0.2)",
+          display: "flex", alignItems: "center", gap: 10,
+          background: timeLeft !== null && timeLeft <= 60 ? "rgba(255,68,68,0.12)" : "rgba(37,99,235,0.18)",
           border: `1.5px solid ${timerColor}`,
-          borderRadius: 50,
-          padding: "8px 24px",
+          borderRadius: 50, padding: "8px 26px",
           animation: timeLeft !== null && timeLeft <= 60 ? "timerPulse 1s infinite" : "none"
         }}>
-          <span style={{ fontSize: 20 }}>⏰</span>
+          <span style={{ fontSize: 18 }}>⏰</span>
           <span style={{
-            fontSize: "clamp(16px,3vw,22px)",
-            fontWeight: "800",
-            color: timerColor,
-            letterSpacing: "2px",
-            fontFamily: "monospace"
+            fontSize: "clamp(16px,3vw,22px)", fontWeight: 800, color: timerColor,
+            letterSpacing: "2.5px", fontFamily: "monospace"
           }}>
             {timeLeft !== null ? formatTime() : "--:--"}
           </span>
         </div>
       </div>
 
-      <div style={{ maxWidth: 1100, margin: "auto", paddingTop: 62 }}>
+      <div style={{ maxWidth: 860, margin: "auto", paddingTop: 66 }}>
 
-        {/* TOP — title only, timer removed from here */}
+        {/* EXAM TITLE */}
         <div style={{
           background: "linear-gradient(135deg,#2563eb,#7c3aed)",
-          borderRadius: 28, padding: "25px 18px", color: "white", marginBottom: 25
+          borderRadius: 24, padding: "22px 20px", color: "white", marginBottom: 22,
+          boxShadow: "0 12px 40px rgba(37,99,235,0.3)",
         }}>
-          <h1 style={{ fontSize: "clamp(28px,5vw,55px)", marginBottom: 6, lineHeight: 1.2 }}>
+          <h1 style={{
+            fontSize: "clamp(22px,4.5vw,46px)", margin: 0, lineHeight: 1.25,
+            fontWeight: 800, letterSpacing: "-0.3px"
+          }}>
             📝 {exam.title}
           </h1>
         </div>
 
         {/* USER INFO */}
-        <div style={{ background: "white", borderRadius: 22, padding: 20, marginBottom: 25 }}>
-          <div style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit,minmax(220px,1fr))",
-            gap: 16
-          }}>
-            <input
-              type="text"
-              placeholder="Your Name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              style={{
-                padding: 16, borderRadius: 14, border: "1px solid #cbd5e1",
-                fontSize: 16, width: "100%", boxSizing: "border-box"
-              }}
-            />
-            <input
-              type="text"
-              placeholder="Your Roll"
-              value={roll}
-              onChange={(e) => setRoll(e.target.value)}
-              style={{
-                padding: 16, borderRadius: 14, border: "1px solid #cbd5e1",
-                fontSize: 16, width: "100%", boxSizing: "border-box"
-              }}
-            />
+        <div style={{
+          background: "white", borderRadius: 20, padding: "18px 16px", marginBottom: 22,
+          boxShadow: "0 2px 8px rgba(37,99,235,0.06), 0 8px 28px rgba(37,99,235,0.10)",
+          border: "1px solid rgba(226,232,240,0.8)",
+        }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(200px,1fr))", gap: 14 }}>
+            {[
+              { placeholder: "Your Name", value: name, onChange: (e) => setName(e.target.value) },
+              { placeholder: "Your Roll", value: roll, onChange: (e) => setRoll(e.target.value) },
+            ].map((inp, i) => (
+              <input
+                key={i}
+                type="text"
+                placeholder={inp.placeholder}
+                value={inp.value}
+                onChange={inp.onChange}
+                style={{
+                  padding: "14px 16px", borderRadius: 14,
+                  border: "1.5px solid #e2e8f0", fontSize: 15,
+                  width: "100%", outline: "none",
+                  fontFamily: "'Hind Siliguri', 'Sora', sans-serif",
+                  color: "#0f172a", background: "#f8fafc",
+                  transition: "border-color 0.2s",
+                }}
+                onFocus={e => e.target.style.borderColor = "#2563eb"}
+                onBlur={e => e.target.style.borderColor = "#e2e8f0"}
+              />
+            ))}
           </div>
         </div>
 
         {/* QUESTIONS */}
         {exam.questions.map((q, index) => (
-          <div
-            key={q._id}
-            style={{ background: "white", borderRadius: 24, padding: 20, marginBottom: 22 }}
-          >
-            <h2 style={{
-              fontSize: "clamp(20px,3vw,30px)", marginBottom: 16,
-              color: "#0f172a", lineHeight: 1.5
+          <div key={q._id} style={{
+            background: "white", borderRadius: 22, padding: "20px 18px", marginBottom: 18,
+            boxShadow: "0 2px 8px rgba(37,99,235,0.06), 0 8px 28px rgba(37,99,235,0.10)",
+            border: "1px solid rgba(226,232,240,0.8)",
+          }}>
+            <div style={{
+              display: "inline-flex", alignItems: "center",
+              background: "linear-gradient(135deg,#eff6ff,#f5f3ff)",
+              borderRadius: 10, padding: "3px 12px", marginBottom: 10,
+              border: "1px solid #e0e7ff",
             }}>
-              {index + 1}. {q.question}
+              <span style={{ fontSize: 12, fontWeight: 700, color: "#3730a3", fontFamily: "'Sora', sans-serif" }}>
+                Q{index + 1}
+              </span>
+            </div>
+
+            <h2 style={{
+              fontSize: "clamp(17px,2.8vw,26px)", marginBottom: 16, margin: "0 0 16px 0",
+              color: "#0f172a", lineHeight: 1.6, fontWeight: 600,
+              fontFamily: "'Hind Siliguri', 'Sora', sans-serif",
+            }}>
+              {q.question}
             </h2>
+
             {q.image && (
               <img src={q.image} alt="question" style={{
-                maxWidth: "320px", borderRadius: "12px",
-                border: "1px solid #e2e8f0", marginBottom: "16px", display: "block"
+                maxWidth: "300px", borderRadius: "12px",
+                border: "1px solid #e2e8f0", marginBottom: "14px", display: "block",
+                boxShadow: "0 4px 12px rgba(0,0,0,0.08)"
               }} />
             )}
-            <div style={{ display: "grid", gap: 14 }}>
-              {q.options.map((opt, i) => (
-                <button
-                  key={i}
-                  onClick={() => handleAnswer(q._id, opt)}
-                  style={{
-                    padding: "16px 18px", borderRadius: 16,
-                    border: answers[q._id] === opt ? "2px solid #2563eb" : "2px solid #e2e8f0",
-                    background: answers[q._id] === opt ? "#dbeafe" : "#f8fafc",
-                    cursor: "pointer", textAlign: "left",
-                    fontSize: "clamp(15px,2.7vw,20px)", fontWeight: 500,
-                    lineHeight: 1.6, width: "100%", wordBreak: "break-word"
-                  }}
-                >
-                  {opt}
-                </button>
-              ))}
+
+            <div style={{ display: "grid", gap: 12 }}>
+              {q.options.map((opt, i) => {
+                const selected = answers[q._id] === opt;
+                return (
+                  <button
+                    key={i}
+                    className="option-btn"
+                    onClick={() => handleAnswer(q._id, opt)}
+                    style={{
+                      padding: "14px 18px", borderRadius: 14, textAlign: "left",
+                      border: selected ? "2px solid #2563eb" : "1.5px solid #e2e8f0",
+                      background: selected
+                        ? "linear-gradient(135deg,#eff6ff,#f5f3ff)"
+                        : "#f8fafc",
+                      cursor: "pointer",
+                      fontSize: "clamp(14px,2.5vw,19px)", fontWeight: selected ? 600 : 500,
+                      lineHeight: 1.6, width: "100%", wordBreak: "break-word",
+                      color: selected ? "#1e40af" : "#334155",
+                      boxShadow: selected ? "0 4px 14px rgba(37,99,235,0.15)" : "none",
+                      fontFamily: "'Hind Siliguri', 'Sora', sans-serif",
+                    }}
+                  >
+                    {opt}
+                  </button>
+                );
+              })}
             </div>
           </div>
         ))}
 
         {/* SUBMIT */}
-        <div style={{ display: "flex", justifyContent: "center", marginTop: 35 }}>
+        <div style={{ display: "flex", justifyContent: "center", marginTop: 30, marginBottom: 40 }}>
           <button
             onClick={submitExam}
             disabled={submitted}
             style={{
-              padding: "18px 28px", border: "none", borderRadius: 18,
-              background: submitted ? "#94a3b8" : "#22c55e",
-              color: "white", fontSize: 20, fontWeight: "700",
+              padding: "17px 28px", border: "none", borderRadius: 18,
+              background: submitted
+                ? "#94a3b8"
+                : "linear-gradient(135deg,#22c55e,#16a34a)",
+              color: "white", fontSize: 19, fontWeight: 700,
               cursor: submitted ? "not-allowed" : "pointer",
-              width: "100%", maxWidth: 350
+              width: "100%", maxWidth: 350,
+              boxShadow: submitted ? "none" : "0 8px 28px rgba(34,197,94,0.35)",
+              fontFamily: "'Sora', sans-serif", letterSpacing: "0.3px",
+              transition: "transform 0.15s ease",
             }}
+            onMouseEnter={e => { if (!submitted) e.currentTarget.style.transform = "translateY(-2px)"; }}
+            onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; }}
           >
             {submitted ? "⏳ Submitting..." : "🚀 Submit Exam"}
           </button>
         </div>
 
       </div>
-
     </div>
   );
 }
