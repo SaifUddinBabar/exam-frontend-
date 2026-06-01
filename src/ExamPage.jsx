@@ -8,6 +8,19 @@ const API = import.meta.env.VITE_API_URL;
 // ==============================
 const getStorageKey = (code) => `exam_progress_${code}`;
 
+// ==============================
+// SCORE COMMENT
+// ==============================
+const getScoreComment = (score, name) => {
+  const n = name || "বন্ধু";
+  if (score >= 1 && score <= 5)  return `😔 ${n}, এবার ফলাফল একটু কম হয়েছে — কিন্তু এটাই শেষ কথা নয়! প্রতিটা ব্যর্থতা সাফল্যের প্রথম ধাপ। আবার চেষ্টা করো, তুমি অবশ্যই পারবে! 💪`;
+  if (score >= 6 && score <= 10) return `🙂 ${n}, তুমি চেষ্টা করেছ — সেটাই সবচেয়ে বড় কথা! একটু বেশি সময় দিলে পরের বার তুমি অনেক এগিয়ে যাবে। হাল ছেড়ো না! 🔥`;
+  if (score >= 11 && score <= 14) return `😊 বাহ ${n}! মাঝামাঝি ফলাফল এসেছে — তবে তোমার মধ্যে আরও অনেক সম্ভাবনা আছে। একটু মনোযোগ বাড়াও, সেরাটা বের হয়ে আসবেই! ⭐`;
+  if (score >= 15 && score <= 18) return `🌟 চমৎকার ${n}! তুমি সত্যিই ভালো করেছ! আর মাত্র কয়েক ধাপ — শীর্ষে পৌঁছানো তোমার পক্ষেই সম্ভব। এগিয়ে যাও! 🚀`;
+  if (score >= 19 && score <= 25) return `🏆 অবিশ্বাস্য ${n}! তুমি আজকে সত্যিকারের চ্যাম্পিয়ন! তোমার এই পরিশ্রম ও মেধা একদিন তোমাকে অনেক উঁচুতে নিয়ে যাবে। গর্বিত তোমাকে নিয়ে! 🎉✨`;
+  return "";
+};
+
 function ExamPage() {
 
   const { code } = useParams();
@@ -406,6 +419,23 @@ function ExamPage() {
               </div>
 
             </div>
+
+            {/* SCORE COMMENT */}
+            <div style={{
+              background: "rgba(255,255,255,0.15)",
+              borderRadius: 20,
+              padding: "20px 24px",
+              marginTop: 18,
+              fontSize: "clamp(15px,2.4vw,21px)",
+              fontWeight: "600",
+              textAlign: "center",
+              lineHeight: 1.8,
+              letterSpacing: "0.3px",
+              border: "1px solid rgba(255,255,255,0.25)"
+            }}>
+              {getScoreComment(score, name)}
+            </div>
+
           </div>
 
           <div style={{ display: "flex", justifyContent: "center", marginBottom: 30 }}>
