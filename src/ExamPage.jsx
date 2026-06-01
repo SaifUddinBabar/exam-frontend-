@@ -96,10 +96,19 @@ function ExamPage() {
   // Security states
   const [blocked, setBlocked] = useState(false);
   const [blurContent, setBlurContent] = useState(false);
+  const [blurReason, setBlurReason] = useState("");
   const [blockReason, setBlockReason] = useState("Screenshot Blocked");
   const blockTimeoutRef = useRef(null);
   const blurTimeoutRef = useRef(null);
   const devToolsRef = useRef(false);
+
+  // ── NEW: Tab-switch warning state ──
+  const tabSwitchCountRef = useRef(0);
+  const [tabWarningMsg, setTabWarningMsg] = useState("");
+  const [showTabWarning, setShowTabWarning] = useState(false);
+
+  // ── NEW: 3-finger touch state ──
+  const threeFingerBlurTimeoutRef = useRef(null);
 
   const [showToast, setShowToast] = useState(false);
   const [toastVisible, setToastVisible] = useState(false);
@@ -109,17 +118,111 @@ function ExamPage() {
     setBlockReason(reason);
     setBlocked(true);
     setBlurContent(true);
+    setBlurReason(reason);
     if (blockTimeoutRef.current) clearTimeout(blockTimeoutRef.current);
     if (blurTimeoutRef.current) clearTimeout(blurTimeoutRef.current);
     blockTimeoutRef.current = setTimeout(() => setBlocked(false), 3000);
-    blurTimeoutRef.current = setTimeout(() => setBlurContent(false), 3000);
+    blurTimeoutRef.current = setTimeout(() => {
+      setBlurContent(false);
+      setBlurReason("");
+    }, 3000);
   }, []);
+
+  /* ── triggerBlurOnly (no block overlay) ── */
+  const triggerBlurOnly = useCallback((reason = "", durationMs = 5000) => {
+    setBlurContent(true);
+    setBlurReason(reason);
+    if (blurTimeoutRef.current) clearTimeout(blurTimeoutRef.current);
+    blurTimeoutRef.current = setTimeout(() => {
+      setBlurContent(false);
+      setBlurReason("");
+    }, durationMs);
+  }, []);
+
+  /* ══════════════════════════════════════════
+     NEW FEATURE 1 — 3-Finger Touch Blur
+     Touch start → ≥3 fingers → blur immediately
+     Touch end / lift → unblur after 1 second
+     ══════════════════════════════════════════ */
+  useEffect(() => {
+    const handleTouchStart = (e) => {
+      if (e.touches.length >= 3) {
+        // Cancel any pending unblur
+        if (threeFingerBlurTimeoutRef.current) {
+          clearTimeout(threeFingerBlurTimeoutRef.current);
+          threeFingerBlurTimeoutRef.current = null;
+        }
+        if (blurTimeoutRef.current) {
+          clearTimeout(blurTimeoutRef.current);
+          blurTimeoutRef.current = null;
+        }
+        setBlurContent(true);
+        setBlurReason("🖐 3-আঙুল শনাক্ত — কন্টেন্ট লুকানো হয়েছে");
+      }
+    };
+
+    const handleTouchEnd = (e) => {
+      // Unblur only if blur was due to 3-finger (not tab-switch etc.)
+      // We unblur after fingers lift + 1s delay
+      if (e.touches.length < 3) {
+        if (threeFingerBlurTimeoutRef.current) clearTimeout(threeFingerBlurTimeoutRef.current);
+        threeFingerBlurTimeoutRef.current = setTimeout(() => {
+          setBlurContent(false);
+          setBlurReason("");
+        }, 1000);
+      }
+    };
+
+    document.addEventListener("touchstart", handleTouchStart, { passive: true });
+    document.addEventListener("touchend", handleTouchEnd, { passive: true });
+    document.addEventListener("touchcancel", handleTouchEnd, { passive: true });
+
+    return () => {
+      document.removeEventListener("touchstart", handleTouchStart);
+      document.removeEventListener("touchend", handleTouchEnd);
+      document.removeEventListener("touchcancel", handleTouchEnd);
+    };
+  }, []);
+
+  /* ══════════════════════════════════════════
+     NEW FEATURE 2 — Tab Switch Warning + Auto Submit
+     1st switch  → warning toast (no blur penalty)
+     2nd switch  → stern warning
+     3rd+ switch → auto submit immediately
+     ══════════════════════════════════════════ */
+  const autoSubmitRef = useRef(null); // store submitExam ref to avoid circular deps
+
+  const handleTabSwitch = useCallback(() => {
+    if (submitted) return;
+
+    tabSwitchCountRef.current += 1;
+    const count = tabSwitchCountRef.current;
+
+    if (count === 1) {
+      setTabWarningMsg("⚠️ সতর্কতা ১/২: ট্যাব বা অ্যাপ পরিবর্তন করবেন না! আরও একবার করলে পরীক্ষা শেষ হয়ে যাবে।");
+      setShowTabWarning(true);
+      triggerBlurOnly("ট্যাব পরিবর্তন ধরা পড়েছে!", 4000);
+      setTimeout(() => setShowTabWarning(false), 5000);
+    } else if (count === 2) {
+      setTabWarningMsg("🚨 সতর্কতা ২/২: এটাই শেষ সুযোগ! পরেরবার ট্যাব/অ্যাপ পরিবর্তন করলে পরীক্ষা স্বয়ংক্রিয়ভাবে জমা হয়ে যাবে!");
+      setShowTabWarning(true);
+      triggerBlurOnly("শেষ সতর্কতা!", 5000);
+      setTimeout(() => setShowTabWarning(false), 6000);
+    } else {
+      // 3rd time → auto submit
+      setTabWarningMsg("❌ ৩বার ট্যাব পরিবর্তন! পরীক্ষা স্বয়ংক্রিয়ভাবে জমা হচ্ছে...");
+      setShowTabWarning(true);
+      triggerBlurOnly("Auto Submit হচ্ছে...", 6000);
+      setTimeout(() => {
+        if (autoSubmitRef.current) autoSubmitRef.current();
+      }, 1500);
+    }
+  }, [submitted, triggerBlurOnly]);
 
   /* ══════════════════════════════════════════
      SECURITY LAYER 1 — Keyboard & Mouse
      ══════════════════════════════════════════ */
   useEffect(() => {
-    /* Context menu */
     const handleContextMenu = (e) => {
       e.preventDefault();
       e.stopPropagation();
@@ -127,36 +230,29 @@ function ExamPage() {
       return false;
     };
 
-    /* Keyboard shortcuts */
     const handleKeyDown = (e) => {
       const key = e.key.toLowerCase();
-
-      // Ctrl combos
       if (e.ctrlKey && ["c","u","s","a","p","x","v","f","g","h","j","k","l","n","t","w"].includes(key)) {
         e.preventDefault(); e.stopPropagation();
         triggerBlock("Keyboard shortcut blocked");
         return;
       }
-      // Meta (Mac) combos
       if (e.metaKey && ["c","u","s","a","p","x","v"].includes(key)) {
         e.preventDefault(); e.stopPropagation();
         triggerBlock("Keyboard shortcut blocked");
         return;
       }
-      // Shift+Meta
       if (e.shiftKey && e.metaKey) {
         e.preventDefault(); e.stopPropagation();
         triggerBlock("Screenshot blocked");
         return;
       }
-      // PrintScreen
       if (e.key === "PrintScreen") {
         e.preventDefault(); e.stopPropagation();
         navigator.clipboard.writeText("").catch(() => {});
         triggerBlock("Screenshot নিষিদ্ধ");
         return;
       }
-      // F12 / DevTools shortcuts
       if (
         e.key === "F12" ||
         (e.ctrlKey && e.shiftKey && ["i","j","c","k"].includes(key)) ||
@@ -166,20 +262,15 @@ function ExamPage() {
         triggerBlock("DevTools নিষিদ্ধ");
         return;
       }
-      // Alt+Tab / Escape
       if (e.altKey && e.key === "Tab") {
         triggerBlock("Tab switching নিষিদ্ধ");
       }
     };
 
-    /* Clipboard */
     const blockClipboard = (e) => { e.preventDefault(); e.stopPropagation(); };
-
-    /* Drag */
     const handleDragStart = (e) => { e.preventDefault(); };
     const handleDrop = (e) => { e.preventDefault(); };
 
-    /* Print */
     const handleBeforePrint = (e) => {
       e.preventDefault();
       triggerBlock("Printing নিষিদ্ধ");
@@ -189,25 +280,23 @@ function ExamPage() {
       window.location.reload();
     };
 
-    /* Visibility / Tab switch */
+    /* ── UPDATED: Visibility change now calls handleTabSwitch ── */
     const handleVisibilityChange = () => {
       if (document.hidden) {
-        triggerBlock("Tab switching ধরা পড়েছে!");
+        handleTabSwitch();
       }
     };
 
-    /* Window blur (focus lost — possible screenshot app) */
     const handleWindowBlur = () => {
-      setBlurContent(true);
-      if (blurTimeoutRef.current) clearTimeout(blurTimeoutRef.current);
-      blurTimeoutRef.current = setTimeout(() => setBlurContent(false), 5000);
+      // Only blur the content, don't double-count as tab switch here
+      triggerBlurOnly("ফিরে আসুন — পরীক্ষা চলছে", 5000);
     };
     const handleWindowFocus = () => {
       if (blurTimeoutRef.current) clearTimeout(blurTimeoutRef.current);
       setBlurContent(false);
+      setBlurReason("");
     };
 
-    /* Selection */
     const handleSelectStart = (e) => {
       const tag = e.target.tagName.toLowerCase();
       if (tag !== "input" && tag !== "textarea") e.preventDefault();
@@ -242,11 +331,10 @@ function ExamPage() {
       window.removeEventListener("blur", handleWindowBlur);
       window.removeEventListener("focus", handleWindowFocus);
     };
-  }, [triggerBlock]);
+  }, [triggerBlock, triggerBlurOnly, handleTabSwitch]);
 
   /* ══════════════════════════════════════════
      SECURITY LAYER 2 — DevTools Detection
-     (window size heuristic + debugger trap)
      ══════════════════════════════════════════ */
   useEffect(() => {
     let devToolsOpen = false;
@@ -266,7 +354,6 @@ function ExamPage() {
       }
     };
 
-    // Debugger trap — slows down if DevTools open
     const debuggerTrap = () => {
       const start = performance.now();
       // eslint-disable-next-line no-debugger
@@ -276,7 +363,7 @@ function ExamPage() {
       }
     };
 
-    const resizeObserver = window.addEventListener("resize", checkDevTools);
+    window.addEventListener("resize", checkDevTools);
     const interval1 = setInterval(checkDevTools, 1000);
     const interval2 = setInterval(debuggerTrap, 3000);
 
@@ -289,7 +376,6 @@ function ExamPage() {
 
   /* ══════════════════════════════════════════
      SECURITY LAYER 3 — CSS Injection Protection
-     (mutation observer — detect injected styles)
      ══════════════════════════════════════════ */
   useEffect(() => {
     const observer = new MutationObserver((mutations) => {
@@ -307,17 +393,11 @@ function ExamPage() {
 
   /* ══════════════════════════════════════════
      SECURITY LAYER 4 — iOS / Mobile Screenshot
-     (deviceorientation & accelerometer hint)
      ══════════════════════════════════════════ */
   useEffect(() => {
-    // iOS power+home button triggers a brief focus-loss;
-    // the blur handler above covers most cases.
-    // Additionally watch for the "screenshot taken" visual flash via brightness API (if available).
-    const handlePageHide = () => {
-      setBlurContent(true);
-    };
+    const handlePageHide = () => { setBlurContent(true); setBlurReason(""); };
     const handlePageShow = () => {
-      setTimeout(() => setBlurContent(false), 800);
+      setTimeout(() => { setBlurContent(false); setBlurReason(""); }, 800);
     };
     window.addEventListener("pagehide", handlePageHide);
     window.addEventListener("pageshow", handlePageShow);
@@ -367,7 +447,7 @@ function ExamPage() {
   /* Timer */
   useEffect(() => {
     if (timeLeft === null || submitted) return;
-    if (timeLeft <= 0) { autoSubmit(); return; }
+    if (timeLeft <= 0) { autoSubmitByTimer(); return; }
     const timer = setInterval(() => setTimeLeft((p) => p - 1), 1000);
     return () => clearInterval(timer);
   }, [timeLeft, submitted]);
@@ -397,9 +477,9 @@ function ExamPage() {
   const handleAnswer = (qid, option) => setAnswers({ ...answers, [qid]: option });
   const clearProgress = () => localStorage.removeItem(getStorageKey(code));
 
-  const submitExam = async () => {
+  const submitExam = useCallback(async () => {
     if (submitted) return;
-    if (!name || !roll) return alert("Name & Roll Required");
+    if (!name || !roll) { alert("Name & Roll Required"); return; }
     setSubmitted(true);
     try {
       const res = await fetch(`${API}/api/exams/submit`, {
@@ -415,9 +495,12 @@ function ExamPage() {
       setSubmitted(false);
       alert("Submit Failed");
     }
-  };
+  }, [submitted, name, roll, code, answers]);
 
-  const autoSubmit = () => {
+  // Keep autoSubmitRef in sync so handleTabSwitch can call it
+  autoSubmitRef.current = submitExam;
+
+  const autoSubmitByTimer = () => {
     if (submitted) return;
     alert("সময় শেষ! Auto Submit হচ্ছে");
     submitExam();
@@ -465,7 +548,6 @@ function ExamPage() {
       -webkit-user-drag: none !important;
       -moz-user-drag: none !important;
     }
-    /* Defeat browser "Save image as" */
     img::after {
       content: '';
       display: block;
@@ -475,7 +557,6 @@ function ExamPage() {
     @media print {
       html, body { display: none !important; visibility: hidden !important; }
     }
-    /* Blur transition for content protection */
     .content-blur {
       filter: blur(18px) !important;
       transition: filter 0.15s ease;
@@ -488,12 +569,13 @@ function ExamPage() {
     .pdf-mode { background: #f8fafc !important; padding: 20px !important; }
     .pdf-mode .question { page-break-inside: avoid !important; break-inside: avoid !important; }
 
-    @keyframes timerPulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.06); } }
-    @keyframes toastIn   { 0%   { transform: translateX(-50%) translateY(100px); opacity: 0; } 100% { transform: translateX(-50%) translateY(0); opacity: 1; } }
-    @keyframes toastOut  { 0%   { transform: translateX(-50%) translateY(0); opacity: 1; } 100% { transform: translateX(-50%) translateY(100px); opacity: 0; } }
-    @keyframes fadeInUp  { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
-    @keyframes scaleIn   { from { opacity: 0; transform: scale(0.92); } to { opacity: 1; transform: scale(1); } }
-    @keyframes blockPulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.04); } }
+    @keyframes timerPulse   { 0%,100% { transform: scale(1); } 50% { transform: scale(1.06); } }
+    @keyframes toastIn      { 0%   { transform: translateX(-50%) translateY(100px); opacity: 0; } 100% { transform: translateX(-50%) translateY(0); opacity: 1; } }
+    @keyframes toastOut     { 0%   { transform: translateX(-50%) translateY(0); opacity: 1; } 100% { transform: translateX(-50%) translateY(100px); opacity: 0; } }
+    @keyframes fadeInUp     { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes scaleIn      { from { opacity: 0; transform: scale(0.92); } to { opacity: 1; transform: scale(1); } }
+    @keyframes blockPulse   { 0%,100% { transform: scale(1); } 50% { transform: scale(1.04); } }
+    @keyframes warningSlide { 0% { transform: translateY(-80px); opacity: 0; } 100% { transform: translateY(0); opacity: 1; } }
 
     .stat-card { transition: transform 0.2s ease, box-shadow 0.2s ease; }
     .stat-card:hover { transform: translateY(-3px); box-shadow: 0 16px 40px rgba(0,0,0,0.15) !important; }
@@ -507,15 +589,13 @@ function ExamPage() {
      ══════════════════════════════════════════ */
   const BlockedOverlay = () =>
     blocked ? (
-      <div
-        style={{
-          position: "fixed", inset: 0, zIndex: 99999,
-          background: "rgba(0,0,0,0.97)",
-          display: "flex", flexDirection: "column",
-          alignItems: "center", justifyContent: "center",
-          color: "white", animation: "blockPulse 0.4s ease",
-        }}
-      >
+      <div style={{
+        position: "fixed", inset: 0, zIndex: 99999,
+        background: "rgba(0,0,0,0.97)",
+        display: "flex", flexDirection: "column",
+        alignItems: "center", justifyContent: "center",
+        color: "white", animation: "blockPulse 0.4s ease",
+      }}>
         <div style={{ fontSize: 72, marginBottom: 20, animation: "blockPulse 0.6s infinite" }}>🚫</div>
         <h2 style={{ fontSize: 28, fontWeight: 800, marginBottom: 12, fontFamily: "'Sora', sans-serif", letterSpacing: "-0.3px" }}>
           {blockReason}
@@ -536,6 +616,65 @@ function ExamPage() {
     ) : null;
 
   /* ══════════════════════════════════════════
+     NEW: TAB WARNING BANNER
+     ══════════════════════════════════════════ */
+  const TabWarningBanner = () =>
+    showTabWarning ? (
+      <div style={{
+        position: "fixed", top: 64, left: "50%",
+        transform: "translateX(-50%)",
+        zIndex: 99990,
+        width: "calc(100% - 32px)", maxWidth: 560,
+        animation: "warningSlide 0.4s cubic-bezier(0.34,1.56,0.64,1) forwards",
+      }}>
+        <div style={{
+          background: tabSwitchCountRef.current >= 3
+            ? "linear-gradient(135deg,#7f1d1d,#991b1b)"
+            : tabSwitchCountRef.current === 2
+            ? "linear-gradient(135deg,#92400e,#b45309)"
+            : "linear-gradient(135deg,#1e3a8a,#1d4ed8)",
+          borderRadius: 18, padding: "16px 20px", color: "white",
+          fontSize: "clamp(13px,2vw,16px)", fontWeight: 600, lineHeight: 1.7,
+          boxShadow: "0 16px 48px rgba(0,0,0,0.4)",
+          border: "1px solid rgba(255,255,255,0.15)",
+          textAlign: "center",
+          fontFamily: "'Hind Siliguri', sans-serif",
+        }}>
+          {tabWarningMsg}
+          {tabSwitchCountRef.current < 3 && (
+            <div style={{ fontSize: 12, opacity: 0.7, marginTop: 6, fontFamily: "'Sora', sans-serif" }}>
+              ট্যাব পরিবর্তন সংখ্যা: {tabSwitchCountRef.current}/2
+            </div>
+          )}
+        </div>
+      </div>
+    ) : null;
+
+  /* ══════════════════════════════════════════
+     BLUR OVERLAY (shared — used by all blur triggers)
+     ══════════════════════════════════════════ */
+  const BlurOverlay = () =>
+    blurContent ? (
+      <div style={{
+        position: "fixed", inset: 0, zIndex: 9500,
+        backdropFilter: "blur(22px)",
+        background: "rgba(0,0,0,0.55)",
+        display: "flex", flexDirection: "column",
+        alignItems: "center", justifyContent: "center",
+        color: "white",
+        transition: "opacity 0.2s ease",
+      }}>
+        <div style={{ fontSize: 56, marginBottom: 16 }}>🔒</div>
+        <p style={{ fontSize: 20, fontWeight: 700, fontFamily: "'Sora', sans-serif", textAlign: "center", maxWidth: 320 }}>
+          {blurReason || "ফিরে আসুন — পরীক্ষা চলছে"}
+        </p>
+        <p style={{ fontSize: 14, opacity: 0.6, fontFamily: "'Hind Siliguri', sans-serif", marginTop: 8, textAlign: "center" }}>
+          পরীক্ষার বাইরে গেলে কন্টেন্ট লুকানো হয়
+        </p>
+      </div>
+    ) : null;
+
+  /* ══════════════════════════════════════════
      RESULT PAGE
      ══════════════════════════════════════════ */
   if (score !== null && reviewData) {
@@ -549,20 +688,9 @@ function ExamPage() {
       }}>
         <style>{globalStyles}</style>
         <BlockedOverlay />
-        {/* Watermark on result page too */}
         <WatermarkOverlay name={name} roll={roll} />
+        <BlurOverlay />
 
-        {/* Blur layer */}
-        {blurContent && (
-          <div style={{
-            position: "fixed", inset: 0, zIndex: 9999,
-            backdropFilter: "blur(20px)",
-            background: "rgba(255,255,255,0.1)",
-            pointerEvents: "none",
-          }} />
-        )}
-
-        {/* Toast */}
         {showToast && (
           <div style={{
             position: "fixed", bottom: 28, left: "50%",
@@ -586,8 +714,6 @@ function ExamPage() {
         )}
 
         <div id="result-sheet" style={{ maxWidth: 860, margin: "0 auto", width: "100%" }}>
-
-          {/* Hero result card */}
           <div style={{
             background: "linear-gradient(135deg,#2563eb 0%,#7c3aed 100%)",
             borderRadius: 28, padding: "28px 22px", color: "white", marginBottom: 28,
@@ -626,7 +752,6 @@ function ExamPage() {
             </div>
           </div>
 
-          {/* Download button */}
           <div style={{ display: "flex", justifyContent: "center", marginBottom: 28 }}>
             <button
               onClick={downloadResult}
@@ -646,7 +771,6 @@ function ExamPage() {
             </button>
           </div>
 
-          {/* Question Review */}
           {reviewData.questions.map((q, index) => {
             const userAns = reviewData.answers[q._id];
             const correct = q.correctAnswer;
@@ -657,12 +781,7 @@ function ExamPage() {
                 border: "1px solid rgba(226,232,240,0.8)",
                 animationDelay: `${index * 0.04}s`,
               }}>
-                <div style={{
-                  display: "inline-flex", alignItems: "center",
-                  background: "linear-gradient(135deg,#eff6ff,#f5f3ff)",
-                  borderRadius: 10, padding: "4px 12px", marginBottom: 12,
-                  border: "1px solid #e0e7ff",
-                }}>
+                <div style={{ display: "inline-flex", alignItems: "center", background: "linear-gradient(135deg,#eff6ff,#f5f3ff)", borderRadius: 10, padding: "4px 12px", marginBottom: 12, border: "1px solid #e0e7ff" }}>
                   <span style={{ fontSize: 13, fontWeight: 700, color: "#3730a3", fontFamily: "'Sora', sans-serif" }}>Q{index + 1}</span>
                 </div>
                 <h2 style={{ fontSize: "clamp(16px,2.6vw,24px)", marginBottom: 14, color: "#0f172a", lineHeight: 1.6, wordBreak: "break-word", fontFamily: "'Hind Siliguri', 'Sora', sans-serif", fontWeight: 600, margin: "0 0 14px 0" }}>
@@ -713,29 +832,13 @@ function ExamPage() {
     <div style={{ minHeight: "100vh", background: "linear-gradient(160deg,#0f172a 0%,#1e293b 100%)", padding: 14, fontFamily: "'Sora', 'Hind Siliguri', sans-serif" }}>
       <style>{globalStyles}</style>
       <BlockedOverlay />
-
-      {/* Dynamic watermark canvas */}
       <WatermarkOverlay name={name} roll={roll} />
 
-      {/* Content blur overlay (activates on tab-switch / window-blur) */}
-      {blurContent && (
-        <div style={{
-          position: "fixed", inset: 0, zIndex: 9500,
-          backdropFilter: "blur(22px)",
-          background: "rgba(0,0,0,0.55)",
-          display: "flex", flexDirection: "column",
-          alignItems: "center", justifyContent: "center",
-          color: "white",
-        }}>
-          <div style={{ fontSize: 56, marginBottom: 16 }}>🔒</div>
-          <p style={{ fontSize: 20, fontWeight: 700, fontFamily: "'Sora', sans-serif" }}>
-            ফিরে আসুন — পরীক্ষা চলছে
-          </p>
-          <p style={{ fontSize: 14, opacity: 0.6, fontFamily: "'Hind Siliguri', sans-serif", marginTop: 8 }}>
-            পরীক্ষার বাইরে গেলে কন্টেন্ট লুকানো হয়
-          </p>
-        </div>
-      )}
+      {/* ── NEW: Tab Warning Banner ── */}
+      <TabWarningBanner />
+
+      {/* ── SHARED Blur Overlay ── */}
+      <BlurOverlay />
 
       {/* Sticky Timer */}
       <div style={{
