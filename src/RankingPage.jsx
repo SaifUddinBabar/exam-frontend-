@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 
@@ -31,6 +32,24 @@ function RankingPage() {
       });
 
   }, [code]);
+
+  // ==============================
+  // DOWNLOAD PDF
+  // ==============================
+  const downloadPDF = async () => {
+    const html2pdf = (await import("html2pdf.js")).default;
+    const element = document.getElementById("ranking-list");
+    await html2pdf()
+      .set({
+        margin: [10, 10, 10, 10],
+        filename: `ranking-${code}.pdf`,
+        image: { type: "jpeg", quality: 1 },
+        html2canvas: { scale: 2, useCORS: true, backgroundColor: "#ffffff" },
+        jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+      })
+      .from(element)
+      .save();
+  };
 
   // ==============================
   // LOADING
@@ -105,6 +124,25 @@ function RankingPage() {
             Exam Code: {code}
           </p>
 
+          {ranking.length > 0 && (
+            <button
+              onClick={downloadPDF}
+              style={{
+                marginTop: 16,
+                background: "white",
+                color: "#2563eb",
+                border: "none",
+                borderRadius: 14,
+                padding: "12px 28px",
+                fontSize: 16,
+                fontWeight: 700,
+                cursor: "pointer"
+              }}
+            >
+              📄 Download PDF
+            </button>
+          )}
+
         </div>
 
         {/* EMPTY */}
@@ -120,13 +158,14 @@ function RankingPage() {
               fontWeight: "bold"
             }}
           >
-            এখনও কেউ পরীক্ষা দেয়নি
+            এখনও কেউ পরীক্ষা দেয়নি
           </div>
 
         )}
 
         {/* LIST */}
         <div
+          id="ranking-list"
           style={{
             display: "grid",
             gap: 18
