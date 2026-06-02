@@ -997,17 +997,17 @@ function Builder() {
               @media screen and (max-width:900px) { .preview-paper { width:100%; padding:14px; } }
             `}</style>
 
-            <div className="text-center border-b pb-3 mb-4">
-              <div className="inline-block bg-black px-5 py-1 mb-2">
-                <h1 className={`text-white font-bold ${pdfCompact?"text-base":"text-2xl"}`}>{examData.subject}</h1>
-              </div>
-              <h2 className={`font-bold ${pdfCompact?"text-sm":"text-xl"}`}>{examData.academy}</h2>
-              <p className={`text-gray-700 mt-1 ${pdfCompact?"text-[10px]":"text-sm"}`}>{examData.title}</p>
-              <div className={`flex justify-between mt-3 border-t pt-2 ${pdfCompact?"text-[9px]":"text-sm"}`}>
-                <p>সময়: {examData.duration} মিনিট</p>
-                <p>পূর্ণমান: {examData.marks}</p>
-              </div>
-            </div>
+          <div style={{ textAlign:"center", borderBottom:"1px solid #ccc", paddingBottom:12, marginBottom:16 }}>
+  <div style={{ display:"inline-block", background:"black", padding:"4px 20px", marginBottom:8 }}>
+    <h1 style={{ color:"white", fontWeight:"bold", fontSize: pdfCompact?"14px":"22px" }}>{examData.subject}</h1>
+  </div>
+  <h2 style={{ fontWeight:"bold", fontSize: pdfCompact?"12px":"18px" }}>{examData.academy}</h2>
+  <p style={{ color:"#374151", marginTop:4, fontSize: pdfCompact?"9px":"13px" }}>{examData.title}</p>
+  <div style={{ display:"flex", justifyContent:"space-between", marginTop:12, borderTop:"1px solid #ccc", paddingTop:8, fontSize: pdfCompact?"8px":"12px" }}>
+    <p>সময়: {examData.duration} মিনিট</p>
+    <p>পূর্ণমান: {examData.marks}</p>
+  </div>
+</div>
 
             <div style={{ columnCount:2, columnGap: pdfCompact?"14px":"28px" }}>
               {allQuestions.filter(q => selected.includes(q._id)).map((q, i) => (
@@ -1019,7 +1019,7 @@ function Builder() {
                   <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap: pdfCompact?"2px 8px":"4px 14px", fontSize: pdfCompact?"8px":"10px", lineHeight: pdfCompact?"12px":"15px" }}>
                     {q.options?.map((opt, idx) => (
                       <div key={idx} className="option-line">
-                        <span style={{ fontWeight:"bold" }}>{"ককখগঘ".split("")[idx+1]}.</span>
+                        <span style={{ fontWeight:"bold" }}>{["ক","খ","গ","ঘ"][idx]}.</span>
                         <span>{opt}</span>
                       </div>
                     ))}
