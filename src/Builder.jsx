@@ -1644,7 +1644,13 @@ function Builder() {
         <div
   id="question-paper"
   className="bg-white mt-10 shadow-xl mx-auto preview-paper"
-  style={{ position: "absolute", left: "-9999px", top: 0 }}
+  style={{ 
+    position: "fixed", 
+    left: "-9999px", 
+    top: "-9999px",
+    zIndex: -1,
+    visibility: "hidden"
+  }}
 >
  
             <style>
