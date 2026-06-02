@@ -17,24 +17,29 @@ const getScoreComment = (score, name) => {
 
 /* ══════════════════════════════════════════
    WATERMARK CANVAS OVERLAY
-══════════════════════════════════════════ */
+   ══════════════════════════════════════════ */
 function WatermarkOverlay({ name, roll }) {
   const canvasRef = useRef(null);
+
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+
     const draw = () => {
       const ctx = canvas.getContext("2d");
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
       ctx.clearRect(0, 0, canvas.width, canvas.height);
+
       const text1 = name ? `${name}` : "Exam Portal";
       const text2 = roll ? `Roll: ${roll}` : "";
       const text3 = new Date().toLocaleString("bn-BD");
+
       ctx.save();
       ctx.globalAlpha = 0.045;
       ctx.font = "bold 18px 'Hind Siliguri', sans-serif";
       ctx.fillStyle = "#1e3a8a";
+
       const step = 220;
       for (let x = -200; x < canvas.width + 200; x += step) {
         for (let y = 0; y < canvas.height + 100; y += 110) {
@@ -50,123 +55,32 @@ function WatermarkOverlay({ name, roll }) {
       }
       ctx.restore();
     };
+
     draw();
-    window.addEventListener("resize", draw);
-    return () => window.removeEventListener("resize", draw);
+    const handler = () => draw();
+    window.addEventListener("resize", handler);
+    return () => window.removeEventListener("resize", handler);
   }, [name, roll]);
+
   return (
-    <canvas ref={canvasRef} style={{ position: "fixed", top: 0, left: 0, width: "100%", height: "100%", pointerEvents: "none", zIndex: 9000 }} />
-  );
-}
-
-/* ══════════════════════════════════════════
-   UDDIPOK BLOCK — renders text / code / html
-══════════════════════════════════════════ */
-function UddipokBlock({ uddipok, uddipokType = "text", uddipokTitle }) {
-  if (!uddipok) return null;
-
-  // code block
-  if (uddipokType === "code") {
-    return (
-      <div style={{
-        marginBottom: 16,
-        borderRadius: 14,
-        overflow: "hidden",
-        border: "1.5px solid #334155",
-        boxShadow: "0 4px 16px rgba(0,0,0,0.18)",
-      }}>
-        {/* header bar */}
-        <div style={{
-          background: "linear-gradient(90deg,#1e293b,#0f172a)",
-          padding: "8px 16px",
-          display: "flex", alignItems: "center", gap: 8,
-        }}>
-          <span style={{ width: 12, height: 12, borderRadius: "50%", background: "#ef4444", display: "inline-block" }} />
-          <span style={{ width: 12, height: 12, borderRadius: "50%", background: "#f59e0b", display: "inline-block" }} />
-          <span style={{ width: 12, height: 12, borderRadius: "50%", background: "#22c55e", display: "inline-block" }} />
-          <span style={{ marginLeft: 8, fontSize: 12, color: "rgba(255,255,255,0.4)", fontFamily: "monospace" }}>
-            {uddipokTitle || "উদ্দীপক"}
-          </span>
-        </div>
-        {/* code body */}
-        <pre style={{
-          margin: 0,
-          padding: "16px 18px",
-          background: "#0f172a",
-          color: "#e2e8f0",
-          fontSize: "clamp(13px,2.2vw,15px)",
-          fontFamily: "'Fira Code', 'Courier New', monospace",
-          lineHeight: 1.7,
-          overflowX: "auto",
-          whiteSpace: "pre-wrap",
-          wordBreak: "break-word",
-        }}>
-          {uddipok}
-        </pre>
-      </div>
-    );
-  }
-
-  // html block (renders raw html inside sandbox)
-  if (uddipokType === "html") {
-    return (
-      <div style={{
-        marginBottom: 16,
-        borderRadius: 14,
-        overflow: "hidden",
-        border: "1.5px solid #e2e8f0",
-        background: "#f8fafc",
-        padding: "14px 16px",
-      }}>
-        {uddipokTitle && (
-          <div style={{ fontSize: 12, fontWeight: 700, color: "#64748b", marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.5px" }}>
-            📄 {uddipokTitle}
-          </div>
-        )}
-        <div
-          style={{ fontSize: "clamp(13px,2.2vw,15px)", color: "#0f172a", lineHeight: 1.7, fontFamily: "monospace", whiteSpace: "pre-wrap", wordBreak: "break-word" }}
-          dangerouslySetInnerHTML={{ __html: uddipok }}
-        />
-      </div>
-    );
-  }
-
-  // default: plain text uddipok
-  return (
-    <div style={{
-      marginBottom: 16,
-      borderRadius: 14,
-      background: "linear-gradient(135deg,#eff6ff,#f0fdf4)",
-      border: "1.5px solid #bfdbfe",
-      padding: "14px 16px",
-      boxShadow: "0 2px 8px rgba(37,99,235,0.07)",
-    }}>
-      <div style={{
-        display: "flex", alignItems: "center", gap: 6, marginBottom: 8,
-      }}>
-        <span style={{ fontSize: 14 }}>📌</span>
-        <span style={{ fontSize: 12, fontWeight: 700, color: "#1d4ed8", textTransform: "uppercase", letterSpacing: "0.5px", fontFamily: "'Sora', sans-serif" }}>
-          {uddipokTitle || "উদ্দীপক"}
-        </span>
-      </div>
-      <p style={{
-        margin: 0,
-        fontSize: "clamp(13px,2.3vw,16px)",
-        color: "#1e3a8a",
-        lineHeight: 1.8,
-        fontFamily: "'Hind Siliguri', sans-serif",
-        whiteSpace: "pre-wrap",
-        wordBreak: "break-word",
-      }}>
-        {uddipok}
-      </p>
-    </div>
+    <canvas
+      ref={canvasRef}
+      style={{
+        position: "fixed",
+        top: 0,
+        left: 0,
+        width: "100%",
+        height: "100%",
+        pointerEvents: "none",
+        zIndex: 9000,
+      }}
+    />
   );
 }
 
 /* ══════════════════════════════════════════
    MAIN COMPONENT
-══════════════════════════════════════════ */
+   ══════════════════════════════════════════ */
 function ExamPage() {
   const { code } = useParams();
 
@@ -179,16 +93,21 @@ function ExamPage() {
   const [submitted, setSubmitted] = useState(false);
   const [timeLeft, setTimeLeft] = useState(null);
 
+  // Security states
   const [blocked, setBlocked] = useState(false);
   const [blurContent, setBlurContent] = useState(false);
   const [blurReason, setBlurReason] = useState("");
   const [blockReason, setBlockReason] = useState("Screenshot Blocked");
   const blockTimeoutRef = useRef(null);
   const blurTimeoutRef = useRef(null);
+  const devToolsRef = useRef(false);
 
+  // ── NEW: Tab-switch warning state ──
   const tabSwitchCountRef = useRef(0);
   const [tabWarningMsg, setTabWarningMsg] = useState("");
   const [showTabWarning, setShowTabWarning] = useState(false);
+
+  // ── NEW: 3-finger touch state ──
   const threeFingerBlurTimeoutRef = useRef(null);
 
   const [showToast, setShowToast] = useState(false);
@@ -203,35 +122,61 @@ function ExamPage() {
     if (blockTimeoutRef.current) clearTimeout(blockTimeoutRef.current);
     if (blurTimeoutRef.current) clearTimeout(blurTimeoutRef.current);
     blockTimeoutRef.current = setTimeout(() => setBlocked(false), 3000);
-    blurTimeoutRef.current = setTimeout(() => { setBlurContent(false); setBlurReason(""); }, 3000);
+    blurTimeoutRef.current = setTimeout(() => {
+      setBlurContent(false);
+      setBlurReason("");
+    }, 3000);
   }, []);
 
+  /* ── triggerBlurOnly (no block overlay) ── */
   const triggerBlurOnly = useCallback((reason = "", durationMs = 5000) => {
     setBlurContent(true);
     setBlurReason(reason);
     if (blurTimeoutRef.current) clearTimeout(blurTimeoutRef.current);
-    blurTimeoutRef.current = setTimeout(() => { setBlurContent(false); setBlurReason(""); }, durationMs);
+    blurTimeoutRef.current = setTimeout(() => {
+      setBlurContent(false);
+      setBlurReason("");
+    }, durationMs);
   }, []);
 
-  /* 3-finger touch blur */
+  /* ══════════════════════════════════════════
+     NEW FEATURE 1 — 3-Finger Touch Blur
+     Touch start → ≥3 fingers → blur immediately
+     Touch end / lift → unblur after 1 second
+     ══════════════════════════════════════════ */
   useEffect(() => {
     const handleTouchStart = (e) => {
       if (e.touches.length >= 3) {
-        if (threeFingerBlurTimeoutRef.current) clearTimeout(threeFingerBlurTimeoutRef.current);
-        if (blurTimeoutRef.current) clearTimeout(blurTimeoutRef.current);
+        // Cancel any pending unblur
+        if (threeFingerBlurTimeoutRef.current) {
+          clearTimeout(threeFingerBlurTimeoutRef.current);
+          threeFingerBlurTimeoutRef.current = null;
+        }
+        if (blurTimeoutRef.current) {
+          clearTimeout(blurTimeoutRef.current);
+          blurTimeoutRef.current = null;
+        }
         setBlurContent(true);
         setBlurReason("🖐 3-আঙুল শনাক্ত — কন্টেন্ট লুকানো হয়েছে");
       }
     };
+
     const handleTouchEnd = (e) => {
+      // Unblur only if blur was due to 3-finger (not tab-switch etc.)
+      // We unblur after fingers lift + 1s delay
       if (e.touches.length < 3) {
         if (threeFingerBlurTimeoutRef.current) clearTimeout(threeFingerBlurTimeoutRef.current);
-        threeFingerBlurTimeoutRef.current = setTimeout(() => { setBlurContent(false); setBlurReason(""); }, 1000);
+        threeFingerBlurTimeoutRef.current = setTimeout(() => {
+          setBlurContent(false);
+          setBlurReason("");
+        }, 1000);
       }
     };
+
     document.addEventListener("touchstart", handleTouchStart, { passive: true });
     document.addEventListener("touchend", handleTouchEnd, { passive: true });
     document.addEventListener("touchcancel", handleTouchEnd, { passive: true });
+
     return () => {
       document.removeEventListener("touchstart", handleTouchStart);
       document.removeEventListener("touchend", handleTouchEnd);
@@ -239,12 +184,20 @@ function ExamPage() {
     };
   }, []);
 
-  const autoSubmitRef = useRef(null);
+  /* ══════════════════════════════════════════
+     NEW FEATURE 2 — Tab Switch Warning + Auto Submit
+     1st switch  → warning toast (no blur penalty)
+     2nd switch  → stern warning
+     3rd+ switch → auto submit immediately
+     ══════════════════════════════════════════ */
+  const autoSubmitRef = useRef(null); // store submitExam ref to avoid circular deps
 
   const handleTabSwitch = useCallback(() => {
     if (submitted) return;
+
     tabSwitchCountRef.current += 1;
     const count = tabSwitchCountRef.current;
+
     if (count === 1) {
       setTabWarningMsg("⚠️ সতর্কতা ১/২: ট্যাব বা অ্যাপ পরিবর্তন করবেন না! আরও একবার করলে পরীক্ষা শেষ হয়ে যাবে।");
       setShowTabWarning(true);
@@ -256,34 +209,98 @@ function ExamPage() {
       triggerBlurOnly("শেষ সতর্কতা!", 5000);
       setTimeout(() => setShowTabWarning(false), 6000);
     } else {
+      // 3rd time → auto submit
       setTabWarningMsg("❌ ৩বার ট্যাব পরিবর্তন! পরীক্ষা স্বয়ংক্রিয়ভাবে জমা হচ্ছে...");
       setShowTabWarning(true);
       triggerBlurOnly("Auto Submit হচ্ছে...", 6000);
-      setTimeout(() => { if (autoSubmitRef.current) autoSubmitRef.current(); }, 1500);
+      setTimeout(() => {
+        if (autoSubmitRef.current) autoSubmitRef.current();
+      }, 1500);
     }
   }, [submitted, triggerBlurOnly]);
 
-  /* Security Layer 1 */
+  /* ══════════════════════════════════════════
+     SECURITY LAYER 1 — Keyboard & Mouse
+     ══════════════════════════════════════════ */
   useEffect(() => {
-    const handleContextMenu = (e) => { e.preventDefault(); e.stopPropagation(); triggerBlock("Right-click নিষিদ্ধ"); return false; };
+    const handleContextMenu = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      triggerBlock("Right-click নিষিদ্ধ");
+      return false;
+    };
+
     const handleKeyDown = (e) => {
       const key = e.key.toLowerCase();
-      if (e.ctrlKey && ["c","u","s","a","p","x","v","f","g","h","j","k","l","n","t","w"].includes(key)) { e.preventDefault(); e.stopPropagation(); triggerBlock("Keyboard shortcut blocked"); return; }
-      if (e.metaKey && ["c","u","s","a","p","x","v"].includes(key)) { e.preventDefault(); e.stopPropagation(); triggerBlock("Keyboard shortcut blocked"); return; }
-      if (e.shiftKey && e.metaKey) { e.preventDefault(); e.stopPropagation(); triggerBlock("Screenshot blocked"); return; }
-      if (e.key === "PrintScreen") { e.preventDefault(); e.stopPropagation(); navigator.clipboard.writeText("").catch(() => {}); triggerBlock("Screenshot নিষিদ্ধ"); return; }
-      if (e.key === "F12" || (e.ctrlKey && e.shiftKey && ["i","j","c","k"].includes(key)) || (e.metaKey && e.altKey && key === "i")) { e.preventDefault(); e.stopPropagation(); triggerBlock("DevTools নিষিদ্ধ"); return; }
-      if (e.altKey && e.key === "Tab") { triggerBlock("Tab switching নিষিদ্ধ"); }
+      if (e.ctrlKey && ["c","u","s","a","p","x","v","f","g","h","j","k","l","n","t","w"].includes(key)) {
+        e.preventDefault(); e.stopPropagation();
+        triggerBlock("Keyboard shortcut blocked");
+        return;
+      }
+      if (e.metaKey && ["c","u","s","a","p","x","v"].includes(key)) {
+        e.preventDefault(); e.stopPropagation();
+        triggerBlock("Keyboard shortcut blocked");
+        return;
+      }
+      if (e.shiftKey && e.metaKey) {
+        e.preventDefault(); e.stopPropagation();
+        triggerBlock("Screenshot blocked");
+        return;
+      }
+      if (e.key === "PrintScreen") {
+        e.preventDefault(); e.stopPropagation();
+        navigator.clipboard.writeText("").catch(() => {});
+        triggerBlock("Screenshot নিষিদ্ধ");
+        return;
+      }
+      if (
+        e.key === "F12" ||
+        (e.ctrlKey && e.shiftKey && ["i","j","c","k"].includes(key)) ||
+        (e.metaKey && e.altKey && key === "i")
+      ) {
+        e.preventDefault(); e.stopPropagation();
+        triggerBlock("DevTools নিষিদ্ধ");
+        return;
+      }
+      if (e.altKey && e.key === "Tab") {
+        triggerBlock("Tab switching নিষিদ্ধ");
+      }
     };
+
     const blockClipboard = (e) => { e.preventDefault(); e.stopPropagation(); };
-    const handleDragStart = (e) => e.preventDefault();
-    const handleDrop = (e) => e.preventDefault();
-    const handleBeforePrint = (e) => { e.preventDefault(); triggerBlock("Printing নিষিদ্ধ"); };
-    const handleAfterPrint = () => { document.body.innerHTML = ""; window.location.reload(); };
-    const handleVisibilityChange = () => { if (document.hidden) handleTabSwitch(); };
-    const handleWindowBlur = () => triggerBlurOnly("ফিরে আসুন — পরীক্ষা চলছে", 5000);
-    const handleWindowFocus = () => { if (blurTimeoutRef.current) clearTimeout(blurTimeoutRef.current); setBlurContent(false); setBlurReason(""); };
-    const handleSelectStart = (e) => { const tag = e.target.tagName.toLowerCase(); if (tag !== "input" && tag !== "textarea") e.preventDefault(); };
+    const handleDragStart = (e) => { e.preventDefault(); };
+    const handleDrop = (e) => { e.preventDefault(); };
+
+    const handleBeforePrint = (e) => {
+      e.preventDefault();
+      triggerBlock("Printing নিষিদ্ধ");
+    };
+    const handleAfterPrint = () => {
+      document.body.innerHTML = "";
+      window.location.reload();
+    };
+
+    /* ── UPDATED: Visibility change now calls handleTabSwitch ── */
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        handleTabSwitch();
+      }
+    };
+
+    const handleWindowBlur = () => {
+      // Only blur the content, don't double-count as tab switch here
+      triggerBlurOnly("ফিরে আসুন — পরীক্ষা চলছে", 5000);
+    };
+    const handleWindowFocus = () => {
+      if (blurTimeoutRef.current) clearTimeout(blurTimeoutRef.current);
+      setBlurContent(false);
+      setBlurReason("");
+    };
+
+    const handleSelectStart = (e) => {
+      const tag = e.target.tagName.toLowerCase();
+      if (tag !== "input" && tag !== "textarea") e.preventDefault();
+    };
 
     document.addEventListener("contextmenu", handleContextMenu, true);
     document.addEventListener("keydown", handleKeyDown, true);
@@ -298,6 +315,7 @@ function ExamPage() {
     document.addEventListener("visibilitychange", handleVisibilityChange);
     window.addEventListener("blur", handleWindowBlur);
     window.addEventListener("focus", handleWindowFocus);
+
     return () => {
       document.removeEventListener("contextmenu", handleContextMenu, true);
       document.removeEventListener("keydown", handleKeyDown, true);
@@ -315,45 +333,83 @@ function ExamPage() {
     };
   }, [triggerBlock, triggerBlurOnly, handleTabSwitch]);
 
-  /* Security Layer 2 — DevTools */
+  /* ══════════════════════════════════════════
+     SECURITY LAYER 2 — DevTools Detection
+     ══════════════════════════════════════════ */
   useEffect(() => {
     let devToolsOpen = false;
+
     const checkDevTools = () => {
-      const isOpen = (window.outerWidth - window.innerWidth) > 160 || (window.outerHeight - window.innerHeight) > 160;
-      if (isOpen && !devToolsOpen) { devToolsOpen = true; triggerBlock("DevTools ব্যবহার নিষিদ্ধ!"); }
-      else if (!isOpen) devToolsOpen = false;
+      const threshold = 160;
+      const widthDiff = window.outerWidth - window.innerWidth;
+      const heightDiff = window.outerHeight - window.innerHeight;
+      const isOpen = widthDiff > threshold || heightDiff > threshold;
+      if (isOpen && !devToolsOpen) {
+        devToolsOpen = true;
+        devToolsRef.current = true;
+        triggerBlock("DevTools ব্যবহার নিষিদ্ধ!");
+      } else if (!isOpen) {
+        devToolsOpen = false;
+        devToolsRef.current = false;
+      }
     };
+
     const debuggerTrap = () => {
       const start = performance.now();
       // eslint-disable-next-line no-debugger
       debugger;
-      if (performance.now() - start > 80) triggerBlock("DevTools detected!");
+      if (performance.now() - start > 80) {
+        triggerBlock("DevTools detected!");
+      }
     };
+
     window.addEventListener("resize", checkDevTools);
-    const i1 = setInterval(checkDevTools, 1000);
-    const i2 = setInterval(debuggerTrap, 3000);
-    return () => { window.removeEventListener("resize", checkDevTools); clearInterval(i1); clearInterval(i2); };
+    const interval1 = setInterval(checkDevTools, 1000);
+    const interval2 = setInterval(debuggerTrap, 3000);
+
+    return () => {
+      window.removeEventListener("resize", checkDevTools);
+      clearInterval(interval1);
+      clearInterval(interval2);
+    };
   }, [triggerBlock]);
 
-  /* Security Layer 3 — CSS injection */
+  /* ══════════════════════════════════════════
+     SECURITY LAYER 3 — CSS Injection Protection
+     ══════════════════════════════════════════ */
   useEffect(() => {
     const observer = new MutationObserver((mutations) => {
-      mutations.forEach((m) => m.addedNodes.forEach((node) => { if (node.nodeName === "STYLE" || node.nodeName === "LINK") node.remove(); }));
+      mutations.forEach((m) => {
+        m.addedNodes.forEach((node) => {
+          if (node.nodeName === "STYLE" || node.nodeName === "LINK") {
+            node.remove();
+          }
+        });
+      });
     });
     observer.observe(document.head, { childList: true, subtree: true });
     return () => observer.disconnect();
   }, []);
 
-  /* Security Layer 4 — iOS pagehide */
+  /* ══════════════════════════════════════════
+     SECURITY LAYER 4 — iOS / Mobile Screenshot
+     ══════════════════════════════════════════ */
   useEffect(() => {
-    const hide = () => { setBlurContent(true); setBlurReason(""); };
-    const show = () => setTimeout(() => { setBlurContent(false); setBlurReason(""); }, 800);
-    window.addEventListener("pagehide", hide);
-    window.addEventListener("pageshow", show);
-    return () => { window.removeEventListener("pagehide", hide); window.removeEventListener("pageshow", show); };
+    const handlePageHide = () => { setBlurContent(true); setBlurReason(""); };
+    const handlePageShow = () => {
+      setTimeout(() => { setBlurContent(false); setBlurReason(""); }, 800);
+    };
+    window.addEventListener("pagehide", handlePageHide);
+    window.addEventListener("pageshow", handlePageShow);
+    return () => {
+      window.removeEventListener("pagehide", handlePageHide);
+      window.removeEventListener("pageshow", handlePageShow);
+    };
   }, []);
 
-  /* Fetch exam */
+  /* ══════════════════════════════════════════
+     FETCH EXAM + RESTORE PROGRESS
+     ══════════════════════════════════════════ */
   useEffect(() => {
     fetch(`${API}/api/exams/${code}`)
       .then((res) => res.json())
@@ -362,28 +418,38 @@ function ExamPage() {
         const saved = localStorage.getItem(getStorageKey(code));
         if (saved) {
           try {
-            const p = JSON.parse(saved);
-            if (p.name) setName(p.name);
-            if (p.roll) setRoll(p.roll);
-            if (p.answers) setAnswers(p.answers);
-            setTimeLeft(p.timeLeft > 0 ? p.timeLeft : (data.duration || 0) * 60);
-          } catch { localStorage.removeItem(getStorageKey(code)); if (data.duration) setTimeLeft(data.duration * 60); }
-        } else { if (data.duration) setTimeLeft(data.duration * 60); }
+            const progress = JSON.parse(saved);
+            if (progress.name) setName(progress.name);
+            if (progress.roll) setRoll(progress.roll);
+            if (progress.answers) setAnswers(progress.answers);
+            setTimeLeft(
+              progress.timeLeft > 0 ? progress.timeLeft : (data.duration || 0) * 60
+            );
+          } catch {
+            localStorage.removeItem(getStorageKey(code));
+            if (data.duration) setTimeLeft(data.duration * 60);
+          }
+        } else {
+          if (data.duration) setTimeLeft(data.duration * 60);
+        }
       });
   }, [code]);
 
   /* Save progress */
   useEffect(() => {
     if (!exam || submitted) return;
-    localStorage.setItem(getStorageKey(code), JSON.stringify({ answers, name, roll, timeLeft }));
+    localStorage.setItem(
+      getStorageKey(code),
+      JSON.stringify({ answers, name, roll, timeLeft })
+    );
   }, [answers, name, roll, timeLeft, exam, submitted, code]);
 
   /* Timer */
   useEffect(() => {
     if (timeLeft === null || submitted) return;
     if (timeLeft <= 0) { autoSubmitByTimer(); return; }
-    const t = setInterval(() => setTimeLeft((p) => p - 1), 1000);
-    return () => clearInterval(t);
+    const timer = setInterval(() => setTimeLeft((p) => p - 1), 1000);
+    return () => clearInterval(timer);
   }, [timeLeft, submitted]);
 
   /* Toast */
@@ -392,12 +458,20 @@ function ExamPage() {
       setTimeout(() => {
         setShowToast(true);
         setTimeout(() => setToastVisible(true), 50);
-        setTimeout(() => { setToastVisible(false); setTimeout(() => setShowToast(false), 600); }, 6000);
+        setTimeout(() => {
+          setToastVisible(false);
+          setTimeout(() => setShowToast(false), 600);
+        }, 6000);
       }, 500);
     }
   }, [score, reviewData]);
 
-  const formatTime = () => { const m = Math.floor(timeLeft / 60); const s = timeLeft % 60; return `${m}:${s.toString().padStart(2, "0")}`; };
+  const formatTime = () => {
+    const m = Math.floor(timeLeft / 60);
+    const s = timeLeft % 60;
+    return `${m}:${s.toString().padStart(2, "0")}`;
+  };
+
   const timerColor = timeLeft !== null && timeLeft <= 60 ? "#ff4444" : "white";
 
   const handleAnswer = (qid, option) => setAnswers({ ...answers, [qid]: option });
@@ -417,34 +491,45 @@ function ExamPage() {
       clearProgress();
       setScore(data.score);
       setReviewData(data);
-    } catch { setSubmitted(false); alert("Submit Failed"); }
+    } catch {
+      setSubmitted(false);
+      alert("Submit Failed");
+    }
   }, [submitted, name, roll, code, answers]);
 
+  // Keep autoSubmitRef in sync so handleTabSwitch can call it
   autoSubmitRef.current = submitExam;
 
-  const autoSubmitByTimer = () => { if (submitted) return; alert("সময় শেষ! Auto Submit হচ্ছে"); submitExam(); };
+  const autoSubmitByTimer = () => {
+    if (submitted) return;
+    alert("সময় শেষ! Auto Submit হচ্ছে");
+    submitExam();
+  };
 
   const downloadResult = async () => {
     const html2pdf = (await import("html2pdf.js")).default;
     const element = document.getElementById("result-sheet");
     element.classList.add("pdf-mode");
     await new Promise((r) => setTimeout(r, 300));
-    await html2pdf().set({
-      margin: [5, 5, 5, 5],
-      filename: `${exam.title || "exam-result"}.pdf`,
-      image: { type: "jpeg", quality: 1 },
-      html2canvas: { scale: 2, useCORS: true, backgroundColor: "#f8fafc", scrollY: 0 },
-      jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
-      pagebreak: { mode: ["avoid-all", "css", "legacy"] },
-    }).from(element).save();
+    await html2pdf()
+      .set({
+        margin: [5, 5, 5, 5],
+        filename: `${exam.title || "exam-result"}.pdf`,
+        image: { type: "jpeg", quality: 1 },
+        html2canvas: { scale: 2, useCORS: true, backgroundColor: "#f8fafc", scrollY: 0 },
+        jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+        pagebreak: { mode: ["avoid-all", "css", "legacy"] },
+      })
+      .from(element)
+      .save();
     element.classList.remove("pdf-mode");
   };
 
   /* ══════════════════════════════════════════
      GLOBAL STYLES
-  ══════════════════════════════════════════ */
+     ══════════════════════════════════════════ */
   const globalStyles = `
-    @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Hind+Siliguri:wght@400;500;600;700&family=Sora:wght@400;500;600;700;800&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=Sora:wght@400;500;600;700;800&display=swap');
 
     *, *::before, *::after {
       user-select: none !important;
@@ -454,19 +539,43 @@ function ExamPage() {
       -webkit-touch-callout: none !important;
       box-sizing: border-box;
     }
-    input, textarea { user-select: text !important; -webkit-user-select: text !important; }
-    img { pointer-events: none !important; -webkit-user-drag: none !important; }
-    @media print { html, body { display: none !important; visibility: hidden !important; } }
-
+    input, textarea {
+      user-select: text !important;
+      -webkit-user-select: text !important;
+    }
+    img {
+      pointer-events: none !important;
+      -webkit-user-drag: none !important;
+      -moz-user-drag: none !important;
+    }
+    img::after {
+      content: '';
+      display: block;
+      position: absolute;
+      inset: 0;
+    }
+    @media print {
+      html, body { display: none !important; visibility: hidden !important; }
+    }
+    .content-blur {
+      filter: blur(18px) !important;
+      transition: filter 0.15s ease;
+      pointer-events: none;
+    }
+    .content-unblur {
+      filter: blur(0px);
+      transition: filter 0.4s ease;
+    }
     .pdf-mode { background: #f8fafc !important; padding: 20px !important; }
     .pdf-mode .question { page-break-inside: avoid !important; break-inside: avoid !important; }
 
     @keyframes timerPulse   { 0%,100% { transform: scale(1); } 50% { transform: scale(1.06); } }
-    @keyframes toastIn      { 0% { transform: translateX(-50%) translateY(100px); opacity:0; } 100% { transform: translateX(-50%) translateY(0); opacity:1; } }
-    @keyframes toastOut     { 0% { transform: translateX(-50%) translateY(0); opacity:1; } 100% { transform: translateX(-50%) translateY(100px); opacity:0; } }
-    @keyframes fadeInUp     { from { opacity:0; transform: translateY(24px); } to { opacity:1; transform: translateY(0); } }
-    @keyframes scaleIn      { from { opacity:0; transform: scale(0.92); } to { opacity:1; transform: scale(1); } }
+    @keyframes toastIn      { 0%   { transform: translateX(-50%) translateY(100px); opacity: 0; } 100% { transform: translateX(-50%) translateY(0); opacity: 1; } }
+    @keyframes toastOut     { 0%   { transform: translateX(-50%) translateY(0); opacity: 1; } 100% { transform: translateX(-50%) translateY(100px); opacity: 0; } }
+    @keyframes fadeInUp     { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes scaleIn      { from { opacity: 0; transform: scale(0.92); } to { opacity: 1; transform: scale(1); } }
     @keyframes blockPulse   { 0%,100% { transform: scale(1); } 50% { transform: scale(1.04); } }
+    @keyframes warningSlide { 0% { transform: translateY(-80px); opacity: 0; } 100% { transform: translateY(0); opacity: 1; } }
 
     .stat-card { transition: transform 0.2s ease, box-shadow 0.2s ease; }
     .stat-card:hover { transform: translateY(-3px); box-shadow: 0 16px 40px rgba(0,0,0,0.15) !important; }
@@ -475,90 +584,323 @@ function ExamPage() {
     .review-question { animation: fadeInUp 0.4s ease both; }
   `;
 
-  /* ── Blocked Overlay ── */
-  const BlockedOverlay = () => blocked ? (
-    <div style={{ position: "fixed", inset: 0, zIndex: 99999, background: "rgba(0,0,0,0.97)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", color: "white" }}>
-      <div style={{ fontSize: 72, marginBottom: 20, animation: "blockPulse 0.6s infinite" }}>🚫</div>
-      <h2 style={{ fontSize: 28, fontWeight: 800, marginBottom: 12, fontFamily: "'Sora', sans-serif" }}>{blockReason}</h2>
-      <p style={{ color: "rgba(255,255,255,0.55)", fontSize: 15, fontFamily: "'Hind Siliguri', sans-serif", textAlign: "center", maxWidth: 340 }}>
-        এই পরীক্ষায় এই কার্যক্রম সম্পূর্ণ নিষিদ্ধ।<br />সন্দেহজনক কার্যকলাপ লগ করা হচ্ছে।
-      </p>
-      <div style={{ marginTop: 24, padding: "10px 28px", background: "rgba(255,68,68,0.15)", borderRadius: 50, border: "1px solid rgba(255,68,68,0.35)", fontSize: 13, color: "rgba(255,200,200,0.8)", fontFamily: "'Sora', sans-serif" }}>
-        ⚠️ কার্যকলাপ রেকর্ড হচ্ছে
-      </div>
-    </div>
-  ) : null;
-
-  /* ── Blur Overlay ── */
-  const BlurOverlay = () => blurContent ? (
-    <div style={{ position: "fixed", inset: 0, zIndex: 9500, backdropFilter: "blur(22px)", background: "rgba(0,0,0,0.55)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", color: "white", transition: "opacity 0.2s ease" }}>
-      <div style={{ fontSize: 56, marginBottom: 16 }}>🔒</div>
-      <p style={{ fontSize: 20, fontWeight: 700, fontFamily: "'Sora', sans-serif", textAlign: "center", maxWidth: 320 }}>{blurReason || "ফিরে আসুন — পরীক্ষা চলছে"}</p>
-      <p style={{ fontSize: 14, opacity: 0.6, fontFamily: "'Hind Siliguri', sans-serif", marginTop: 8, textAlign: "center" }}>পরীক্ষার বাইরে গেলে কন্টেন্ট লুকানো হয়</p>
-    </div>
-  ) : null;
-
-  /* ── Tab Warning ── */
-  const TabWarningBanner = () => showTabWarning ? (
-    <div style={{ position: "fixed", inset: 0, zIndex: 999999, display: "flex", justifyContent: "center", alignItems: "center", padding: "20px", background: "rgba(0,0,0,0.15)", backdropFilter: "blur(6px)" }}>
+  /* ══════════════════════════════════════════
+     BLOCKED OVERLAY
+     ══════════════════════════════════════════ */
+  const BlockedOverlay = () =>
+    blocked ? (
       <div style={{
-        width: "90%", maxWidth: "420px",
-        background: tabSwitchCountRef.current >= 3 ? "linear-gradient(135deg,#7f1d1d,#991b1b)" : tabSwitchCountRef.current === 2 ? "linear-gradient(135deg,#92400e,#b45309)" : "linear-gradient(135deg,#1e3a8a,#1d4ed8)",
-        borderRadius: "24px", padding: "28px 22px", color: "white", textAlign: "center",
-        boxShadow: "0 30px 80px rgba(0,0,0,0.45)", border: "1px solid rgba(255,255,255,0.16)",
-        animation: "scaleIn 0.35s cubic-bezier(0.34,1.56,0.64,1)",
+        position: "fixed", inset: 0, zIndex: 99999,
+        background: "rgba(0,0,0,0.97)",
+        display: "flex", flexDirection: "column",
+        alignItems: "center", justifyContent: "center",
+        color: "white", animation: "blockPulse 0.4s ease",
       }}>
-        <div style={{ fontSize: "clamp(34px,8vw,52px)", marginBottom: "14px" }}>
-          {tabSwitchCountRef.current >= 3 ? "🚫" : tabSwitchCountRef.current === 2 ? "⚠️" : "🔔"}
-        </div>
-        <h2 style={{ margin: "0 0 12px", fontSize: "clamp(18px,5vw,24px)", fontWeight: 800, fontFamily: "'Sora', sans-serif" }}>
-          {tabSwitchCountRef.current >= 3 ? "পরীক্ষা জমা হচ্ছে" : tabSwitchCountRef.current === 2 ? "শেষ সতর্কতা!" : "সতর্কতা"}
+        <div style={{ fontSize: 72, marginBottom: 20, animation: "blockPulse 0.6s infinite" }}>🚫</div>
+        <h2 style={{ fontSize: 28, fontWeight: 800, marginBottom: 12, fontFamily: "'Sora', sans-serif", letterSpacing: "-0.3px" }}>
+          {blockReason}
         </h2>
-        <div style={{ fontSize: "clamp(14px,4vw,18px)", fontWeight: 500, lineHeight: 1.8, fontFamily: "'Hind Siliguri', sans-serif" }}>
+        <p style={{ color: "rgba(255,255,255,0.55)", fontSize: 15, fontFamily: "'Hind Siliguri', sans-serif", textAlign: "center", maxWidth: 340 }}>
+          এই পরীক্ষায় এই কার্যক্রম সম্পূর্ণ নিষিদ্ধ।<br />সন্দেহজনক কার্যকলাপ লগ করা হচ্ছে।
+        </p>
+        <div style={{
+          marginTop: 24, padding: "10px 28px",
+          background: "rgba(255,68,68,0.15)", borderRadius: 50,
+          border: "1px solid rgba(255,68,68,0.35)",
+          fontSize: 13, color: "rgba(255,200,200,0.8)",
+          fontFamily: "'Sora', sans-serif",
+        }}>
+          ⚠️ কার্যকলাপ রেকর্ড হচ্ছে
+        </div>
+      </div>
+    ) : null;
+
+  /* ══════════════════════════════════════════
+     NEW: TAB WARNING BANNER
+     ══════════════════════════════════════════ */
+  /* ══════════════════════════════════════════
+   TAB WARNING BANNER (CENTERED + RESPONSIVE)
+   ══════════════════════════════════════════ */
+const TabWarningBanner = () =>
+  showTabWarning ? (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 999999,
+
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+
+        padding: "20px",
+        background: "rgba(0,0,0,0.15)",
+        backdropFilter: "blur(6px)",
+      }}
+    >
+      <div
+        style={{
+          width: "90%",
+          maxWidth: "420px",
+
+          background:
+            tabSwitchCountRef.current >= 3
+              ? "linear-gradient(135deg,#7f1d1d,#991b1b)"
+              : tabSwitchCountRef.current === 2
+              ? "linear-gradient(135deg,#92400e,#b45309)"
+              : "linear-gradient(135deg,#1e3a8a,#1d4ed8)",
+
+          borderRadius: "24px",
+          padding: "28px 22px",
+
+          color: "white",
+          textAlign: "center",
+
+          boxShadow:
+            "0 30px 80px rgba(0,0,0,0.45), 0 8px 30px rgba(0,0,0,0.25)",
+
+          border: "1px solid rgba(255,255,255,0.16)",
+          backdropFilter: "blur(18px)",
+
+          animation:
+            "scaleIn 0.35s cubic-bezier(0.34,1.56,0.64,1)",
+
+          overflow: "hidden",
+        }}
+      >
+        {/* Icon */}
+        <div
+          style={{
+            fontSize: "clamp(34px,8vw,52px)",
+            marginBottom: "14px",
+          }}
+        >
+          {tabSwitchCountRef.current >= 3
+            ? "🚫"
+            : tabSwitchCountRef.current === 2
+            ? "⚠️"
+            : "🔔"}
+        </div>
+
+        {/* Title */}
+        <h2
+          style={{
+            margin: "0 0 12px",
+            fontSize: "clamp(18px,5vw,24px)",
+            fontWeight: 800,
+            lineHeight: 1.3,
+            fontFamily: "'Sora', sans-serif",
+          }}
+        >
+          {tabSwitchCountRef.current >= 3
+            ? "পরীক্ষা জমা হচ্ছে"
+            : tabSwitchCountRef.current === 2
+            ? "শেষ সতর্কতা!"
+            : "সতর্কতা"}
+        </h2>
+
+        {/* Message */}
+        <div
+          style={{
+            fontSize: "clamp(14px,4vw,18px)",
+            fontWeight: 500,
+            lineHeight: 1.8,
+            opacity: 0.96,
+            fontFamily: "'Hind Siliguri', sans-serif",
+          }}
+        >
           {tabWarningMsg}
         </div>
+
+        {/* Counter */}
         {tabSwitchCountRef.current < 3 && (
-          <div style={{ marginTop: "18px", display: "inline-flex", alignItems: "center", padding: "10px 18px", borderRadius: "999px", background: "rgba(255,255,255,0.14)", border: "1px solid rgba(255,255,255,0.18)", fontSize: "13px", fontWeight: 600, color: "rgba(255,255,255,0.95)", fontFamily: "'Sora', sans-serif" }}>
-            ⚠️ ট্যাব পরিবর্তন সংখ্যা: {tabSwitchCountRef.current}/2
+          <div
+            style={{
+              marginTop: "18px",
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+
+              padding: "10px 18px",
+              borderRadius: "999px",
+
+              background: "rgba(255,255,255,0.14)",
+              border: "1px solid rgba(255,255,255,0.18)",
+
+              fontSize: "13px",
+              fontWeight: 600,
+              letterSpacing: "0.3px",
+              color: "rgba(255,255,255,0.95)",
+              fontFamily: "'Sora', sans-serif",
+            }}
+          >
+            ⚠️ ট্যাব পরিবর্তন সংখ্যা:{" "}
+            {tabSwitchCountRef.current}/2
           </div>
         )}
       </div>
     </div>
   ) : null;
+    showTabWarning ? (
+      <div style={{
+        position: "fixed", top: 64, left: "50%",
+        transform: "translateX(-50%)",
+        zIndex: 99990,
+        width: "calc(100% - 32px)", maxWidth: 560,
+        animation: "warningSlide 0.4s cubic-bezier(0.34,1.56,0.64,1) forwards",
+      }}>
+       <div
+  style={{
+    position: "fixed",
+    top: "50%",
+    left: "50%",
+    transform: "translate(-50%, -50%)",
+
+    width: "90%",
+    maxWidth: "400px",
+    zIndex: 999999,
+
+    background:
+      tabSwitchCountRef.current >= 3
+        ? "linear-gradient(135deg,#7f1d1d,#991b1b)"
+        : tabSwitchCountRef.current === 2
+        ? "linear-gradient(135deg,#92400e,#b45309)"
+        : "linear-gradient(135deg,#1e3a8a,#1d4ed8)",
+
+    borderRadius: "22px",
+    padding: "24px 22px",
+
+    color: "white",
+    textAlign: "center",
+
+    fontSize: "clamp(15px,4vw,18px)",
+    fontWeight: 600,
+    lineHeight: 1.7,
+
+    boxShadow:
+      "0 25px 60px rgba(0,0,0,0.35), 0 8px 25px rgba(0,0,0,0.2)",
+
+    border: "1px solid rgba(255,255,255,0.15)",
+    backdropFilter: "blur(18px)",
+
+    animation:
+      "scaleIn 0.35s cubic-bezier(0.34,1.56,0.64,1)",
+  }}
+>
+  <div
+    style={{
+      fontSize: "clamp(22px,6vw,32px)",
+      marginBottom: "12px",
+    }}
+  >
+    {tabSwitchCountRef.current >= 3
+      ? "🚫"
+      : tabSwitchCountRef.current === 2
+      ? "⚠️"
+      : "🔔"}
+  </div>
+
+  <div>{tabWarningMsg}</div>
+
+  {tabSwitchCountRef.current < 3 && (
+    <div
+      style={{
+        marginTop: "14px",
+        padding: "8px 14px",
+        borderRadius: "999px",
+
+        background: "rgba(255,255,255,0.14)",
+        border: "1px solid rgba(255,255,255,0.16)",
+
+        fontSize: "13px",
+        fontWeight: 500,
+        opacity: 0.92,
+        display: "inline-block",
+      }}
+    >
+      ট্যাব পরিবর্তন সংখ্যা: {tabSwitchCountRef.current}/2
+    </div>
+  )}
+</div>
+      </div>
+    ) : null;
+
+  /* ══════════════════════════════════════════
+     BLUR OVERLAY (shared — used by all blur triggers)
+     ══════════════════════════════════════════ */
+  const BlurOverlay = () =>
+    blurContent ? (
+      <div style={{
+        position: "fixed", inset: 0, zIndex: 9500,
+        backdropFilter: "blur(22px)",
+        background: "rgba(0,0,0,0.55)",
+        display: "flex", flexDirection: "column",
+        alignItems: "center", justifyContent: "center",
+        color: "white",
+        transition: "opacity 0.2s ease",
+      }}>
+        <div style={{ fontSize: 56, marginBottom: 16 }}>🔒</div>
+        <p style={{ fontSize: 20, fontWeight: 700, fontFamily: "'Sora', sans-serif", textAlign: "center", maxWidth: 320 }}>
+          {blurReason || "ফিরে আসুন — পরীক্ষা চলছে"}
+        </p>
+        <p style={{ fontSize: 14, opacity: 0.6, fontFamily: "'Hind Siliguri', sans-serif", marginTop: 8, textAlign: "center" }}>
+          পরীক্ষার বাইরে গেলে কন্টেন্ট লুকানো হয়
+        </p>
+      </div>
+    ) : null;
 
   /* ══════════════════════════════════════════
      RESULT PAGE
-  ══════════════════════════════════════════ */
+     ══════════════════════════════════════════ */
   if (score !== null && reviewData) {
     const wrong = reviewData.questions.length - score;
     const percentage = Math.round((score / reviewData.questions.length) * 100);
+
     return (
-      <div style={{ minHeight: "100vh", background: "#f0f4ff", padding: "14px", fontFamily: "'Sora', 'Hind Siliguri', sans-serif" }}>
+      <div style={{
+        minHeight: "100vh", background: "#f0f4ff",
+        padding: "14px", fontFamily: "'Sora', 'Hind Siliguri', sans-serif",
+      }}>
         <style>{globalStyles}</style>
         <BlockedOverlay />
         <WatermarkOverlay name={name} roll={roll} />
         <BlurOverlay />
 
-        {/* Toast */}
         {showToast && (
           <div style={{
             position: "fixed", bottom: 28, left: "50%",
-            transform: "translateX(-50%)",
-            zIndex: 99998,
+            transform: "translateX(-50%)", zIndex: 99998,
             width: "calc(100% - 32px)", maxWidth: 540,
-            animation: toastVisible ? "toastIn 0.5s cubic-bezier(0.34,1.56,0.64,1) forwards" : "toastOut 0.45s ease forwards",
+            animation: toastVisible
+              ? "toastIn 0.5s cubic-bezier(0.34,1.56,0.64,1) forwards"
+              : "toastOut 0.45s ease forwards",
           }}>
-            <div style={{ background: "linear-gradient(135deg,#1e3a8a 0%,#4c1d95 100%)", borderRadius: 20, padding: "18px 22px", color: "white", fontSize: "clamp(13px,2vw,17px)", fontWeight: 600, lineHeight: 1.8, boxShadow: "0 24px 64px rgba(30,58,138,0.45)", border: "1px solid rgba(255,255,255,0.18)", textAlign: "center", backdropFilter: "blur(12px)", fontFamily: "'Hind Siliguri', sans-serif" }}>
+            <div style={{
+              background: "linear-gradient(135deg,#1e3a8a 0%,#4c1d95 100%)",
+              borderRadius: 20, padding: "18px 22px", color: "white",
+              fontSize: "clamp(13px,2vw,17px)", fontWeight: 600, lineHeight: 1.8,
+              boxShadow: "0 24px 64px rgba(30,58,138,0.45), 0 4px 16px rgba(0,0,0,0.3)",
+              border: "1px solid rgba(255,255,255,0.18)", textAlign: "center",
+              backdropFilter: "blur(12px)", fontFamily: "'Hind Siliguri', sans-serif",
+            }}>
               {getScoreComment(score, name)}
             </div>
           </div>
         )}
 
         <div id="result-sheet" style={{ maxWidth: 860, margin: "0 auto", width: "100%" }}>
-          {/* Hero card */}
-          <div style={{ background: "linear-gradient(135deg,#2563eb 0%,#7c3aed 100%)", borderRadius: 28, padding: "28px 22px", color: "white", marginBottom: 28, boxShadow: "0 20px 60px rgba(37,99,235,0.35)", animation: "scaleIn 0.5s ease both" }}>
-            <h1 style={{ fontSize: "clamp(26px,5vw,48px)", margin: "0 0 6px", fontWeight: 800, fontFamily: "'Sora', sans-serif" }}>🎉 Exam Completed</h1>
-            <h2 style={{ fontSize: "clamp(15px,2.5vw,22px)", margin: "0 0 24px", opacity: 0.85, fontWeight: 500, wordBreak: "break-word" }}>{exam.title}</h2>
+          <div style={{
+            background: "linear-gradient(135deg,#2563eb 0%,#7c3aed 100%)",
+            borderRadius: 28, padding: "28px 22px", color: "white", marginBottom: 28,
+            boxShadow: "0 20px 60px rgba(37,99,235,0.35), 0 4px 20px rgba(0,0,0,0.15)",
+            animation: "scaleIn 0.5s ease both",
+          }}>
+            <h1 style={{ fontSize: "clamp(26px,5vw,48px)", margin: "0 0 6px", fontWeight: 800, lineHeight: 1.2, fontFamily: "'Sora', sans-serif" }}>
+              🎉 Exam Completed
+            </h1>
+            <h2 style={{ fontSize: "clamp(15px,2.5vw,22px)", margin: "0 0 24px", opacity: 0.85, fontWeight: 500, wordBreak: "break-word" }}>
+              {exam.title}
+            </h2>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))", gap: 14 }}>
               {[
                 { label: "Score",      value: `${score}/${reviewData.questions.length}`, bg: "rgba(255,255,255,0.15)", border: "rgba(255,255,255,0.25)" },
@@ -566,45 +908,63 @@ function ExamPage() {
                 { label: "Wrong",      value: `❌ ${wrong}`,    bg: "rgba(239,68,68,0.18)",   border: "rgba(239,68,68,0.35)" },
                 { label: "Percentage", value: `${percentage}%`, bg: "rgba(255,255,255,0.12)", border: "rgba(255,255,255,0.22)" },
               ].map((s, i) => (
-                <div key={i} className="stat-card" style={{ background: s.bg, padding: "18px 16px", borderRadius: 18, border: `1.5px solid ${s.border}`, boxShadow: "0 4px 16px rgba(0,0,0,0.1)" }}>
+                <div key={i} className="stat-card" style={{
+                  background: s.bg, padding: "18px 16px", borderRadius: 18,
+                  border: `1.5px solid ${s.border}`, boxShadow: "0 4px 16px rgba(0,0,0,0.1)",
+                }}>
                   <p style={{ opacity: 0.8, margin: "0 0 8px", fontSize: 13, fontWeight: 600, letterSpacing: "0.5px", textTransform: "uppercase" }}>{s.label}</p>
                   <p style={{ fontSize: "clamp(26px,4.5vw,44px)", margin: 0, fontWeight: 800, lineHeight: 1, fontFamily: "'Sora', sans-serif" }}>{s.value}</p>
                 </div>
               ))}
             </div>
-            <div style={{ background: "rgba(255,255,255,0.13)", borderRadius: 18, padding: "18px 20px", marginTop: 18, fontSize: "clamp(14px,2.2vw,19px)", fontWeight: 600, textAlign: "center", lineHeight: 1.9, border: "1px solid rgba(255,255,255,0.22)", fontFamily: "'Hind Siliguri', sans-serif" }}>
+            <div style={{
+              background: "rgba(255,255,255,0.13)", borderRadius: 18, padding: "18px 20px",
+              marginTop: 18, fontSize: "clamp(14px,2.2vw,19px)", fontWeight: 600,
+              textAlign: "center", lineHeight: 1.9, letterSpacing: "0.2px",
+              border: "1px solid rgba(255,255,255,0.22)", fontFamily: "'Hind Siliguri', sans-serif",
+            }}>
               {getScoreComment(score, name)}
             </div>
           </div>
 
-          {/* Download */}
           <div style={{ display: "flex", justifyContent: "center", marginBottom: 28 }}>
-            <button onClick={downloadResult}
-              style={{ padding: "15px 28px", border: "none", borderRadius: 16, background: "linear-gradient(135deg,#16a34a,#15803d)", color: "white", fontSize: 17, fontWeight: 700, cursor: "pointer", width: "100%", maxWidth: 340, boxShadow: "0 8px 24px rgba(22,163,74,0.35)", fontFamily: "'Sora', sans-serif", transition: "transform 0.15s ease" }}
-              onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-2px)"; }}
-              onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; }}
+            <button
+              onClick={downloadResult}
+              style={{
+                padding: "15px 28px", border: "none", borderRadius: 16,
+                background: "linear-gradient(135deg,#16a34a,#15803d)",
+                color: "white", fontSize: 17, fontWeight: 700, cursor: "pointer",
+                width: "100%", maxWidth: 340,
+                boxShadow: "0 8px 24px rgba(22,163,74,0.35)",
+                fontFamily: "'Sora', sans-serif", letterSpacing: "0.3px",
+                transition: "transform 0.15s ease, box-shadow 0.15s ease",
+              }}
+              onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 12px 32px rgba(22,163,74,0.45)"; }}
+              onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "0 8px 24px rgba(22,163,74,0.35)"; }}
             >
               📄 Download Result PDF
             </button>
           </div>
 
-          {/* Review questions */}
           {reviewData.questions.map((q, index) => {
             const userAns = reviewData.answers[q._id];
             const correct = q.correctAnswer;
             return (
-              <div key={index} className="review-question question" style={{ background: "white", padding: "22px 20px", borderRadius: 22, marginBottom: 18, boxShadow: "0 2px 8px rgba(37,99,235,0.06), 0 8px 28px rgba(37,99,235,0.10)", border: "1px solid rgba(226,232,240,0.8)", animationDelay: `${index * 0.04}s` }}>
+              <div key={index} className="review-question" style={{
+                background: "white", padding: "22px 20px", borderRadius: 22, marginBottom: 18,
+                boxShadow: "0 2px 8px rgba(37,99,235,0.06), 0 8px 28px rgba(37,99,235,0.10)",
+                border: "1px solid rgba(226,232,240,0.8)",
+                animationDelay: `${index * 0.04}s`,
+              }}>
                 <div style={{ display: "inline-flex", alignItems: "center", background: "linear-gradient(135deg,#eff6ff,#f5f3ff)", borderRadius: 10, padding: "4px 12px", marginBottom: 12, border: "1px solid #e0e7ff" }}>
                   <span style={{ fontSize: 13, fontWeight: 700, color: "#3730a3", fontFamily: "'Sora', sans-serif" }}>Q{index + 1}</span>
                 </div>
-
-                {/* ── UDDIPOK in review ── */}
-                <UddipokBlock uddipok={q.uddipok} uddipokType={q.uddipokType} uddipokTitle={q.uddipokTitle} />
-
-                <h2 style={{ fontSize: "clamp(16px,2.6vw,24px)", margin: "0 0 14px", color: "#0f172a", lineHeight: 1.6, wordBreak: "break-word", fontFamily: "'Hind Siliguri', 'Sora', sans-serif", fontWeight: 600 }}>
+                <h2 style={{ fontSize: "clamp(16px,2.6vw,24px)", marginBottom: 14, color: "#0f172a", lineHeight: 1.6, wordBreak: "break-word", fontFamily: "'Hind Siliguri', 'Sora', sans-serif", fontWeight: 600, margin: "0 0 14px 0" }}>
                   {q.question}
                 </h2>
-                {q.image && <img src={q.image} alt="question" style={{ maxWidth: "300px", borderRadius: "12px", border: "1px solid #e2e8f0", marginBottom: "16px", display: "block", boxShadow: "0 4px 12px rgba(0,0,0,0.08)" }} />}
+                {q.image && (
+                  <img src={q.image} alt="question" style={{ maxWidth: "300px", borderRadius: "12px", border: "1px solid #e2e8f0", marginBottom: "16px", display: "block", boxShadow: "0 4px 12px rgba(0,0,0,0.08)" }} />
+                )}
                 <div style={{ display: "grid", gap: 10 }}>
                   {q.options.map((opt, i) => {
                     const isCorrect = opt === correct;
@@ -629,7 +989,9 @@ function ExamPage() {
     );
   }
 
-  /* Loading */
+  /* ══════════════════════════════════════════
+     LOADING
+     ══════════════════════════════════════════ */
   if (!exam) {
     return (
       <div style={{ minHeight: "100vh", display: "flex", justifyContent: "center", alignItems: "center", fontSize: 28, fontWeight: "bold", background: "linear-gradient(135deg,#0f172a,#1e293b)", color: "white", fontFamily: "'Sora', sans-serif" }}>
@@ -640,18 +1002,34 @@ function ExamPage() {
 
   /* ══════════════════════════════════════════
      EXAM PAGE
-  ══════════════════════════════════════════ */
+     ══════════════════════════════════════════ */
   return (
     <div style={{ minHeight: "100vh", background: "linear-gradient(160deg,#0f172a 0%,#1e293b 100%)", padding: 14, fontFamily: "'Sora', 'Hind Siliguri', sans-serif" }}>
       <style>{globalStyles}</style>
       <BlockedOverlay />
       <WatermarkOverlay name={name} roll={roll} />
+
+      {/* ── NEW: Tab Warning Banner ── */}
       <TabWarningBanner />
+
+      {/* ── SHARED Blur Overlay ── */}
       <BlurOverlay />
 
       {/* Sticky Timer */}
-      <div style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 1000, display: "flex", justifyContent: "center", padding: "10px 16px", background: "rgba(15,23,42,0.88)", backdropFilter: "blur(14px)", borderBottom: "1px solid rgba(255,255,255,0.07)", boxShadow: "0 4px 24px rgba(0,0,0,0.4)" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10, background: timeLeft !== null && timeLeft <= 60 ? "rgba(255,68,68,0.12)" : "rgba(37,99,235,0.18)", border: `1.5px solid ${timerColor}`, borderRadius: 50, padding: "8px 26px", animation: timeLeft !== null && timeLeft <= 60 ? "timerPulse 1s infinite" : "none" }}>
+      <div style={{
+        position: "fixed", top: 0, left: 0, right: 0, zIndex: 1000,
+        display: "flex", justifyContent: "center", padding: "10px 16px",
+        background: "rgba(15,23,42,0.88)", backdropFilter: "blur(14px)",
+        borderBottom: "1px solid rgba(255,255,255,0.07)",
+        boxShadow: "0 4px 24px rgba(0,0,0,0.4)",
+      }}>
+        <div style={{
+          display: "flex", alignItems: "center", gap: 10,
+          background: timeLeft !== null && timeLeft <= 60 ? "rgba(255,68,68,0.12)" : "rgba(37,99,235,0.18)",
+          border: `1.5px solid ${timerColor}`,
+          borderRadius: 50, padding: "8px 26px",
+          animation: timeLeft !== null && timeLeft <= 60 ? "timerPulse 1s infinite" : "none",
+        }}>
           <span style={{ fontSize: 18 }}>⏰</span>
           <span style={{ fontSize: "clamp(16px,3vw,22px)", fontWeight: 800, color: timerColor, letterSpacing: "2.5px", fontFamily: "monospace" }}>
             {timeLeft !== null ? formatTime() : "--:--"}
@@ -663,7 +1041,9 @@ function ExamPage() {
 
         {/* Exam title */}
         <div style={{ background: "linear-gradient(135deg,#2563eb,#7c3aed)", borderRadius: 24, padding: "22px 20px", color: "white", marginBottom: 22, boxShadow: "0 12px 40px rgba(37,99,235,0.3)" }}>
-          <h1 style={{ fontSize: "clamp(22px,4.5vw,46px)", margin: 0, lineHeight: 1.25, fontWeight: 800, letterSpacing: "-0.3px" }}>📝 {exam.title}</h1>
+          <h1 style={{ fontSize: "clamp(22px,4.5vw,46px)", margin: 0, lineHeight: 1.25, fontWeight: 800, letterSpacing: "-0.3px" }}>
+            📝 {exam.title}
+          </h1>
         </div>
 
         {/* User info */}
@@ -671,9 +1051,14 @@ function ExamPage() {
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(200px,1fr))", gap: 14 }}>
             {[
               { placeholder: "Your Name", value: name, onChange: (e) => setName(e.target.value) },
-              { placeholder: "Your Roll", value: roll,  onChange: (e) => setRoll(e.target.value) },
+              { placeholder: "Your Roll", value: roll, onChange: (e) => setRoll(e.target.value) },
             ].map((inp, i) => (
-              <input key={i} type="text" placeholder={inp.placeholder} value={inp.value} onChange={inp.onChange}
+              <input
+                key={i}
+                type="text"
+                placeholder={inp.placeholder}
+                value={inp.value}
+                onChange={inp.onChange}
                 style={{ padding: "14px 16px", borderRadius: 14, border: "1.5px solid #e2e8f0", fontSize: 15, width: "100%", outline: "none", fontFamily: "'Hind Siliguri', 'Sora', sans-serif", color: "#0f172a", background: "#f8fafc", transition: "border-color 0.2s" }}
                 onFocus={e => e.target.style.borderColor = "#2563eb"}
                 onBlur={e => e.target.style.borderColor = "#e2e8f0"}
@@ -685,35 +1070,29 @@ function ExamPage() {
         {/* Questions */}
         {exam.questions.map((q, index) => (
           <div key={q._id} style={{ background: "white", borderRadius: 22, padding: "20px 18px", marginBottom: 18, boxShadow: "0 2px 8px rgba(37,99,235,0.06), 0 8px 28px rgba(37,99,235,0.10)", border: "1px solid rgba(226,232,240,0.8)" }}>
-            {/* Q number badge */}
             <div style={{ display: "inline-flex", alignItems: "center", background: "linear-gradient(135deg,#eff6ff,#f5f3ff)", borderRadius: 10, padding: "3px 12px", marginBottom: 10, border: "1px solid #e0e7ff" }}>
               <span style={{ fontSize: 12, fontWeight: 700, color: "#3730a3", fontFamily: "'Sora', sans-serif" }}>Q{index + 1}</span>
             </div>
-
-            {/* ── UDDIPOK BLOCK ── */}
-            <UddipokBlock uddipok={q.uddipok} uddipokType={q.uddipokType} uddipokTitle={q.uddipokTitle} />
-
-            {/* Question text */}
             <h2 style={{ fontSize: "clamp(17px,2.8vw,26px)", margin: "0 0 16px", color: "#0f172a", lineHeight: 1.6, fontWeight: 600, fontFamily: "'Hind Siliguri', 'Sora', sans-serif" }}>
               {q.question}
             </h2>
-
-            {/* Question image */}
-            {q.image && <img src={q.image} alt="question" style={{ maxWidth: "300px", borderRadius: "12px", border: "1px solid #e2e8f0", marginBottom: "14px", display: "block", boxShadow: "0 4px 12px rgba(0,0,0,0.08)" }} />}
-
-            {/* Options */}
+            {q.image && (
+              <img src={q.image} alt="question" style={{ maxWidth: "300px", borderRadius: "12px", border: "1px solid #e2e8f0", marginBottom: "14px", display: "block", boxShadow: "0 4px 12px rgba(0,0,0,0.08)" }} />
+            )}
             <div style={{ display: "grid", gap: 12 }}>
               {q.options.map((opt, i) => {
                 const selected = answers[q._id] === opt;
                 return (
-                  <button key={i} className="option-btn" onClick={() => handleAnswer(q._id, opt)}
+                  <button
+                    key={i}
+                    className="option-btn"
+                    onClick={() => handleAnswer(q._id, opt)}
                     style={{
                       padding: "14px 18px", borderRadius: 14, textAlign: "left",
                       border: selected ? "2px solid #2563eb" : "1.5px solid #e2e8f0",
                       background: selected ? "linear-gradient(135deg,#eff6ff,#f5f3ff)" : "#f8fafc",
-                      cursor: "pointer", fontSize: "clamp(14px,2.5vw,19px)",
-                      fontWeight: selected ? 600 : 500, lineHeight: 1.6,
-                      width: "100%", wordBreak: "break-word",
+                      cursor: "pointer", fontSize: "clamp(14px,2.5vw,19px)", fontWeight: selected ? 600 : 500,
+                      lineHeight: 1.6, width: "100%", wordBreak: "break-word",
                       color: selected ? "#1e40af" : "#334155",
                       boxShadow: selected ? "0 4px 14px rgba(37,99,235,0.15)" : "none",
                       fontFamily: "'Hind Siliguri', 'Sora', sans-serif",
@@ -729,7 +1108,9 @@ function ExamPage() {
 
         {/* Submit */}
         <div style={{ display: "flex", justifyContent: "center", marginTop: 30, marginBottom: 40 }}>
-          <button onClick={submitExam} disabled={submitted}
+          <button
+            onClick={submitExam}
+            disabled={submitted}
             style={{
               padding: "17px 28px", border: "none", borderRadius: 18,
               background: submitted ? "#94a3b8" : "linear-gradient(135deg,#22c55e,#16a34a)",
