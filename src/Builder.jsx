@@ -1387,6 +1387,45 @@ function Builder() {
                       >
                         {q.question}
                       </h2>
+
+
+                      {/* QUESTION */}
+<h2
+  style={{
+    color: "white",
+    fontSize: "18px",
+    fontWeight: "700",
+    lineHeight: "1.6",
+    marginBottom: "16px"
+  }}
+>
+  {q.question}
+</h2>
+
+{/* UDDIPOK */}
+{q.uddipok && (
+  <div
+    style={{
+      background: "rgba(255,255,255,0.07)",
+      border: "1px solid rgba(255,255,255,0.15)",
+      borderRadius: "10px",
+      padding: "12px 16px",
+      marginBottom: "14px",
+      color: "rgba(255,255,255,0.85)",
+      fontSize: q.uddipokType === "code" ? "13px" : "15px",
+      fontFamily: q.uddipokType === "code" ? "monospace" : "inherit",
+      whiteSpace: q.uddipokType === "code" ? "pre" : "pre-wrap",
+      lineHeight: "1.7"
+    }}
+  >
+    {q.uddipokTitle && (
+      <div style={{ fontWeight: "700", color: "#a78bfa", marginBottom: "6px", fontSize: "13px" }}>
+        {q.uddipokTitle}
+      </div>
+    )}
+    {q.uddipok}
+  </div>
+)}
  
                       {/* IMAGE */}
                       {q.image && (
