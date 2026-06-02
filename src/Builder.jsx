@@ -1641,10 +1641,11 @@ function Builder() {
           )}
  
           {/* PRINTABLE QUESTION PAPER */}
-          <div
-            id="question-paper"
-            className="bg-white mt-10 shadow-xl mx-auto preview-paper"
-          >
+        <div
+  id="question-paper"
+  className="bg-white mt-10 shadow-xl mx-auto preview-paper"
+  style={{ position: "absolute", left: "-9999px", top: 0 }}
+>
  
             <style>
               {`
