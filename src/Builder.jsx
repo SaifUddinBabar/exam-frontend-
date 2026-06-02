@@ -759,7 +759,7 @@ function Builder() {
           )}
 
           {/* ── Printable Paper ───────────────────────────────────────── */}
-          <div id="question-paper" className="bg-white mt-10 shadow-xl mx-auto preview-paper hidden">
+          <div id="question-paper" className="bg-white mt-10 shadow-xl mx-auto preview-paper ">
             <style>{`
               .preview-paper { width: 210mm; min-height: 297mm; background: white; padding: 14mm; box-sizing: border-box; overflow: hidden; }
               .preview-paper * { box-sizing: border-box; word-break: break-word; overflow-wrap: break-word; }
