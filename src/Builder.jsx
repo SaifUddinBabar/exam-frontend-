@@ -323,13 +323,7 @@ const GlobalStyles = () => (
 
     /* ── PDF ── */
    /* ── PDF ── */
-     .preview-paper {
-      width: 210mm; min-height: 297mm;
-      background: white; padding: 14mm;
-      box-sizing: border-box; overflow: hidden;
-      position: fixed; left: -9999px; top: -9999px;
-      z-index: -1;
-    }
+     .preview-paper
     .preview-paper * { box-sizing: border-box; word-break: break-word; overflow-wrap: break-word; }
     .question-block { width: 100%; margin-bottom: 12px; page-break-inside: avoid; break-inside: avoid; }
     .question-title { font-weight: 700; text-align: justify; }
@@ -461,23 +455,52 @@ const downloadPDF = async () => {
     setPdfCompact(selected.length > 20);
     await new Promise(r => setTimeout(r, 300));
     const el = document.getElementById("question-paper");
-    el.style.left = "0";
-    el.style.top = "0";
-    el.style.zIndex = "9999";
+
+    // সম্পূর্ণ visible করো
+    el.style.cssText = `
+      width: 210mm;
+      min-height: 297mm;
+      background: white;
+      padding: 14mm;
+      box-sizing: border-box;
+      overflow: hidden;
+      position: absolute;
+      left: 0;
+      top: ${window.scrollY}px;
+      z-index: 99999;
+    `;
+
+    await new Promise(r => setTimeout(r, 200));
+
     await html2pdf().set({
-      margin: 0, filename: `${examData.title || "question-paper"}.pdf`,
+      margin: 0,
+      filename: `${examData.title || "question-paper"}.pdf`,
       image: { type: "jpeg", quality: 1 },
       html2canvas: {
-        scale: 2, useCORS: true,
-        scrollX: 0, scrollY: -window.scrollY,
+        scale: 2,
+        useCORS: true,
+        scrollX: 0,
+        scrollY: 0,
         windowWidth: 794
       },
       jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
-      pagebreak: { mode: ["avoid-all","css","legacy"] }
+      pagebreak: { mode: ["avoid-all", "css", "legacy"] }
     }).from(el).save();
-    el.style.left = "-9999px";
-    el.style.top = "-9999px";
-    el.style.zIndex = "-1";
+
+    // আবার লুকাও
+    el.style.cssText = `
+      width: 210mm;
+      min-height: 297mm;
+      background: white;
+      padding: 14mm;
+      box-sizing: border-box;
+      overflow: hidden;
+      position: fixed;
+      left: -9999px;
+      top: -9999px;
+      z-index: -1;
+    `;
+
     setPdfCompact(false);
   };
   const labels = ["ক","খ","গ","ঘ"];
