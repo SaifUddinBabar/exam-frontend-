@@ -322,12 +322,10 @@ const GlobalStyles = () => (
     ::-webkit-scrollbar-thumb:hover { background: var(--ink-4); }
 
     /* ── PDF ── */
-    .preview-paper {
+     .preview-paper {
       width: 210mm; min-height: 297mm;
       background: white; padding: 14mm;
       box-sizing: border-box; overflow: hidden;
-      position: fixed; left: -9999px; top: -9999px;
-      z-index: -1; visibility: hidden;
     }
     .preview-paper * { box-sizing: border-box; word-break: break-word; overflow-wrap: break-word; }
     .question-block { width: 100%; margin-bottom: 12px; page-break-inside: avoid; break-inside: avoid; }
@@ -456,28 +454,18 @@ function Builder() {
     alert("Link Copied!");
   };
 
- const downloadPDF = async () => {
+const downloadPDF = async () => {
     setPdfCompact(selected.length > 20);
     await new Promise(r => setTimeout(r, 300));
-    const el = document.getElementById("question-paper");
-    el.style.position = "absolute";
-    el.style.left = "0";
-    el.style.top = "0";
-    el.style.visibility = "visible";
     await html2pdf().set({
       margin: 0, filename: `${examData.title || "question-paper"}.pdf`,
       image: { type: "jpeg", quality: 1 },
       html2canvas: { scale: 2, useCORS: true, scrollY: 0 },
       jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
       pagebreak: { mode: ["avoid-all","css","legacy"] }
-    }).from(el).save();
-    el.style.position = "fixed";
-    el.style.left = "-9999px";
-    el.style.top = "-9999px";
-    el.style.visibility = "hidden";
+    }).from(document.getElementById("question-paper")).save();
     setPdfCompact(false);
   };
-
   const labels = ["ক","খ","গ","ঘ"];
 
   return (
