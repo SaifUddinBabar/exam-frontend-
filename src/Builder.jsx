@@ -456,10 +456,13 @@ function Builder() {
     alert("Link Copied!");
   };
 
-  const downloadPDF = async () => {
+ const downloadPDF = async () => {
     setPdfCompact(selected.length > 20);
     await new Promise(r => setTimeout(r, 300));
     const el = document.getElementById("question-paper");
+    el.style.position = "absolute";
+    el.style.left = "0";
+    el.style.top = "0";
     el.style.visibility = "visible";
     await html2pdf().set({
       margin: 0, filename: `${examData.title || "question-paper"}.pdf`,
@@ -468,6 +471,9 @@ function Builder() {
       jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
       pagebreak: { mode: ["avoid-all","css","legacy"] }
     }).from(el).save();
+    el.style.position = "fixed";
+    el.style.left = "-9999px";
+    el.style.top = "-9999px";
     el.style.visibility = "hidden";
     setPdfCompact(false);
   };
