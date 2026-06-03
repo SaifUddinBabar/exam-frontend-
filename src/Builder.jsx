@@ -322,10 +322,19 @@ const GlobalStyles = () => (
     ::-webkit-scrollbar-thumb:hover { background: var(--ink-4); }
 
     /* ── PDF ── */
-     .preview-paper {
+   /* ── PDF ── */
+    .preview-paper {
       width: 210mm; min-height: 297mm;
       background: white; padding: 14mm;
       box-sizing: border-box; overflow: hidden;
+    }
+    @media screen and (max-width: 768px) {
+      .preview-paper {
+        width: 100% !important;
+        min-height: unset !important;
+        padding: 14px !important;
+        overflow-x: hidden !important;
+      }
     }
     .preview-paper * { box-sizing: border-box; word-break: break-word; overflow-wrap: break-word; }
     .question-block { width: 100%; margin-bottom: 12px; page-break-inside: avoid; break-inside: avoid; }
