@@ -1,1001 +1,818 @@
-import { useEffect, useState, useRef, useCallback } from "react";
-import { useParams } from "react-router-dom";
+import { useState, useEffect } from "react";
+import html2pdf from "html2pdf.js";
 
 const API = import.meta.env.VITE_API_URL;
 
-const getStorageKey = (code) => `exam_progress_${code}`;
-
-const getScoreComment = (score, name) => {
-  const n = name || "বন্ধু";
-  if (score >= 1 && score <= 5)  return `😔 ${n}, এবার ফলাফল একটু কম হয়েছে — কিন্তু এটাই শেষ কথা নয়! প্রতিটা ব্যর্থতা সাফল্যের প্রথম ধাপ। আবার চেষ্টা করো, তুমি অবশ্যই পারবে! 💪`;
-  if (score >= 6 && score <= 10) return `🙂 ${n}, তুমি চেষ্টা করেছ — সেটাই সবচেয়ে বড় কথা! একটু বেশি সময় দিলে পরের বার তুমি অনেক এগিয়ে যাবে। হাল ছেড়ো না! 🔥`;
-  if (score >= 11 && score <= 14) return `😊 বাহ ${n}! মাঝামাঝি ফলাফল এসেছে — তবে তোমার মধ্যে আরও অনেক সম্ভাবনা আছে। একটু মনোযোগ বাড়াও, সেরাটা বের হয়ে আসবেই! ⭐`;
-  if (score >= 15 && score <= 18) return `🌟 চমৎকার ${n}! তুমি সত্যিই ভালো করেছ! আর মাত্র কয়েক ধাপ — শীর্ষে পৌঁছানো তোমার পক্ষেই সম্ভব। এগিয়ে যাও! 🚀`;
-  if (score >= 19 && score <= 25) return `🏆 অবিশ্বাস্য ${n}! তুমি আজকে সত্যিকারের চ্যাম্পিয়ন! তোমার এই পরিশ্রম ও মেধা একদিন তোমাকে অনেক উঁচুতে নিয়ে যাবে। গর্বিত তোমাকে নিয়ে! 🎉✨`;
-  return "";
-};
-
-/* ══════════════════════════════════════════
-   WATERMARK CANVAS OVERLAY
-   ══════════════════════════════════════════ */
-function WatermarkOverlay({ name, roll }) {
-  const canvasRef = useRef(null);
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const draw = () => {
-      const ctx = canvas.getContext("2d");
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      const text1 = name ? `${name}` : "Exam Portal";
-      const text2 = roll ? `Roll: ${roll}` : "";
-      const text3 = new Date().toLocaleString("bn-BD");
-
-      ctx.save();
-      ctx.globalAlpha = 0.045;
-      ctx.font = "bold 18px 'Hind Siliguri', sans-serif";
-      ctx.fillStyle = "#1e3a8a";
-
-      const step = 220;
-      for (let x = -200; x < canvas.width + 200; x += step) {
-        for (let y = 0; y < canvas.height + 100; y += 110) {
-          ctx.save();
-          ctx.translate(x, y);
-          ctx.rotate(-Math.PI / 6);
-          ctx.fillText(text1, 0, 0);
-          if (text2) ctx.fillText(text2, 0, 26);
-          ctx.font = "12px 'Sora', sans-serif";
-          ctx.fillText(text3, 0, 48);
-          ctx.restore();
-        }
-      }
-      ctx.restore();
-    };
-
-    draw();
-    const handler = () => draw();
-    window.addEventListener("resize", handler);
-    return () => window.removeEventListener("resize", handler);
-  }, [name, roll]);
-
-  return (
-    <canvas
-      ref={canvasRef}
-      style={{
-        position: "fixed",
-        top: 0,
-        left: 0,
-        width: "100%",
-        height: "100%",
-        pointerEvents: "none",
-        zIndex: 9000,
-      }}
-    />
-  );
-}
-
-/* ══════════════════════════════════════════
-   MAIN COMPONENT
-   ══════════════════════════════════════════ */
-function ExamPage() {
-  const { code } = useParams();
-
-  const [exam, setExam] = useState(null);
-  const [answers, setAnswers] = useState({});
-  const [name, setName] = useState("");
-  const [roll, setRoll] = useState("");
-  const [score, setScore] = useState(null);
-  const [reviewData, setReviewData] = useState(null);
-  const [submitted, setSubmitted] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(null);
-
-  // Security states
-  const [blocked, setBlocked] = useState(false);
-  const [blurContent, setBlurContent] = useState(false);
-  const [blurReason, setBlurReason] = useState("");
-  const [blockReason, setBlockReason] = useState("Screenshot Blocked");
-  const blockTimeoutRef = useRef(null);
-  const blurTimeoutRef = useRef(null);
-  const devToolsRef = useRef(false);
-
-  // ── Tab-switch warning state ──
-  const tabSwitchCountRef = useRef(0);
-  const [tabWarningMsg, setTabWarningMsg] = useState("");
-  const [showTabWarning, setShowTabWarning] = useState(false);
-
-  const [showToast, setShowToast] = useState(false);
-  const [toastVisible, setToastVisible] = useState(false);
-
-  /* ── triggerBlock ── */
-  const triggerBlock = useCallback((reason = "Screenshot Blocked") => {
-    setBlockReason(reason);
-    setBlocked(true);
-    setBlurContent(true);
-    setBlurReason(reason);
-    if (blockTimeoutRef.current) clearTimeout(blockTimeoutRef.current);
-    if (blurTimeoutRef.current) clearTimeout(blurTimeoutRef.current);
-    blockTimeoutRef.current = setTimeout(() => setBlocked(false), 3000);
-    blurTimeoutRef.current = setTimeout(() => {
-      setBlurContent(false);
-      setBlurReason("");
-    }, 3000);
-  }, []);
-
-  /* ── triggerBlurOnly (no block overlay) ── */
-  const triggerBlurOnly = useCallback((reason = "", durationMs = 5000) => {
-    setBlurContent(true);
-    setBlurReason(reason);
-    if (blurTimeoutRef.current) clearTimeout(blurTimeoutRef.current);
-    blurTimeoutRef.current = setTimeout(() => {
-      setBlurContent(false);
-      setBlurReason("");
-    }, durationMs);
-  }, []);
-
-  /* ══════════════════════════════════════════
-     Tab Switch Warning + Auto Submit
-     1st switch  → warning toast (no blur penalty)
-     2nd switch  → stern warning
-     3rd+ switch → auto submit immediately
-     ══════════════════════════════════════════ */
-  const autoSubmitRef = useRef(null); // store submitExam ref to avoid circular deps
-
-  const handleTabSwitch = useCallback(() => {
-    if (submitted) return;
-
-    tabSwitchCountRef.current += 1;
-    const count = tabSwitchCountRef.current;
-
-    if (count === 1) {
-      setTabWarningMsg("⚠️ সতর্কতা ১/২: ট্যাব বা অ্যাপ পরিবর্তন করবেন না! আরও একবার করলে পরীক্ষা শেষ হয়ে যাবে।");
-      setShowTabWarning(true);
-      triggerBlurOnly("ট্যাব পরিবর্তন ধরা পড়েছে!", 4000);
-      setTimeout(() => setShowTabWarning(false), 5000);
-    } else if (count === 2) {
-      setTabWarningMsg("🚨 সতর্কতা ২/২: এটাই শেষ সুযোগ! পরেরবার ট্যাব/অ্যাপ পরিবর্তন করলে পরীক্ষা স্বয়ংক্রিয়ভাবে জমা হয়ে যাবে!");
-      setShowTabWarning(true);
-      triggerBlurOnly("শেষ সতর্কতা!", 5000);
-      setTimeout(() => setShowTabWarning(false), 6000);
-    } else {
-      // 3rd time → auto submit
-      setTabWarningMsg("❌ ৩বার ট্যাব পরিবর্তন! পরীক্ষা স্বয়ংক্রিয়ভাবে জমা হচ্ছে...");
-      setShowTabWarning(true);
-      triggerBlurOnly("Auto Submit হচ্ছে...", 6000);
-      setTimeout(() => {
-        if (autoSubmitRef.current) autoSubmitRef.current();
-      }, 1500);
-    }
-  }, [submitted, triggerBlurOnly]);
-
-  /* ══════════════════════════════════════════
-     SECURITY LAYER 1 — Keyboard & Mouse
-     ══════════════════════════════════════════ */
-  useEffect(() => {
-    const handleContextMenu = (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      triggerBlock("Right-click নিষিদ্ধ");
-      return false;
-    };
-
-    const handleKeyDown = (e) => {
-      const key = e.key.toLowerCase();
-      if (e.ctrlKey && ["c","u","s","a","p","x","v","f","g","h","j","k","l","n","t","w"].includes(key)) {
-        e.preventDefault(); e.stopPropagation();
-        triggerBlock("Keyboard shortcut blocked");
-        return;
-      }
-      if (e.metaKey && ["c","u","s","a","p","x","v"].includes(key)) {
-        e.preventDefault(); e.stopPropagation();
-        triggerBlock("Keyboard shortcut blocked");
-        return;
-      }
-      if (e.shiftKey && e.metaKey) {
-        e.preventDefault(); e.stopPropagation();
-        triggerBlock("Screenshot blocked");
-        return;
-      }
-      if (e.key === "PrintScreen") {
-        e.preventDefault(); e.stopPropagation();
-        navigator.clipboard.writeText("").catch(() => {});
-        triggerBlock("Screenshot নিষিদ্ধ");
-        return;
-      }
-      if (
-        e.key === "F12" ||
-        (e.ctrlKey && e.shiftKey && ["i","j","c","k"].includes(key)) ||
-        (e.metaKey && e.altKey && key === "i")
-      ) {
-        e.preventDefault(); e.stopPropagation();
-        triggerBlock("DevTools নিষিদ্ধ");
-        return;
-      }
-      if (e.altKey && e.key === "Tab") {
-        triggerBlock("Tab switching নিষিদ্ধ");
-      }
-    };
-
-    const blockClipboard = (e) => { e.preventDefault(); e.stopPropagation(); };
-    const handleDragStart = (e) => { e.preventDefault(); };
-    const handleDrop = (e) => { e.preventDefault(); };
-
-    const handleBeforePrint = (e) => {
-      e.preventDefault();
-      triggerBlock("Printing নিষিদ্ধ");
-    };
-    const handleAfterPrint = () => {
-      document.body.innerHTML = "";
-      window.location.reload();
-    };
-
-    /* ── Visibility change calls handleTabSwitch ── */
-    const handleVisibilityChange = () => {
-      if (document.hidden) {
-        handleTabSwitch();
-      }
-    };
-
-    const handleWindowBlur = () => {
-      // Only blur the content, don't double-count as tab switch here
-      triggerBlurOnly("ফিরে আসুন — পরীক্ষা চলছে", 5000);
-    };
-    const handleWindowFocus = () => {
-      if (blurTimeoutRef.current) clearTimeout(blurTimeoutRef.current);
-      setBlurContent(false);
-      setBlurReason("");
-    };
-
-    const handleSelectStart = (e) => {
-      const tag = e.target.tagName.toLowerCase();
-      if (tag !== "input" && tag !== "textarea") e.preventDefault();
-    };
-
-    document.addEventListener("contextmenu", handleContextMenu, true);
-    document.addEventListener("keydown", handleKeyDown, true);
-    document.addEventListener("copy", blockClipboard, true);
-    document.addEventListener("cut", blockClipboard, true);
-    document.addEventListener("paste", blockClipboard, true);
-    document.addEventListener("dragstart", handleDragStart, true);
-    document.addEventListener("drop", handleDrop, true);
-    document.addEventListener("selectstart", handleSelectStart, true);
-    window.addEventListener("beforeprint", handleBeforePrint, true);
-    window.addEventListener("afterprint", handleAfterPrint);
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-    window.addEventListener("blur", handleWindowBlur);
-    window.addEventListener("focus", handleWindowFocus);
-
-    return () => {
-      document.removeEventListener("contextmenu", handleContextMenu, true);
-      document.removeEventListener("keydown", handleKeyDown, true);
-      document.removeEventListener("copy", blockClipboard, true);
-      document.removeEventListener("cut", blockClipboard, true);
-      document.removeEventListener("paste", blockClipboard, true);
-      document.removeEventListener("dragstart", handleDragStart, true);
-      document.removeEventListener("drop", handleDrop, true);
-      document.removeEventListener("selectstart", handleSelectStart, true);
-      window.removeEventListener("beforeprint", handleBeforePrint, true);
-      window.removeEventListener("afterprint", handleAfterPrint);
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-      window.removeEventListener("blur", handleWindowBlur);
-      window.removeEventListener("focus", handleWindowFocus);
-    };
-  }, [triggerBlock, triggerBlurOnly, handleTabSwitch]);
-
-  /* ══════════════════════════════════════════
-     SECURITY LAYER 2 — DevTools Detection
-     ══════════════════════════════════════════ */
-  useEffect(() => {
-    let devToolsOpen = false;
-
-    const checkDevTools = () => {
-      const threshold = 160;
-      const widthDiff = window.outerWidth - window.innerWidth;
-      const heightDiff = window.outerHeight - window.innerHeight;
-      const isOpen = widthDiff > threshold || heightDiff > threshold;
-      if (isOpen && !devToolsOpen) {
-        devToolsOpen = true;
-        devToolsRef.current = true;
-        triggerBlock("DevTools ব্যবহার নিষিদ্ধ!");
-      } else if (!isOpen) {
-        devToolsOpen = false;
-        devToolsRef.current = false;
-      }
-    };
-
-    const debuggerTrap = () => {
-      const start = performance.now();
-      // eslint-disable-next-line no-debugger
-      debugger;
-      if (performance.now() - start > 80) {
-        triggerBlock("DevTools detected!");
-      }
-    };
-
-    window.addEventListener("resize", checkDevTools);
-    const interval1 = setInterval(checkDevTools, 1000);
-    const interval2 = setInterval(debuggerTrap, 3000);
-
-    return () => {
-      window.removeEventListener("resize", checkDevTools);
-      clearInterval(interval1);
-      clearInterval(interval2);
-    };
-  }, [triggerBlock]);
-
-  /* ══════════════════════════════════════════
-     SECURITY LAYER 3 — CSS Injection Protection
-     ══════════════════════════════════════════ */
-  useEffect(() => {
-    const observer = new MutationObserver((mutations) => {
-      mutations.forEach((m) => {
-        m.addedNodes.forEach((node) => {
-          if (node.nodeName === "STYLE" || node.nodeName === "LINK") {
-            node.remove();
-          }
-        });
-      });
-    });
-    observer.observe(document.head, { childList: true, subtree: true });
-    return () => observer.disconnect();
-  }, []);
-
-  /* ══════════════════════════════════════════
-     SECURITY LAYER 4 — iOS / Mobile Screenshot
-     ══════════════════════════════════════════ */
-  useEffect(() => {
-    const handlePageHide = () => { setBlurContent(true); setBlurReason(""); };
-    const handlePageShow = () => {
-      setTimeout(() => { setBlurContent(false); setBlurReason(""); }, 800);
-    };
-    window.addEventListener("pagehide", handlePageHide);
-    window.addEventListener("pageshow", handlePageShow);
-    return () => {
-      window.removeEventListener("pagehide", handlePageHide);
-      window.removeEventListener("pageshow", handlePageShow);
-    };
-  }, []);
-
-  /* ══════════════════════════════════════════
-     FETCH EXAM + RESTORE PROGRESS
-     ══════════════════════════════════════════ */
-  useEffect(() => {
-    fetch(`${API}/api/exams/${code}`)
-      .then((res) => res.json())
-      .then((data) => {
-        setExam(data);
-        const saved = localStorage.getItem(getStorageKey(code));
-        if (saved) {
-          try {
-            const progress = JSON.parse(saved);
-            if (progress.name) setName(progress.name);
-            if (progress.roll) setRoll(progress.roll);
-            if (progress.answers) setAnswers(progress.answers);
-            setTimeLeft(
-              progress.timeLeft > 0 ? progress.timeLeft : (data.duration || 0) * 60
-            );
-          } catch {
-            localStorage.removeItem(getStorageKey(code));
-            if (data.duration) setTimeLeft(data.duration * 60);
-          }
-        } else {
-          if (data.duration) setTimeLeft(data.duration * 60);
-        }
-      });
-  }, [code]);
-
-  /* Save progress */
-  useEffect(() => {
-    if (!exam || submitted) return;
-    localStorage.setItem(
-      getStorageKey(code),
-      JSON.stringify({ answers, name, roll, timeLeft })
-    );
-  }, [answers, name, roll, timeLeft, exam, submitted, code]);
-
-  /* Timer */
-  useEffect(() => {
-    if (timeLeft === null || submitted) return;
-    if (timeLeft <= 0) { autoSubmitByTimer(); return; }
-    const timer = setInterval(() => setTimeLeft((p) => p - 1), 1000);
-    return () => clearInterval(timer);
-  }, [timeLeft, submitted]);
-
-  /* Toast */
-  useEffect(() => {
-    if (score !== null && reviewData) {
-      setTimeout(() => {
-        setShowToast(true);
-        setTimeout(() => setToastVisible(true), 50);
-        setTimeout(() => {
-          setToastVisible(false);
-          setTimeout(() => setShowToast(false), 600);
-        }, 6000);
-      }, 500);
-    }
-  }, [score, reviewData]);
-
-  const formatTime = () => {
-    const m = Math.floor(timeLeft / 60);
-    const s = timeLeft % 60;
-    return `${m}:${s.toString().padStart(2, "0")}`;
-  };
-
-  const timerColor = timeLeft !== null && timeLeft <= 60 ? "#ff4444" : "white";
-
-  const handleAnswer = (qid, option) => setAnswers({ ...answers, [qid]: option });
-  const clearProgress = () => localStorage.removeItem(getStorageKey(code));
-
-  const submitExam = useCallback(async () => {
-    if (submitted) return;
-    if (!name || !roll) { alert("Name & Roll Required"); return; }
-    setSubmitted(true);
-    try {
-      const res = await fetch(`${API}/api/exams/submit`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ examCode: code, name, roll, answers }),
-      });
-      const data = await res.json();
-      clearProgress();
-      setScore(data.score);
-      setReviewData(data);
-    } catch {
-      setSubmitted(false);
-      alert("Submit Failed");
-    }
-  }, [submitted, name, roll, code, answers]);
-
-  // Keep autoSubmitRef in sync so handleTabSwitch can call it
-  autoSubmitRef.current = submitExam;
-
-  const autoSubmitByTimer = () => {
-    if (submitted) return;
-    alert("সময় শেষ! Auto Submit হচ্ছে");
-    submitExam();
-  };
-
-  const downloadResult = async () => {
-    const html2pdf = (await import("html2pdf.js")).default;
-    const element = document.getElementById("result-sheet");
-    element.classList.add("pdf-mode");
-    await new Promise((r) => setTimeout(r, 300));
-    await html2pdf()
-      .set({
-        margin: [5, 5, 5, 5],
-        filename: `${exam.title || "exam-result"}.pdf`,
-        image: { type: "jpeg", quality: 1 },
-        html2canvas: { scale: 2, useCORS: true, backgroundColor: "#f8fafc", scrollY: 0 },
-        jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
-        pagebreak: { mode: ["avoid-all", "css", "legacy"] },
-      })
-      .from(element)
-      .save();
-    element.classList.remove("pdf-mode");
-  };
-
-  /* ══════════════════════════════════════════
-     GLOBAL STYLES
-     ══════════════════════════════════════════ */
-  const globalStyles = `
-    @import url('https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=Sora:wght@400;500;600;700;800&display=swap');
+const GlobalStyles = () => (
+  <style>{`
+    @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,300;1,9..144,400;1,9..144,600&family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&display=swap');
 
     *, *::before, *::after {
+      box-sizing: border-box;
       user-select: none !important;
       -webkit-user-select: none !important;
-      -moz-user-select: none !important;
-      -ms-user-select: none !important;
-      -webkit-touch-callout: none !important;
-      box-sizing: border-box;
     }
-    input, textarea {
+    input, textarea, select {
       user-select: text !important;
       -webkit-user-select: text !important;
     }
-    img {
-      pointer-events: none !important;
-      -webkit-user-drag: none !important;
-      -moz-user-drag: none !important;
+    img { pointer-events: none !important; -webkit-user-drag: none !important; }
+    @media print { body { display: none !important; } }
+
+    :root {
+      --bg:        #fafaf8;
+      --bg-2:      #f4f3ef;
+      --bg-3:      #eceae3;
+      --ink:       #1a1916;
+      --ink-2:     #3d3b35;
+      --ink-3:     #6b6860;
+      --ink-4:     #9e9b94;
+      --line:      rgba(26,25,22,0.08);
+      --line-2:    rgba(26,25,22,0.14);
+      --accent:    #2563eb;
+      --accent-2:  #1d4ed8;
+      --accent-bg: #eff6ff;
+      --accent-line: rgba(37,99,235,0.2);
+      --green:     #059669;
+      --green-bg:  #ecfdf5;
+      --red:       #dc2626;
+      --red-bg:    #fef2f2;
+      --amber:     #d97706;
+      --amber-bg:  #fffbeb;
+      --r-sm:      6px;
+      --r-md:      12px;
+      --r-lg:      18px;
+      --r-xl:      24px;
+      --sh-xs:     0 1px 3px rgba(0,0,0,0.06);
+      --sh-sm:     0 2px 8px rgba(0,0,0,0.07), 0 1px 3px rgba(0,0,0,0.04);
+      --sh-md:     0 4px 20px rgba(0,0,0,0.08), 0 2px 6px rgba(0,0,0,0.04);
+      --sh-lg:     0 12px 40px rgba(0,0,0,0.10), 0 4px 12px rgba(0,0,0,0.05);
+      --sh-xl:     0 24px 64px rgba(0,0,0,0.12), 0 8px 20px rgba(0,0,0,0.06);
     }
-    img::after {
-      content: '';
-      display: block;
-      position: absolute;
-      inset: 0;
+
+    html { scroll-behavior: smooth; }
+    body { font-family: 'Geist', sans-serif; background: var(--bg); color: var(--ink); margin: 0; }
+
+    /* ── Animations ── */
+    @keyframes fadeUp   { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
+    @keyframes fadeIn   { from { opacity:0; } to { opacity:1; } }
+    @keyframes scaleIn  { from { opacity:0; transform:scale(0.97) translateY(8px); } to { opacity:1; transform:scale(1) translateY(0); } }
+    @keyframes slideIn  { from { opacity:0; transform:translateX(-12px); } to { opacity:1; transform:translateX(0); } }
+    @keyframes pop      { 0%{transform:scale(0.8);} 60%{transform:scale(1.1);} 100%{transform:scale(1);} }
+    @keyframes shimmer  { 0%{background-position:-200% center;} 100%{background-position:200% center;} }
+    @keyframes spin     { to { transform: rotate(360deg); } }
+
+    .au  { animation: fadeUp   0.5s cubic-bezier(.22,1,.36,1) both; }
+    .asi { animation: scaleIn  0.45s cubic-bezier(.22,1,.36,1) both; }
+    .afi { animation: fadeIn   0.4s ease both; }
+    .asl { animation: slideIn  0.4s cubic-bezier(.22,1,.36,1) both; }
+    .d1  { animation-delay: 0.05s; } .d2 { animation-delay: 0.10s; }
+    .d3  { animation-delay: 0.15s; } .d4 { animation-delay: 0.20s; }
+    .d5  { animation-delay: 0.25s; } .d6 { animation-delay: 0.30s; }
+
+    /* ── Topbar ── */
+    .topbar {
+      position: sticky; top: 0; z-index: 300;
+      background: rgba(250,250,248,0.92);
+      backdrop-filter: blur(20px) saturate(160%);
+      -webkit-backdrop-filter: blur(20px) saturate(160%);
+      border-bottom: 1px solid var(--line);
     }
-    @media print {
-      html, body { display: none !important; visibility: hidden !important; }
+
+    /* ── Input ── */
+    .p-input {
+      width: 100%;
+      background: #fff;
+      border: 1.5px solid var(--line-2);
+      border-radius: var(--r-md);
+      padding: 11px 14px;
+      color: var(--ink);
+      font-family: 'Geist', sans-serif;
+      font-size: 14px;
+      font-weight: 400;
+      outline: none;
+      transition: border-color 0.18s, box-shadow 0.18s;
+      box-shadow: var(--sh-xs);
     }
-    .content-blur {
-      filter: blur(18px) !important;
-      transition: filter 0.15s ease;
-      pointer-events: none;
+    .p-input::placeholder { color: var(--ink-4); }
+    .p-input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(37,99,235,0.10), var(--sh-xs);
     }
-    .content-unblur {
-      filter: blur(0px);
-      transition: filter 0.4s ease;
+    .p-input:hover:not(:focus) { border-color: rgba(26,25,22,0.22); }
+    select.p-input {
+      cursor: pointer; appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%239e9b94' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 14px center;
+      padding-right: 36px;
     }
-    .pdf-mode { background: #f8fafc !important; padding: 20px !important; }
-    .pdf-mode .question { page-break-inside: avoid !important; break-inside: avoid !important; }
 
-    @keyframes timerPulse   { 0%,100% { transform: scale(1); } 50% { transform: scale(1.06); } }
-    @keyframes toastIn      { 0%   { transform: translateX(-50%) translateY(100px); opacity: 0; } 100% { transform: translateX(-50%) translateY(0); opacity: 1; } }
-    @keyframes toastOut     { 0%   { transform: translateX(-50%) translateY(0); opacity: 1; } 100% { transform: translateX(-50%) translateY(100px); opacity: 0; } }
-    @keyframes fadeInUp     { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
-    @keyframes scaleIn      { from { opacity: 0; transform: scale(0.92); } to { opacity: 1; transform: scale(1); } }
-    @keyframes blockPulse   { 0%,100% { transform: scale(1); } 50% { transform: scale(1.04); } }
-    @keyframes warningSlide { 0% { transform: translateY(-80px); opacity: 0; } 100% { transform: translateY(0); opacity: 1; } }
+    /* ── Buttons ── */
+    .btn {
+      display: inline-flex; align-items: center; gap: 7px;
+      border: none; border-radius: var(--r-md);
+      padding: 10px 20px;
+      font-family: 'Geist', sans-serif;
+      font-weight: 600; font-size: 13.5px;
+      cursor: pointer; letter-spacing: -0.01em;
+      transition: all 0.18s; white-space: nowrap;
+    }
+    .btn:active { transform: scale(0.98); }
 
-    .stat-card { transition: transform 0.2s ease, box-shadow 0.2s ease; }
-    .stat-card:hover { transform: translateY(-3px); box-shadow: 0 16px 40px rgba(0,0,0,0.15) !important; }
-    .option-btn { transition: all 0.18s ease; }
-    .option-btn:hover { transform: translateX(4px); }
-    .review-question { animation: fadeInUp 0.4s ease both; }
-  `;
+    .btn-primary {
+      background: var(--ink); color: #fff;
+      box-shadow: 0 2px 8px rgba(26,25,22,0.20), inset 0 1px 0 rgba(255,255,255,0.08);
+    }
+    .btn-primary:hover { background: #2a2825; box-shadow: 0 4px 16px rgba(26,25,22,0.28); transform: translateY(-1px); }
 
-  /* ══════════════════════════════════════════
-     BLOCKED OVERLAY
-     ══════════════════════════════════════════ */
-  const BlockedOverlay = () =>
-    blocked ? (
-      <div style={{
-        position: "fixed", inset: 0, zIndex: 99999,
-        background: "rgba(0,0,0,0.97)",
-        display: "flex", flexDirection: "column",
-        alignItems: "center", justifyContent: "center",
-        color: "white", animation: "blockPulse 0.4s ease",
-      }}>
-        <div style={{ fontSize: 72, marginBottom: 20, animation: "blockPulse 0.6s infinite" }}>🚫</div>
-        <h2 style={{ fontSize: 28, fontWeight: 800, marginBottom: 12, fontFamily: "'Sora', sans-serif", letterSpacing: "-0.3px" }}>
-          {blockReason}
-        </h2>
-        <p style={{ color: "rgba(255,255,255,0.55)", fontSize: 15, fontFamily: "'Hind Siliguri', sans-serif", textAlign: "center", maxWidth: 340 }}>
-          এই পরীক্ষায় এই কার্যক্রম সম্পূর্ণ নিষিদ্ধ।<br />সন্দেহজনক কার্যকলাপ লগ করা হচ্ছে।
-        </p>
-        <div style={{
-          marginTop: 24, padding: "10px 28px",
-          background: "rgba(255,68,68,0.15)", borderRadius: 50,
-          border: "1px solid rgba(255,68,68,0.35)",
-          fontSize: 13, color: "rgba(255,200,200,0.8)",
-          fontFamily: "'Sora', sans-serif",
-        }}>
-          ⚠️ কার্যকলাপ রেকর্ড হচ্ছে
-        </div>
-      </div>
-    ) : null;
+    .btn-accent {
+      background: var(--accent); color: #fff;
+      box-shadow: 0 2px 10px rgba(37,99,235,0.28), inset 0 1px 0 rgba(255,255,255,0.12);
+    }
+    .btn-accent:hover { background: var(--accent-2); box-shadow: 0 4px 18px rgba(37,99,235,0.36); transform: translateY(-1px); }
 
-  /* ══════════════════════════════════════════
-     TAB WARNING BANNER (CENTERED + RESPONSIVE)
-     ══════════════════════════════════════════ */
-  const TabWarningBanner = () =>
-    showTabWarning ? (
-      <div
-        style={{
-          position: "fixed",
-          inset: 0,
-          zIndex: 999999,
+    .btn-green {
+      background: var(--green); color: #fff;
+      box-shadow: 0 2px 10px rgba(5,150,105,0.28), inset 0 1px 0 rgba(255,255,255,0.12);
+    }
+    .btn-green:hover { background: #047857; box-shadow: 0 4px 18px rgba(5,150,105,0.36); transform: translateY(-1px); }
 
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
+    .btn-ghost {
+      background: #fff; color: var(--ink-2);
+      border: 1.5px solid var(--line-2);
+      box-shadow: var(--sh-xs);
+    }
+    .btn-ghost:hover { background: var(--bg-2); border-color: var(--ink-4); transform: translateY(-1px); }
 
-          padding: "20px",
-          background: "rgba(0,0,0,0.15)",
-          backdropFilter: "blur(6px)",
-        }}
-      >
-        <div
-          style={{
-            width: "90%",
-            maxWidth: "420px",
+    .btn-danger {
+      background: var(--red-bg); color: var(--red);
+      border: 1.5px solid rgba(220,38,38,0.2);
+    }
+    .btn-danger:hover { background: #fee2e2; border-color: rgba(220,38,38,0.35); transform: translateY(-1px); }
 
-            background:
-              tabSwitchCountRef.current >= 3
-                ? "linear-gradient(135deg,#7f1d1d,#991b1b)"
-                : tabSwitchCountRef.current === 2
-                ? "linear-gradient(135deg,#92400e,#b45309)"
-                : "linear-gradient(135deg,#1e3a8a,#1d4ed8)",
+    .btn-sm { padding: 7px 14px; font-size: 12.5px; border-radius: 9px; }
+    .btn-lg { padding: 13px 28px; font-size: 15px; border-radius: 14px; }
 
-            borderRadius: "24px",
-            padding: "28px 22px",
+    /* ── Card ── */
+    .card {
+      background: #fff;
+      border: 1.5px solid var(--line);
+      border-radius: var(--r-xl);
+      box-shadow: var(--sh-sm);
+    }
 
-            color: "white",
-            textAlign: "center",
+    /* ── Divider ── */
+    .divider { height: 1px; background: var(--line); margin: 0; }
 
-            boxShadow:
-              "0 30px 80px rgba(0,0,0,0.45), 0 8px 30px rgba(0,0,0,0.25)",
+    /* ── Badge ── */
+    .badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 3px 10px; border-radius: 20px;
+      font-size: 11.5px; font-weight: 600;
+      font-family: 'Geist', sans-serif; letter-spacing: -0.01em;
+    }
+    .badge-blue   { background: var(--accent-bg); color: var(--accent); border: 1px solid var(--accent-line); }
+    .badge-green  { background: var(--green-bg); color: var(--green); border: 1px solid rgba(5,150,105,0.2); }
+    .badge-red    { background: var(--red-bg); color: var(--red); border: 1px solid rgba(220,38,38,0.15); }
+    .badge-amber  { background: var(--amber-bg); color: var(--amber); border: 1px solid rgba(217,119,6,0.2); }
+    .badge-slate  { background: var(--bg-2); color: var(--ink-3); border: 1px solid var(--line-2); }
 
-            border: "1px solid rgba(255,255,255,0.16)",
-            backdropFilter: "blur(18px)",
+    /* ── Tab ── */
+    .tab-btn {
+      padding: 7px 18px; border-radius: 30px;
+      font-family: 'Geist', sans-serif;
+      font-weight: 600; font-size: 13px; letter-spacing: -0.01em;
+      cursor: pointer; transition: all 0.2s; border: none;
+    }
+    .tab-btn.inactive { background: transparent; color: var(--ink-3); }
+    .tab-btn.inactive:hover { color: var(--ink); background: var(--bg-3); }
+    .tab-btn.active { background: var(--ink); color: #fff; box-shadow: var(--sh-sm); }
 
-            animation:
-              "scaleIn 0.35s cubic-bezier(0.34,1.56,0.64,1)",
+    /* ── Stat card ── */
+    .stat-card {
+      background: #fff; border: 1.5px solid var(--line);
+      border-radius: var(--r-lg); padding: 28px 24px;
+      text-align: center; box-shadow: var(--sh-sm);
+      transition: transform 0.22s, box-shadow 0.22s;
+    }
+    .stat-card:hover { transform: translateY(-4px); box-shadow: var(--sh-lg); }
 
-            overflow: "hidden",
-          }}
-        >
-          {/* Icon */}
-          <div
-            style={{
-              fontSize: "clamp(34px,8vw,52px)",
-              marginBottom: "14px",
-            }}
-          >
-            {tabSwitchCountRef.current >= 3
-              ? "🚫"
-              : tabSwitchCountRef.current === 2
-              ? "⚠️"
-              : "🔔"}
-          </div>
+    /* ── Q card ── */
+    .q-card {
+      background: #fff; border: 1.5px solid var(--line);
+      border-radius: var(--r-lg); padding: 20px 22px;
+      cursor: pointer;
+      transition: border-color 0.18s, background 0.18s, transform 0.2s, box-shadow 0.2s;
+      box-shadow: var(--sh-xs);
+      position: relative;
+    }
+    .q-card::before {
+      content: ''; position: absolute; left: 0; top: 16px; bottom: 16px;
+      width: 3px; border-radius: 0 3px 3px 0;
+      background: var(--accent);
+      transform: scaleY(0); transform-origin: center;
+      transition: transform 0.22s cubic-bezier(.22,1,.36,1);
+    }
+    .q-card:hover { border-color: var(--line-2); transform: translateY(-2px); box-shadow: var(--sh-md); }
+    .q-card.active {
+      background: var(--accent-bg); border-color: rgba(37,99,235,0.3);
+      box-shadow: 0 4px 20px rgba(37,99,235,0.08), var(--sh-xs);
+    }
+    .q-card.active::before { transform: scaleY(1); }
 
-          {/* Title */}
-          <h2
-            style={{
-              margin: "0 0 12px",
-              fontSize: "clamp(18px,5vw,24px)",
-              fontWeight: 800,
-              lineHeight: 1.3,
-              fontFamily: "'Sora', sans-serif",
-            }}
-          >
-            {tabSwitchCountRef.current >= 3
-              ? "পরীক্ষা জমা হচ্ছে"
-              : tabSwitchCountRef.current === 2
-              ? "শেষ সতর্কতা!"
-              : "সতর্কতা"}
-          </h2>
+    /* ── Num badge ── */
+    .num-badge {
+      width: 36px; height: 36px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700; font-size: 13px; flex-shrink: 0;
+      transition: all 0.25s cubic-bezier(.22,1,.36,1);
+    }
+    .num-badge.inactive { background: var(--bg-2); border: 1.5px solid var(--line-2); color: var(--ink-3); }
+    .num-badge.active {
+      background: var(--accent); color: #fff;
+      animation: pop 0.3s cubic-bezier(.22,1,.36,1);
+      box-shadow: 0 3px 10px rgba(37,99,235,0.3);
+    }
 
-          {/* Message */}
-          <div
-            style={{
-              fontSize: "clamp(14px,4vw,18px)",
-              fontWeight: 500,
-              lineHeight: 1.8,
-              opacity: 0.96,
-              fontFamily: "'Hind Siliguri', sans-serif",
-            }}
-          >
-            {tabWarningMsg}
-          </div>
+    /* ── Opt pill ── */
+    .opt-pill {
+      display: flex; gap: 7px; align-items: flex-start;
+      background: var(--bg-2); border: 1px solid var(--line);
+      border-radius: 9px; padding: 8px 11px;
+      font-size: 13.5px; color: var(--ink-2);
+      transition: background 0.18s, border-color 0.18s;
+    }
+    .q-card.active .opt-pill { background: #dbeafe; border-color: rgba(37,99,235,0.15); }
 
-          {/* Counter */}
-          {tabSwitchCountRef.current < 3 && (
-            <div
-              style={{
-                marginTop: "18px",
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
+    /* ── Progress ── */
+    .progress-track { background: var(--bg-3); border-radius: 99px; height: 5px; overflow: hidden; }
+    .progress-fill {
+      height: 100%; border-radius: 99px;
+      background: var(--accent);
+      transition: width 0.4s cubic-bezier(.22,1,.36,1);
+    }
 
-                padding: "10px 18px",
-                borderRadius: "999px",
+    /* ── Success box ── */
+    .success-box {
+      background: #fff; border: 1.5px solid var(--line);
+      border-radius: var(--r-xl); padding: 44px 40px;
+      text-align: center; box-shadow: var(--sh-md);
+    }
 
-                background: "rgba(255,255,255,0.14)",
-                border: "1px solid rgba(255,255,255,0.18)",
+    /* ── Exam row ── */
+    .exam-row {
+      background: #fff; border: 1.5px solid var(--line);
+      border-radius: var(--r-lg); padding: 20px 26px;
+      display: flex; justify-content: space-between;
+      align-items: center; flex-wrap: wrap; gap: 16px;
+      box-shadow: var(--sh-xs);
+      transition: transform 0.2s, box-shadow 0.2s, border-color 0.18s;
+    }
+    .exam-row:hover { transform: translateY(-2px); box-shadow: var(--sh-md); border-color: var(--line-2); }
 
-                fontSize: "13px",
-                fontWeight: 600,
-                letterSpacing: "0.3px",
-                color: "rgba(255,255,255,0.95)",
-                fontFamily: "'Sora', sans-serif",
-              }}
-            >
-              ⚠️ ট্যাব পরিবর্তন সংখ্যা:{" "}
-              {tabSwitchCountRef.current}/2
-            </div>
-          )}
-        </div>
-      </div>
-    ) : null;
+    /* ── Field label ── */
+    .field-label {
+      display: block; margin-bottom: 7px;
+      color: var(--ink-2); font-size: 12.5px; font-weight: 600;
+      letter-spacing: 0.01em; font-family: 'Geist', sans-serif;
+    }
 
-  /* ══════════════════════════════════════════
-     BLUR OVERLAY (shared — used by all blur triggers)
-     ══════════════════════════════════════════ */
-  const BlurOverlay = () =>
-    blurContent ? (
-      <div style={{
-        position: "fixed", inset: 0, zIndex: 9500,
-        backdropFilter: "blur(22px)",
-        background: "rgba(0,0,0,0.55)",
-        display: "flex", flexDirection: "column",
-        alignItems: "center", justifyContent: "center",
-        color: "white",
-        transition: "opacity 0.2s ease",
-      }}>
-        <div style={{ fontSize: 56, marginBottom: 16 }}>🔒</div>
-        <p style={{ fontSize: 20, fontWeight: 700, fontFamily: "'Sora', sans-serif", textAlign: "center", maxWidth: 320 }}>
-          {blurReason || "ফিরে আসুন — পরীক্ষা চলছে"}
-        </p>
-        <p style={{ fontSize: 14, opacity: 0.6, fontFamily: "'Hind Siliguri', sans-serif", marginTop: 8, textAlign: "center" }}>
-          পরীক্ষার বাইরে গেলে কন্টেন্ট লুকানো হয়
-        </p>
-      </div>
-    ) : null;
+    /* ── Section title ── */
+    .sec-title {
+      font-family: 'Fraunces', Georgia, serif;
+      font-size: 30px; font-weight: 600; color: var(--ink);
+      letter-spacing: -0.5px; line-height: 1.15;
+    }
+    .sec-sub {
+      font-size: 14px; color: var(--ink-4); margin-top: 4px; font-weight: 400;
+    }
 
-  /* ══════════════════════════════════════════
-     RESULT PAGE
-     ══════════════════════════════════════════ */
-  if (score !== null && reviewData) {
-    const wrong = reviewData.questions.length - score;
-    const percentage = Math.round((score / reviewData.questions.length) * 100);
+    /* ── Link box ── */
+    .link-box {
+      background: var(--bg-2); border: 1.5px solid var(--line-2);
+      border-radius: var(--r-md); padding: 13px 18px;
+      color: var(--accent); font-family: 'Geist Mono', monospace;
+      font-size: 13px; word-break: break-all; margin-bottom: 20px;
+    }
 
-    return (
-      <div style={{
-        minHeight: "100vh", background: "#f0f4ff",
-        padding: "14px", fontFamily: "'Sora', 'Hind Siliguri', sans-serif",
-      }}>
-        <style>{globalStyles}</style>
-        <BlockedOverlay />
-        <WatermarkOverlay name={name} roll={roll} />
-        <BlurOverlay />
+    /* ── Counter ── */
+    .counter {
+      background: var(--ink); color: #fff;
+      border-radius: var(--r-sm);
+      padding: 6px 16px;
+      font-family: 'Geist Mono', monospace;
+      font-size: 15px; font-weight: 500; letter-spacing: 0.02em;
+    }
 
-        {showToast && (
-          <div style={{
-            position: "fixed", bottom: 28, left: "50%",
-            transform: "translateX(-50%)", zIndex: 99998,
-            width: "calc(100% - 32px)", maxWidth: 540,
-            animation: toastVisible
-              ? "toastIn 0.5s cubic-bezier(0.34,1.56,0.64,1) forwards"
-              : "toastOut 0.45s ease forwards",
-          }}>
+    /* ── Separator ── */
+    .sep {
+      display: flex; align-items: center; gap: 12px;
+      font-size: 11px; font-weight: 600; letter-spacing: 0.06em;
+      text-transform: uppercase; color: var(--ink-4);
+    }
+    .sep::before, .sep::after {
+      content: ''; flex: 1; height: 1px; background: var(--line);
+    }
+
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--line-2); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--ink-4); }
+
+    /* ── PDF ── */
+   /* ── PDF ── */
+    .preview-paper {
+      width: 210mm; min-height: 297mm;
+      background: white; padding: 14mm;
+      box-sizing: border-box; overflow: hidden;
+    }
+    @media screen and (max-width: 768px) {
+      .preview-paper {
+        width: 100% !important;
+        min-height: unset !important;
+        padding: 14px !important;
+        overflow-x: hidden !important;
+      }
+    }
+    .preview-paper * { box-sizing: border-box; word-break: break-word; overflow-wrap: break-word; }
+    .question-block { width: 100%; margin-bottom: 12px; page-break-inside: avoid; break-inside: avoid; }
+    .question-title { font-weight: 700; text-align: justify; }
+    .option-line { display: flex; gap: 4px; align-items: flex-start; }
+  `}</style>
+);
+
+function Builder() {
+
+  useEffect(() => {
+    const noCtx  = (e) => e.preventDefault();
+    const noKey  = (e) => {
+      if (e.ctrlKey && ["c","u","s","a","p"].includes(e.key.toLowerCase())) e.preventDefault();
+      if (e.key === "PrintScreen") { e.preventDefault(); navigator.clipboard.writeText(""); }
+    };
+    const noDrag = (e) => e.preventDefault();
+    const noPrint= (e) => e.preventDefault();
+    document.addEventListener("contextmenu", noCtx);
+    document.addEventListener("keydown", noKey);
+    document.addEventListener("dragstart", noDrag);
+    window.addEventListener("beforeprint", noPrint);
+    return () => {
+      document.removeEventListener("contextmenu", noCtx);
+      document.removeEventListener("keydown", noKey);
+      document.removeEventListener("dragstart", noDrag);
+      window.removeEventListener("beforeprint", noPrint);
+    };
+  }, []);
+
+  const [questions,    setQuestions]    = useState([]);
+  const [allQuestions, setAllQuestions] = useState([]);
+  const [selected,     setSelected]     = useState([]);
+  const [chapter,      setChapter]      = useState("");
+  const [examCode,     setExamCode]     = useState("");
+  const [boardYear,    setBoardYear]    = useState("");
+  const [boardName,    setBoardName]    = useState("");
+  const [pdfCompact,   setPdfCompact]   = useState(false);
+  const [examData,     setExamData]     = useState({ academy:"", title:"", duration:"60", subject:"ICT", marks:"25" });
+  const [examList,     setExamList]     = useState([]);
+  const [stats,        setStats]        = useState(null);
+  const [loadingExams, setLoadingExams] = useState(false);
+  const [activeTab,    setActiveTab]    = useState("builder");
+  const [creating,     setCreating]     = useState(false);
+
+  const progress = Math.min(100, (selected.length / Math.max(1, Number(examData.marks))) * 100);
+
+  const fetchExamList = async () => {
+    setLoadingExams(true);
+    try {
+      const [r1, r2] = await Promise.all([
+        fetch(`${API}/api/exams/list`),
+        fetch(`${API}/api/exams/stats`)
+      ]);
+      setExamList((await r1.json()) || []);
+      setStats(await r2.json());
+    } catch { setExamList([]); }
+    finally { setLoadingExams(false); }
+  };
+  useEffect(() => { if (activeTab === "exams") fetchExamList(); }, [activeTab]);
+
+  const deleteExam = async (code) => {
+    if (!window.confirm("এই exam এবং সব submissions delete হয়ে যাবে। নিশ্চিত?")) return;
+    try {
+      await fetch(`${API}/api/exams/${code}`, { method: "DELETE" });
+      setExamList(p => p.filter(e => e.examCode !== code));
+      fetchExamList();
+    } catch { alert("Delete failed"); }
+  };
+
+  useEffect(() => {
+    if (!chapter) { setQuestions([]); setAllQuestions([]); setSelected([]); return; }
+    const p = new URLSearchParams();
+    p.append("subject", examData.subject);
+    p.append("chapter", chapter);
+    if (chapter === "Board Questions") {
+      if (!boardYear || !boardName) { setQuestions([]); return; }
+      p.append("questionType","board"); p.append("boardYear", boardYear); p.append("boardName", boardName);
+    } else { p.append("questionType","normal"); }
+    fetch(`${API}/api/questions?${p}`)
+      .then(r => r.json())
+      .then(data => {
+        const q = data || [];
+        setQuestions(q);
+        if (chapter === "Board Questions") {
+          setAllQuestions(q); setSelected(q.map(x => x._id));
+          setExamData(prev => ({ ...prev, marks: String(q.length) }));
+        } else {
+          setAllQuestions(prev => {
+            const merged = [...prev];
+            q.forEach(x => { if (!merged.find(m => m._id === x._id)) merged.push(x); });
+            return merged;
+          });
+        }
+      }).catch(() => setQuestions([]));
+  }, [chapter, boardYear, boardName, examData.subject]);
+
+  const handleChange  = (e) => setExamData({ ...examData, [e.target.name]: e.target.value });
+  const toggleSelect  = (id) => {
+    if (selected.includes(id)) { setSelected(p => p.filter(x => x !== id)); return; }
+    if (selected.length >= Number(examData.marks)) { alert(`সর্বোচ্চ ${examData.marks}টি প্রশ্ন বেছে নিন`); return; }
+    setSelected(p => [...p, id]);
+  };
+  const selectAll   = () => { setSelected(questions.map(q => q._id)); if (chapter==="Board Questions") setExamData(p=>({...p,marks:String(questions.length)})); };
+  const deselectAll = () => setSelected([]);
+
+  const createExam = async () => {
+    if (!examData.academy) return alert("একাডেমির নাম লিখুন");
+    if (!examData.title)   return alert("পরীক্ষার নাম লিখুন");
+    if (!chapter)          return alert("অধ্যায় নির্বাচন করুন");
+    if (selected.length===0) return alert("প্রশ্ন সিলেক্ট করুন");
+    setCreating(true);
+    try {
+      const res  = await fetch(`${API}/api/exams/create`, {
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body: JSON.stringify({ title:examData.title, duration:examData.duration, questions:selected })
+      });
+      const data = await res.json();
+      setExamCode(data.examCode);
+    } catch { alert("Create Failed"); }
+    finally { setCreating(false); }
+  };
+
+  const copyLink = () => {
+    navigator.clipboard.writeText(`${window.location.origin}/exam/${examCode}`);
+    alert("Link Copied!");
+  };
+
+const downloadPDF = async () => {
+    setPdfCompact(selected.length > 20);
+    await new Promise(r => setTimeout(r, 300));
+    await html2pdf().set({
+      margin: 0, filename: `${examData.title || "question-paper"}.pdf`,
+      image: { type: "jpeg", quality: 1 },
+      html2canvas: { scale: 2, useCORS: true, scrollY: 0 },
+      jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+      pagebreak: { mode: ["avoid-all","css","legacy"] }
+    }).from(document.getElementById("question-paper")).save();
+    setPdfCompact(false);
+  };
+  const labels = ["ক","খ","গ","ঘ"];
+
+  return (
+    <div style={{ minHeight:"100vh", background:"var(--bg)", fontFamily:"'Geist', sans-serif" }}>
+      <GlobalStyles />
+
+      {/* ── Topbar ── */}
+      <header className="topbar">
+        <div style={{ maxWidth:1080, margin:"0 auto", padding:"0 28px", height:62, display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+
+          <div className="asl" style={{ display:"flex", alignItems:"center", gap:12 }}>
             <div style={{
-              background: "linear-gradient(135deg,#1e3a8a 0%,#4c1d95 100%)",
-              borderRadius: 20, padding: "18px 22px", color: "white",
-              fontSize: "clamp(13px,2vw,17px)", fontWeight: 600, lineHeight: 1.8,
-              boxShadow: "0 24px 64px rgba(30,58,138,0.45), 0 4px 16px rgba(0,0,0,0.3)",
-              border: "1px solid rgba(255,255,255,0.18)", textAlign: "center",
-              backdropFilter: "blur(12px)", fontFamily: "'Hind Siliguri', sans-serif",
-            }}>
-              {getScoreComment(score, name)}
+              width:38, height:38, borderRadius:10,
+              background:"var(--ink)",
+              display:"flex", alignItems:"center", justifyContent:"center",
+              fontSize:17, flexShrink:0,
+              boxShadow:"0 2px 8px rgba(26,25,22,0.25)"
+            }}>📝</div>
+            <div>
+              <div style={{ fontFamily:"'Fraunces', Georgia, serif", fontSize:18, fontWeight:600, color:"var(--ink)", letterSpacing:"-0.3px", lineHeight:1 }}>প্রশ্নব্যাংক</div>
+              <div style={{ fontSize:10, color:"var(--ink-4)", fontWeight:500, letterSpacing:"0.07em", textTransform:"uppercase", marginTop:2 }}>Question Bank Builder</div>
             </div>
           </div>
-        )}
 
-        <div id="result-sheet" style={{ maxWidth: 860, margin: "0 auto", width: "100%" }}>
-          <div style={{
-            background: "linear-gradient(135deg,#2563eb 0%,#7c3aed 100%)",
-            borderRadius: 28, padding: "28px 22px", color: "white", marginBottom: 28,
-            boxShadow: "0 20px 60px rgba(37,99,235,0.35), 0 4px 20px rgba(0,0,0,0.15)",
-            animation: "scaleIn 0.5s ease both",
-          }}>
-            <h1 style={{ fontSize: "clamp(26px,5vw,48px)", margin: "0 0 6px", fontWeight: 800, lineHeight: 1.2, fontFamily: "'Sora', sans-serif" }}>
-              🎉 Exam Completed
-            </h1>
-            <h2 style={{ fontSize: "clamp(15px,2.5vw,22px)", margin: "0 0 24px", opacity: 0.85, fontWeight: 500, wordBreak: "break-word" }}>
-              {exam.title}
-            </h2>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))", gap: 14 }}>
+          <div style={{ display:"flex", gap:3, background:"var(--bg-2)", padding:"4px 5px", borderRadius:40, border:"1px solid var(--line)" }}>
+            {[["builder","Builder"],["exams","Exam List"]].map(([id, label]) => (
+              <button key={id} className={`tab-btn ${activeTab===id?"active":"inactive"}`} onClick={() => setActiveTab(id)}>
+                {label}
+              </button>
+            ))}
+          </div>
+
+        </div>
+      </header>
+
+      {/* ══ EXAM LIST TAB ══ */}
+      {activeTab === "exams" && (
+        <div className="au" style={{ maxWidth:1080, margin:"0 auto", padding:"44px 28px" }}>
+
+          <div style={{ marginBottom:40 }}>
+            <div className="sec-title">Exam তালিকা</div>
+            <div className="sec-sub">তৈরি করা সব পরীক্ষার সংক্ষিপ্ত বিবরণ</div>
+          </div>
+
+          {stats && (
+            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit,minmax(170px,1fr))", gap:14, marginBottom:44 }}>
               {[
-                { label: "Score",      value: `${score}/${reviewData.questions.length}`, bg: "rgba(255,255,255,0.15)", border: "rgba(255,255,255,0.25)" },
-                { label: "Correct",    value: `✅ ${score}`,    bg: "rgba(34,197,94,0.2)",    border: "rgba(34,197,94,0.4)" },
-                { label: "Wrong",      value: `❌ ${wrong}`,    bg: "rgba(239,68,68,0.18)",   border: "rgba(239,68,68,0.35)" },
-                { label: "Percentage", value: `${percentage}%`, bg: "rgba(255,255,255,0.12)", border: "rgba(255,255,255,0.22)" },
-              ].map((s, i) => (
-                <div key={i} className="stat-card" style={{
-                  background: s.bg, padding: "18px 16px", borderRadius: 18,
-                  border: `1.5px solid ${s.border}`, boxShadow: "0 4px 16px rgba(0,0,0,0.1)",
-                }}>
-                  <p style={{ opacity: 0.8, margin: "0 0 8px", fontSize: 13, fontWeight: 600, letterSpacing: "0.5px", textTransform: "uppercase" }}>{s.label}</p>
-                  <p style={{ fontSize: "clamp(26px,4.5vw,44px)", margin: 0, fontWeight: 800, lineHeight: 1, fontFamily: "'Sora', sans-serif" }}>{s.value}</p>
+                { label:"মোট Exam",       value:stats.examCount,       icon:"📝", color:"var(--accent)"  },
+                { label:"মোট Submission", value:stats.submissionCount, icon:"✅", color:"var(--green)"   },
+                { label:"মোট Question",   value:stats.questionCount,   icon:"❓", color:"var(--amber)"   }
+              ].map((s,i) => (
+                <div key={i} className={`stat-card au d${i+1}`}>
+                  <div style={{ fontSize:28, marginBottom:12 }}>{s.icon}</div>
+                  <div style={{ fontFamily:"'Fraunces', Georgia, serif", fontSize:42, fontWeight:600, color:s.color, lineHeight:1, letterSpacing:"-1px" }}>{s.value}</div>
+                  <div style={{ fontSize:12, color:"var(--ink-3)", fontWeight:600, marginTop:6, letterSpacing:"0.02em" }}>{s.label}</div>
                 </div>
               ))}
             </div>
-            <div style={{
-              background: "rgba(255,255,255,0.13)", borderRadius: 18, padding: "18px 20px",
-              marginTop: 18, fontSize: "clamp(14px,2.2vw,19px)", fontWeight: 600,
-              textAlign: "center", lineHeight: 1.9, letterSpacing: "0.2px",
-              border: "1px solid rgba(255,255,255,0.22)", fontFamily: "'Hind Siliguri', sans-serif",
-            }}>
-              {getScoreComment(score, name)}
+          )}
+
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:18, flexWrap:"wrap", gap:10 }}>
+            <div style={{ fontFamily:"'Fraunces', Georgia, serif", fontSize:18, fontWeight:500, color:"var(--ink)" }}>
+              {examList.length}টি পরীক্ষা
             </div>
+            <button className="btn btn-ghost btn-sm" onClick={fetchExamList}>↺ &nbsp;Refresh</button>
           </div>
 
-          <div style={{ display: "flex", justifyContent: "center", marginBottom: 28 }}>
-            <button
-              onClick={downloadResult}
-              style={{
-                padding: "15px 28px", border: "none", borderRadius: 16,
-                background: "linear-gradient(135deg,#16a34a,#15803d)",
-                color: "white", fontSize: 17, fontWeight: 700, cursor: "pointer",
-                width: "100%", maxWidth: 340,
-                boxShadow: "0 8px 24px rgba(22,163,74,0.35)",
-                fontFamily: "'Sora', sans-serif", letterSpacing: "0.3px",
-                transition: "transform 0.15s ease, box-shadow 0.15s ease",
-              }}
-              onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 12px 32px rgba(22,163,74,0.45)"; }}
-              onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "0 8px 24px rgba(22,163,74,0.35)"; }}
-            >
-              📄 Download Result PDF
-            </button>
-          </div>
+          {loadingExams && (
+            <div style={{ textAlign:"center", padding:80, color:"var(--ink-4)" }}>
+              <div style={{ fontSize:26, marginBottom:10 }}>⏳</div>
+              <div style={{ fontSize:14 }}>লোড হচ্ছে…</div>
+            </div>
+          )}
+          {!loadingExams && examList.length === 0 && (
+            <div style={{ textAlign:"center", padding:80 }}>
+              <div style={{ fontSize:36, marginBottom:12, opacity:0.25 }}>📋</div>
+              <div style={{ color:"var(--ink-4)", fontSize:15 }}>কোনো Exam পাওয়া যায়নি</div>
+            </div>
+          )}
 
-          {reviewData.questions.map((q, index) => {
-            const userAns = reviewData.answers[q._id];
-            const correct = q.correctAnswer;
-            return (
-              <div key={index} className="review-question" style={{
-                background: "white", padding: "22px 20px", borderRadius: 22, marginBottom: 18,
-                boxShadow: "0 2px 8px rgba(37,99,235,0.06), 0 8px 28px rgba(37,99,235,0.10)",
-                border: "1px solid rgba(226,232,240,0.8)",
-                animationDelay: `${index * 0.04}s`,
-              }}>
-                <div style={{ display: "inline-flex", alignItems: "center", background: "linear-gradient(135deg,#eff6ff,#f5f3ff)", borderRadius: 10, padding: "4px 12px", marginBottom: 12, border: "1px solid #e0e7ff" }}>
-                  <span style={{ fontSize: 13, fontWeight: 700, color: "#3730a3", fontFamily: "'Sora', sans-serif" }}>Q{index + 1}</span>
+          <div style={{ display:"grid", gap:12 }}>
+            {examList.map((exam, idx) => (
+              <div key={exam._id} className={`exam-row au d${Math.min(idx+1,5)}`}>
+                <div style={{ flex:1 }}>
+                  <h3 style={{ fontFamily:"'Fraunces', Georgia, serif", fontSize:19, fontWeight:500, color:"var(--ink)", margin:"0 0 10px" }}>
+                    {exam.title}
+                  </h3>
+                  <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
+                    <span className="badge badge-blue">🔑 {exam.examCode}</span>
+                    <span className="badge badge-green">❓ {exam.questions?.length||0} প্রশ্ন</span>
+                    <span className="badge badge-red">✓ {exam.submissionCount||0} Submission</span>
+                    <span className="badge badge-slate">⏱ {exam.duration} মিনিট</span>
+                  </div>
                 </div>
-                <h2 style={{ fontSize: "clamp(16px,2.6vw,24px)", marginBottom: 14, color: "#0f172a", lineHeight: 1.6, wordBreak: "break-word", fontFamily: "'Hind Siliguri', 'Sora', sans-serif", fontWeight: 600, margin: "0 0 14px 0" }}>
-                  {q.question}
-                </h2>
-                {q.image && (
-                  <img src={q.image} alt="question" style={{ maxWidth: "300px", borderRadius: "12px", border: "1px solid #e2e8f0", marginBottom: "16px", display: "block", boxShadow: "0 4px 12px rgba(0,0,0,0.08)" }} />
-                )}
-                <div style={{ display: "grid", gap: 10 }}>
-                  {q.options.map((opt, i) => {
-                    const isCorrect = opt === correct;
-                    const isWrong = opt === userAns && opt !== correct;
-                    let bg = "#f8fafc", border = "#e2e8f0", color = "#334155";
-                    if (isCorrect) { bg = "#f0fdf4"; border = "#86efac"; color = "#14532d"; }
-                    if (isWrong)   { bg = "#fff1f2"; border = "#fca5a5"; color = "#7f1d1d"; }
-                    return (
-                      <div key={i} style={{ padding: "13px 16px", borderRadius: 14, background: bg, border: `1.5px solid ${border}`, color, fontSize: "clamp(14px,2.4vw,18px)", fontWeight: 500, lineHeight: 1.6, wordBreak: "break-word", fontFamily: "'Hind Siliguri', sans-serif", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-                        <span>{opt}</span>
-                        {isCorrect && <span style={{ fontSize: 13, fontWeight: 700, color: "#16a34a", whiteSpace: "nowrap", background: "#dcfce7", padding: "2px 10px", borderRadius: 20 }}>✅ Correct</span>}
-                        {isWrong   && <span style={{ fontSize: 13, fontWeight: 700, color: "#dc2626", whiteSpace: "nowrap", background: "#fee2e2", padding: "2px 10px", borderRadius: 20 }}>❌ Your Answer</span>}
-                      </div>
-                    );
-                  })}
+                <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+                  <button className="btn btn-ghost btn-sm"
+                    onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/exam/${exam.examCode}`); alert("Copied!"); }}>
+                    ⎘ &nbsp;Link
+                  </button>
+                  <a href={`/ranking/${exam.examCode}`} target="_blank" rel="noreferrer"
+                    style={{ display:"inline-flex", alignItems:"center", gap:5, background:"var(--accent-bg)", border:"1.5px solid var(--accent-line)", borderRadius:9, padding:"7px 14px", color:"var(--accent)", fontWeight:600, fontSize:12.5, textDecoration:"none", transition:"all 0.18s" }}>
+                    ◈ &nbsp;Ranking
+                  </a>
+                  <button onClick={() => deleteExam(exam.examCode)} className="btn btn-danger btn-sm">
+                    ✕ &nbsp;Delete
+                  </button>
                 </div>
               </div>
-            );
-          })}
-        </div>
-      </div>
-    );
-  }
-
-  /* ══════════════════════════════════════════
-     LOADING
-     ══════════════════════════════════════════ */
-  if (!exam) {
-    return (
-      <div style={{ minHeight: "100vh", display: "flex", justifyContent: "center", alignItems: "center", fontSize: 28, fontWeight: "bold", background: "linear-gradient(135deg,#0f172a,#1e293b)", color: "white", fontFamily: "'Sora', sans-serif" }}>
-        Loading...
-      </div>
-    );
-  }
-
-  /* ══════════════════════════════════════════
-     EXAM PAGE
-     ══════════════════════════════════════════ */
-  return (
-    <div style={{ minHeight: "100vh", background: "linear-gradient(160deg,#0f172a 0%,#1e293b 100%)", padding: 14, fontFamily: "'Sora', 'Hind Siliguri', sans-serif" }}>
-      <style>{globalStyles}</style>
-      <BlockedOverlay />
-      <WatermarkOverlay name={name} roll={roll} />
-
-      {/* ── Tab Warning Banner ── */}
-      <TabWarningBanner />
-
-      {/* ── SHARED Blur Overlay ── */}
-      <BlurOverlay />
-
-      {/* Sticky Timer */}
-      <div style={{
-        position: "fixed", top: 0, left: 0, right: 0, zIndex: 1000,
-        display: "flex", justifyContent: "center", padding: "10px 16px",
-        background: "rgba(15,23,42,0.88)", backdropFilter: "blur(14px)",
-        borderBottom: "1px solid rgba(255,255,255,0.07)",
-        boxShadow: "0 4px 24px rgba(0,0,0,0.4)",
-      }}>
-        <div style={{
-          display: "flex", alignItems: "center", gap: 10,
-          background: timeLeft !== null && timeLeft <= 60 ? "rgba(255,68,68,0.12)" : "rgba(37,99,235,0.18)",
-          border: `1.5px solid ${timerColor}`,
-          borderRadius: 50, padding: "8px 26px",
-          animation: timeLeft !== null && timeLeft <= 60 ? "timerPulse 1s infinite" : "none",
-        }}>
-          <span style={{ fontSize: 18 }}>⏰</span>
-          <span style={{ fontSize: "clamp(16px,3vw,22px)", fontWeight: 800, color: timerColor, letterSpacing: "2.5px", fontFamily: "monospace" }}>
-            {timeLeft !== null ? formatTime() : "--:--"}
-          </span>
-        </div>
-      </div>
-
-      <div style={{ maxWidth: 860, margin: "auto", paddingTop: 66 }}>
-
-        {/* Exam title */}
-        <div style={{ background: "linear-gradient(135deg,#2563eb,#7c3aed)", borderRadius: 24, padding: "22px 20px", color: "white", marginBottom: 22, boxShadow: "0 12px 40px rgba(37,99,235,0.3)" }}>
-          <h1 style={{ fontSize: "clamp(22px,4.5vw,46px)", margin: 0, lineHeight: 1.25, fontWeight: 800, letterSpacing: "-0.3px" }}>
-            📝 {exam.title}
-          </h1>
-        </div>
-
-        {/* User info */}
-        <div style={{ background: "white", borderRadius: 20, padding: "18px 16px", marginBottom: 22, boxShadow: "0 2px 8px rgba(37,99,235,0.06), 0 8px 28px rgba(37,99,235,0.10)", border: "1px solid rgba(226,232,240,0.8)" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(200px,1fr))", gap: 14 }}>
-            {[
-              { placeholder: "Your Name", value: name, onChange: (e) => setName(e.target.value) },
-              { placeholder: "Your Roll", value: roll, onChange: (e) => setRoll(e.target.value) },
-            ].map((inp, i) => (
-              <input
-                key={i}
-                type="text"
-                placeholder={inp.placeholder}
-                value={inp.value}
-                onChange={inp.onChange}
-                style={{ padding: "14px 16px", borderRadius: 14, border: "1.5px solid #e2e8f0", fontSize: 15, width: "100%", outline: "none", fontFamily: "'Hind Siliguri', 'Sora', sans-serif", color: "#0f172a", background: "#f8fafc", transition: "border-color 0.2s" }}
-                onFocus={e => e.target.style.borderColor = "#2563eb"}
-                onBlur={e => e.target.style.borderColor = "#e2e8f0"}
-              />
             ))}
           </div>
         </div>
+      )}
 
-        {/* Questions */}
-        {exam.questions.map((q, index) => (
-          <div key={q._id} style={{ background: "white", borderRadius: 22, padding: "20px 18px", marginBottom: 18, boxShadow: "0 2px 8px rgba(37,99,235,0.06), 0 8px 28px rgba(37,99,235,0.10)", border: "1px solid rgba(226,232,240,0.8)" }}>
-            <div style={{ display: "inline-flex", alignItems: "center", background: "linear-gradient(135deg,#eff6ff,#f5f3ff)", borderRadius: 10, padding: "3px 12px", marginBottom: 10, border: "1px solid #e0e7ff" }}>
-              <span style={{ fontSize: 12, fontWeight: 700, color: "#3730a3", fontFamily: "'Sora', sans-serif" }}>Q{index + 1}</span>
+      {/* ══ BUILDER TAB ══ */}
+      {activeTab === "builder" && (
+        <div style={{ maxWidth:1080, margin:"0 auto", padding:"44px 28px" }}>
+
+          <div className="au" style={{ marginBottom:32 }}>
+            <div className="sec-title">নতুন পরীক্ষা তৈরি করুন</div>
+            <div className="sec-sub">তথ্য পূরণ করে প্রশ্ন বেছে নিন, তারপর প্রকাশ করুন</div>
+          </div>
+
+          {/* ── Form Card ── */}
+          <div className="card au d1" style={{ padding:"36px 40px", marginBottom:28 }}>
+
+            <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:28, paddingBottom:20, borderBottom:"1px solid var(--line)" }}>
+              <div style={{ width:36, height:36, borderRadius:9, background:"var(--bg-2)", border:"1.5px solid var(--line-2)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:16 }}>📋</div>
+              <div>
+                <div style={{ fontFamily:"'Fraunces', Georgia, serif", fontSize:18, fontWeight:500, color:"var(--ink)" }}>পরীক্ষার তথ্য</div>
+                <div style={{ fontSize:12.5, color:"var(--ink-4)", marginTop:1 }}>সঠিক তথ্য দিয়ে পূরণ করুন</div>
+              </div>
             </div>
-            <h2 style={{ fontSize: "clamp(17px,2.8vw,26px)", margin: "0 0 16px", color: "#0f172a", lineHeight: 1.6, fontWeight: 600, fontFamily: "'Hind Siliguri', 'Sora', sans-serif" }}>
-              {q.question}
-            </h2>
-            {q.image && (
-              <img src={q.image} alt="question" style={{ maxWidth: "300px", borderRadius: "12px", border: "1px solid #e2e8f0", marginBottom: "14px", display: "block", boxShadow: "0 4px 12px rgba(0,0,0,0.08)" }} />
-            )}
-            <div style={{ display: "grid", gap: 12 }}>
-              {q.options.map((opt, i) => {
-                const selected = answers[q._id] === opt;
-                return (
-                  <button
-                    key={i}
-                    className="option-btn"
-                    onClick={() => handleAnswer(q._id, opt)}
-                    style={{
-                      padding: "14px 18px", borderRadius: 14, textAlign: "left",
-                      border: selected ? "2px solid #2563eb" : "1.5px solid #e2e8f0",
-                      background: selected ? "linear-gradient(135deg,#eff6ff,#f5f3ff)" : "#f8fafc",
-                      cursor: "pointer", fontSize: "clamp(14px,2.5vw,19px)", fontWeight: selected ? 600 : 500,
-                      lineHeight: 1.6, width: "100%", wordBreak: "break-word",
-                      color: selected ? "#1e40af" : "#334155",
-                      boxShadow: selected ? "0 4px 14px rgba(37,99,235,0.15)" : "none",
-                      fontFamily: "'Hind Siliguri', 'Sora', sans-serif",
-                    }}
-                  >
-                    {opt}
-                  </button>
-                );
-              })}
+
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:20 }}>
+
+              <div className="au d1">
+                <label className="field-label">একাডেমি / কলেজ</label>
+                <input className="p-input" type="text" name="academy" placeholder="যেমন: Saif Academy"
+                  value={examData.academy} onChange={handleChange} />
+              </div>
+
+              <div className="au d2">
+                <label className="field-label">পরীক্ষার নাম</label>
+                <input className="p-input" type="text" name="title" placeholder="যেমন: Model Test 2024"
+                  value={examData.title} onChange={handleChange} />
+              </div>
+
+              <div className="au d3">
+                <label className="field-label">বিষয়</label>
+                <input className="p-input" type="text" name="subject" value={examData.subject} onChange={handleChange} />
+              </div>
+
+              <div className="au d4">
+                <label className="field-label">অধ্যায় নির্বাচন</label>
+                <select className="p-input" value={chapter}
+                  onChange={e => { setChapter(e.target.value); setSelected([]); setAllQuestions([]); setBoardYear(""); setBoardName(""); }}>
+                  <option value="">— অধ্যায় বেছে নিন —</option>
+                  <option value="Introduction to ICT">Chapter 1 — ICT Introduction</option>
+                  <option value="Communication Systems">Chapter 2 — Communication Systems</option>
+                  <option value="Numbers & Digital Devices">Chapter 3 — Number System</option>
+                  <option value="Web & HTML">Chapter 4 — Web & HTML</option>
+                  <option value="Programming & Language">Chapter 5 — Programming</option>
+                  <option value="Board Questions">Board Questions</option>
+                </select>
+
+                {chapter === "Board Questions" && (
+                  <div style={{ marginTop:14 }} className="au">
+                    <label className="field-label">Board Year</label>
+                    <select className="p-input" value={boardYear}
+                      onChange={e => { setBoardYear(e.target.value); setSelected([]); setAllQuestions([]); setBoardName(""); }}>
+                      <option value="">— বছর বেছে নিন —</option>
+                      {["2025","2024","2023","2022","2019"].map(y => <option key={y} value={y}>{y}</option>)}
+                    </select>
+                  </div>
+                )}
+                {chapter === "Board Questions" && boardYear && (
+                  <div style={{ marginTop:14 }} className="au">
+                    <label className="field-label">Board Name</label>
+                    <select className="p-input" value={boardName}
+                      onChange={e => { setSelected([]); setAllQuestions([]); setBoardName(e.target.value); }}>
+                      <option value="">— বোর্ড বেছে নিন —</option>
+                      {["Dhaka","Chittagong","Rajshahi","Cumilla","Jessore","Dinajpur","Sylhet"].map(b => <option key={b} value={b}>{b}</option>)}
+                    </select>
+                  </div>
+                )}
+              </div>
+
+              <div className="au d5">
+                <label className="field-label">প্রশ্ন সংখ্যা</label>
+                <input className="p-input" type="number" name="marks" value={examData.marks} onChange={handleChange} />
+              </div>
+
+              <div className="au d6">
+                <label className="field-label">সময় (মিনিট)</label>
+                <input className="p-input" type="number" name="duration" value={examData.duration} onChange={handleChange} />
+              </div>
+
             </div>
           </div>
-        ))}
 
-        {/* Submit */}
-        <div style={{ display: "flex", justifyContent: "center", marginTop: 30, marginBottom: 40 }}>
-          <button
-            onClick={submitExam}
-            disabled={submitted}
-            style={{
-              padding: "17px 28px", border: "none", borderRadius: 18,
-              background: submitted ? "#94a3b8" : "linear-gradient(135deg,#22c55e,#16a34a)",
-              color: "white", fontSize: 19, fontWeight: 700,
-              cursor: submitted ? "not-allowed" : "pointer",
-              width: "100%", maxWidth: 350,
-              boxShadow: submitted ? "none" : "0 8px 28px rgba(34,197,94,0.35)",
-              fontFamily: "'Sora', sans-serif", letterSpacing: "0.3px",
-              transition: "transform 0.15s ease",
-            }}
-            onMouseEnter={e => { if (!submitted) e.currentTarget.style.transform = "translateY(-2px)"; }}
-            onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; }}
-          >
-            {submitted ? "⏳ Submitting..." : "🚀 Submit Exam"}
-          </button>
+          {/* ── Question header ── */}
+          {questions.length > 0 && (
+            <div className="card asi" style={{ padding:"18px 24px", marginBottom:20 }}>
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", flexWrap:"wrap", gap:14, marginBottom:14 }}>
+                <div>
+                  <div style={{ fontFamily:"'Fraunces', Georgia, serif", fontSize:17, fontWeight:500, color:"var(--ink)" }}>প্রশ্ন নির্বাচন করুন</div>
+                  <div style={{ fontSize:12.5, color:"var(--ink-4)", marginTop:2 }}>মোট {questions.length}টি প্রশ্ন পাওয়া গেছে</div>
+                </div>
+                <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                  <div className="counter">{selected.length}&thinsp;/&thinsp;{examData.marks}</div>
+                  <button className="btn btn-ghost btn-sm" onClick={selectAll}>সব Select</button>
+                  <button className="btn btn-sm" style={{ background:"var(--red-bg)", color:"var(--red)", border:"1.5px solid rgba(220,38,38,0.18)" }} onClick={deselectAll}>Deselect</button>
+                </div>
+              </div>
+              <div className="progress-track">
+                <div className="progress-fill" style={{ width:`${progress}%` }} />
+              </div>
+              <div style={{ fontSize:11, color:"var(--ink-4)", marginTop:5, textAlign:"right", fontFamily:"'Geist Mono', monospace" }}>
+                {Math.round(progress)}%
+              </div>
+            </div>
+          )}
+
+          {/* ── Question list ── */}
+          <div style={{ display:"grid", gap:10 }}>
+            {questions.map((q, index) => {
+              const active = selected.includes(q._id);
+              return (
+                <div key={q._id} className={`q-card${active?" active":""} au`}
+                  style={{ animationDelay:`${Math.min(index*0.03,0.4)}s` }}
+                  onClick={() => toggleSelect(q._id)}>
+                  <div style={{ display:"flex", gap:14, alignItems:"flex-start" }}>
+
+                    <div className={`num-badge ${active?"active":"inactive"}`}>
+                      {active ? "✓" : index + 1}
+                    </div>
+
+                    <div style={{ flex:1 }}>
+                      <p style={{ color:"var(--ink)", fontSize:15, fontWeight:500, lineHeight:1.65, marginBottom:13, margin:"0 0 13px" }}>
+                        {q.question}
+                      </p>
+
+                      {q.image && (
+                        <img src={q.image} alt="q" style={{ maxWidth:260, borderRadius:10, border:"1.5px solid var(--line-2)", marginBottom:13, display:"block" }} />
+                      )}
+
+                      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"7px 10px" }}>
+                        {q.options?.map((opt, idx) => (
+                          <div key={idx} className="opt-pill">
+                            <span style={{ color:"var(--accent)", fontWeight:700, fontFamily:"'Geist', sans-serif", fontSize:12, flexShrink:0, marginTop:1 }}>{labels[idx]}.</span>
+                            <span style={{ fontSize:13.5 }}>{opt}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* ── Action buttons ── */}
+          {questions.length > 0 && (
+            <div className="au" style={{ display:"flex", justifyContent:"center", gap:12, marginTop:40, flexWrap:"wrap" }}>
+              <button className="btn btn-green btn-lg" onClick={createExam} disabled={creating}>
+                {creating ? "⏳ তৈরি হচ্ছে…" : "🚀 অনলাইনে পরীক্ষা নিন"}
+              </button>
+              <button className="btn btn-primary btn-lg" onClick={downloadPDF}>
+                ↓ &nbsp;PDF Download
+              </button>
+            </div>
+          )}
+
+          {/* ── Success box ── */}
+          {examCode && (
+            <div className="success-box asi" style={{ marginTop:40 }}>
+              <div style={{ fontSize:40, marginBottom:14 }}>🎉</div>
+              <div style={{ fontFamily:"'Fraunces', Georgia, serif", fontSize:24, fontWeight:600, color:"var(--ink)", marginBottom:6 }}>
+                Exam সফলভাবে তৈরি!
+              </div>
+              <p style={{ color:"var(--ink-3)", marginBottom:22, fontSize:14 }}>নিচের লিংকটি স্টুডেন্টদের পাঠান</p>
+              <div className="link-box">{window.location.origin}/exam/{examCode}</div>
+              <div style={{ display:"flex", justifyContent:"center", gap:12, flexWrap:"wrap" }}>
+                <button className="btn btn-accent btn-lg" onClick={copyLink}>⎘ &nbsp;Link Copy</button>
+                <a href={`/ranking/${examCode}`} target="_blank" rel="noreferrer"
+                  style={{ display:"inline-flex", alignItems:"center", gap:6, background:"var(--ink)", color:"#fff", borderRadius:14, padding:"13px 28px", fontWeight:600, fontSize:15, textDecoration:"none", boxShadow:"0 2px 10px rgba(26,25,22,0.2)", transition:"all 0.18s" }}>
+                  ◈ &nbsp;View Ranking
+                </a>
+              </div>
+            </div>
+          )}
+
+          {/* ── Hidden PDF ── */}
+          <div id="question-paper" className="preview-paper">
+            <style>{`
+              .preview-paper { width:210mm; min-height:297mm; background:white; padding:14mm; box-sizing:border-box; overflow:hidden; }
+              .preview-paper * { box-sizing:border-box; word-break:break-word; overflow-wrap:break-word; }
+              .question-block { width:100%; margin-bottom:12px; page-break-inside:avoid; break-inside:avoid; }
+              .question-title { font-weight:700; text-align:justify; }
+              .option-line { display:flex; gap:4px; align-items:flex-start; }
+            `}</style>
+
+            <div style={{ textAlign:"center", borderBottom:"1px solid #ccc", paddingBottom:12, marginBottom:16 }}>
+              <div style={{ display:"inline-block", background:"black", padding:"4px 20px", marginBottom:8 }}>
+                <h1 style={{ color:"white", fontWeight:"bold", fontSize: pdfCompact?"14px":"22px", margin:0 }}>{examData.subject}</h1>
+              </div>
+              <h2 style={{ fontWeight:"bold", fontSize: pdfCompact?"13px":"19px", margin:"0 0 4px" }}>{examData.academy}</h2>
+              <p style={{ color:"#374151", margin:"0 0 10px", fontSize: pdfCompact?"10px":"13px" }}>{examData.title}</p>
+              <div style={{ display:"flex", justifyContent:"space-between", borderTop:"1px solid #ccc", paddingTop:8, fontSize: pdfCompact?"9px":"12px" }}>
+                <span>সময়: {examData.duration} মিনিট</span>
+                <span>পূর্ণমান: {examData.marks}</span>
+              </div>
+            </div>
+
+            <div style={{ columnCount:2, columnGap: pdfCompact?"14px":"28px" }}>
+              {allQuestions.filter(q => selected.includes(q._id)).map((q, i) => (
+                <div key={q._id} className="question-block">
+                  <h2 className="question-title" style={{ fontSize: pdfCompact?"9px":"12px", lineHeight: pdfCompact?"14px":"18px", marginBottom:4 }}>
+                    {i+1}. {q.question}
+                  </h2>
+                  {q.image && <img src={q.image} alt="q" style={{ maxWidth:"100%", marginBottom:4 }} />}
+                  <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap: pdfCompact?"2px 8px":"4px 14px", fontSize: pdfCompact?"8px":"10px", lineHeight: pdfCompact?"12px":"15px" }}>
+                    {q.options?.map((opt, idx) => (
+                      <div key={idx} className="option-line">
+                        <span style={{ fontWeight:"bold" }}>{labels[idx]}.</span>
+                        <span>{opt}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
         </div>
-      </div>
+      )}
     </div>
   );
 }
 
-export default ExamPage;
+export default Builder;
