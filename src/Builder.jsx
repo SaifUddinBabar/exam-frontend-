@@ -372,6 +372,8 @@ function Builder() {
   const [examCode,     setExamCode]     = useState("");
   const [boardYear,    setBoardYear]    = useState("");
   const [boardName,    setBoardName]    = useState("");
+  const [topic,        setTopic]        = useState("");
+const [topicList,    setTopicList]    = useState([]);
   const [pdfCompact,   setPdfCompact]   = useState(false);
   const [examData,     setExamData]     = useState({ academy:"", title:"", duration:"60", subject:"ICT", marks:"25" });
   const [examList,     setExamList]     = useState([]);
@@ -395,6 +397,13 @@ function Builder() {
     finally { setLoadingExams(false); }
   };
   useEffect(() => { if (activeTab === "exams") fetchExamList(); }, [activeTab]);
+  useEffect(() => {
+  if (!chapter || chapter === "Board Questions") { setTopicList([]); setTopic(""); return; }
+  fetch(`${API}/api/questions/topics?subject=${examData.subject}&chapter=${encodeURIComponent(chapter)}`)
+    .then(r => r.json())
+    .then(setTopicList)
+    .catch(() => setTopicList([]));
+}, [chapter, examData.subject]);
 
   const deleteExam = async (code) => {
     if (!window.confirm("এই exam এবং সব submissions delete হয়ে যাবে। নিশ্চিত?")) return;
@@ -413,7 +422,10 @@ function Builder() {
     if (chapter === "Board Questions") {
       if (!boardYear || !boardName) { setQuestions([]); return; }
       p.append("questionType","board"); p.append("boardYear", boardYear); p.append("boardName", boardName);
-    } else { p.append("questionType","normal"); }
+    } else { p.append("questionType","normal"); 
+       if (topic) p.append("topic", topic);
+    }
+
     fetch(`${API}/api/questions?${p}`)
       .then(r => r.json())
       .then(data => {
@@ -430,7 +442,9 @@ function Builder() {
           });
         }
       }).catch(() => setQuestions([]));
-  }, [chapter, boardYear, boardName, examData.subject]);
+  }, [chapter, boardYear, boardName, topic, examData.subject]);
+
+  
 
   const handleChange  = (e) => setExamData({ ...examData, [e.target.name]: e.target.value });
   const toggleSelect  = (id) => {
@@ -630,7 +644,7 @@ const downloadPDF = async () => {
               <div className="au d4">
                 <label className="field-label">অধ্যায় নির্বাচন</label>
                 <select className="p-input" value={chapter}
-                  onChange={e => { setChapter(e.target.value); setSelected([]); setAllQuestions([]); setBoardYear(""); setBoardName(""); }}>
+                  onChange={e => { setChapter(e.target.value); setSelected([]); setAllQuestions([]); setBoardYear(""); setBoardName(""); setTopic(""); }}>
                   <option value="">— অধ্যায় বেছে নিন —</option>
                   <option value="Introduction to ICT">Chapter 1 — ICT Introduction</option>
                   <option value="Communication Systems">Chapter 2 — Communication Systems</option>
@@ -661,6 +675,17 @@ const downloadPDF = async () => {
                   </div>
                 )}
               </div>
+              {chapter && chapter !== "Board Questions" && topicList.length > 0 && (
+                  <div style={{ marginTop:14 }} className="au">
+                    <label className="field-label">Topic নির্বাচন (ঐচ্ছিক)</label>
+                    <select className="p-input" value={topic}
+                      onChange={e => { setTopic(e.target.value); setSelected([]); }}>
+                      <option value="">— সব Topic —</option>
+                      {topicList.map(t => <option key={t} value={t}>{t}</option>)}
+                    </select>
+                  </div>
+                )}
+
 
               <div className="au d5">
                 <label className="field-label">প্রশ্ন সংখ্যা</label>
