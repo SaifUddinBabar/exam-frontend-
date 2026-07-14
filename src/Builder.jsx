@@ -674,8 +674,7 @@ const downloadPDF = async () => {
                     </select>
                   </div>
                 )}
-              </div>
-              {chapter && chapter !== "Board Questions" && topicList.length > 0 && (
+                 {chapter && chapter !== "Board Questions" && topicList.length > 0 && (
                   <div style={{ marginTop:14 }} className="au">
                     <label className="field-label">Topic নির্বাচন (ঐচ্ছিক)</label>
                     <select className="p-input" value={topic}
@@ -685,6 +684,8 @@ const downloadPDF = async () => {
                     </select>
                   </div>
                 )}
+              </div>
+             
 
 
               <div className="au d5">
