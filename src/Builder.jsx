@@ -678,7 +678,7 @@ const downloadPDF = async () => {
                   <div style={{ marginTop:14 }} className="au">
                     <label className="field-label">Topic নির্বাচন (ঐচ্ছিক)</label>
                     <select className="p-input" value={topic}
-                      onChange={e => { setTopic(e.target.value); setSelected([]); }}>
+                      onChange={e => setTopic(e.target.value)}>
                       <option value="">— সব Topic —</option>
                       {topicList.map(t => <option key={t} value={t}>{t}</option>)}
                     </select>
