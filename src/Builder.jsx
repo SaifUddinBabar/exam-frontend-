@@ -646,7 +646,7 @@ const downloadPDF = async () => {
                 <select className="p-input" value={chapter}
                   onChange={e => { setChapter(e.target.value); setSelected([]); setAllQuestions([]); setBoardYear(""); setBoardName(""); setTopic(""); }}>
                   <option value="">— অধ্যায় বেছে নিন —</option>
-                  <option value="Introduction to ICT">অধ্যায়-০১ (তথ্য ও যোগাযোগ প্রযুক্তি: বিশ্ব ও বাংলাদেশ প্রেক্ষাপট)</option>
+                  <option value="Introduction to ICT">Chapter 1 — ICT Introduction</option>
                   <option value="Communication Systems">Chapter 2 — Communication Systems</option>
                   <option value="Numbers & Digital Devices">Chapter 3 — Number System</option>
                   <option value="Web & HTML">Chapter 4 — Web & HTML</option>
