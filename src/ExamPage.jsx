@@ -450,10 +450,6 @@ function ExamPage() {
         if (saved) {
           try {
             const progress = JSON.parse(saved);
-            if (progress.name) setName(progress.name);
-            if (progress.roll) setRoll(progress.roll);
-            if (progress.answers) setAnswers(progress.answers);
-            if (progress.name && progress.roll) setExamStarted(true);
 
             let endTime = progress.examEndTime;
             if (!endTime) {
@@ -461,8 +457,26 @@ function ExamPage() {
               const remaining = progress.timeLeft > 0 ? progress.timeLeft : (data.duration || 0) * 60;
               endTime = Date.now() + remaining * 1000;
             }
-            setExamEndTime(endTime);
-            setTimeLeft(Math.max(0, Math.round((endTime - Date.now()) / 1000)));
+
+            // ── NEW: if this saved session's time already ran out (e.g. a
+            // previous student left mid-exam on this same device and never
+            // submitted), it's STALE — don't restore it or auto-submit on
+            // behalf of a new student. Wipe it and start a completely fresh
+            // session instead, so the exam link never appears "expired". ──
+            const remainingSeconds = Math.round((endTime - Date.now()) / 1000);
+            if (remainingSeconds <= 0) {
+              localStorage.removeItem(getStorageKey(code));
+              const freshEndTime = Date.now() + (data.duration || 0) * 60 * 1000;
+              setExamEndTime(freshEndTime);
+              setTimeLeft((data.duration || 0) * 60);
+            } else {
+              if (progress.name) setName(progress.name);
+              if (progress.roll) setRoll(progress.roll);
+              if (progress.answers) setAnswers(progress.answers);
+              if (progress.name && progress.roll) setExamStarted(true);
+              setExamEndTime(endTime);
+              setTimeLeft(remainingSeconds);
+            }
           } catch {
             localStorage.removeItem(getStorageKey(code));
             const endTime = Date.now() + (data.duration || 0) * 60 * 1000;
