@@ -5,6 +5,28 @@ const API = import.meta.env.VITE_API_URL;
 
 const getStorageKey = (code) => `exam_progress_${code}`;
 
+// ── NEW: tracks which names have already completed this exam (per exam code) ──
+const getCompletedKey = (code) => `exam_completed_${code}`;
+
+const isNameAlreadySubmitted = (code, name) => {
+  try {
+    const list = JSON.parse(localStorage.getItem(getCompletedKey(code)) || "[]");
+    return list.some((n) => n.trim().toLowerCase() === name.trim().toLowerCase());
+  } catch {
+    return false;
+  }
+};
+
+const markNameSubmitted = (code, name) => {
+  try {
+    const list = JSON.parse(localStorage.getItem(getCompletedKey(code)) || "[]");
+    list.push(name.trim());
+    localStorage.setItem(getCompletedKey(code), JSON.stringify(list));
+  } catch {
+    // ignore storage errors
+  }
+};
+
 const getScoreComment = (score, name) => {
   const n = name || "বন্ধু";
   if (score >= 1 && score <= 5)  return `😔 ${n}, এবার ফলাফল একটু কম হয়েছে — কিন্তু এটাই শেষ কথা নয়! প্রতিটা ব্যর্থতা সাফল্যের প্রথম ধাপ। আবার চেষ্টা করো, তুমি অবশ্যই পারবে! 💪`;
@@ -93,12 +115,12 @@ function ExamPage() {
   const [submitted, setSubmitted] = useState(false);
   const [timeLeft, setTimeLeft] = useState(null);
 
-  // ── NEW: absolute exam end timestamp (ms) — timer is now calculated from
+  // ── absolute exam end timestamp (ms) — timer is calculated from
   // real wall-clock time instead of a plain countdown, so it never "pauses"
   // when the tab/app is backgrounded and always reflects true elapsed time ──
   const [examEndTime, setExamEndTime] = useState(null);
 
-  // ── NEW: Gate state — exam can't start without name & roll ──
+  // ── Gate state — exam can't start without name & roll ──
   const [examStarted, setExamStarted] = useState(false);
 
   // Security states
@@ -110,12 +132,15 @@ function ExamPage() {
   const blurTimeoutRef = useRef(null);
   const devToolsRef = useRef(false);
 
-  // ── Tab-switch state (now only 1 chance — instant auto submit) ──
+  // ── Tab-switch state — UPDATED: 2 strikes now.
+  // 1st switch = warning only. 2nd switch = instant auto submit. ──
   const tabSwitchCountRef = useRef(0);
+  const tabWarningTimeoutRef = useRef(null);
   const [tabWarningMsg, setTabWarningMsg] = useState("");
   const [showTabWarning, setShowTabWarning] = useState(false);
+  const [tabWarningIsFinal, setTabWarningIsFinal] = useState(false);
 
-  // ── NEW: 3-finger touch state ──
+  // ── 3-finger touch state ──
   const threeFingerBlurTimeoutRef = useRef(null);
 
   const [showToast, setShowToast] = useState(false);
@@ -148,14 +173,13 @@ function ExamPage() {
   }, []);
 
   /* ══════════════════════════════════════════
-     NEW FEATURE 1 — 3-Finger Touch Blur
+     3-Finger Touch Blur
      Touch start → ≥3 fingers → blur immediately
      Touch end / lift → unblur after 1 second
      ══════════════════════════════════════════ */
   useEffect(() => {
     const handleTouchStart = (e) => {
       if (e.touches.length >= 3) {
-        // Cancel any pending unblur
         if (threeFingerBlurTimeoutRef.current) {
           clearTimeout(threeFingerBlurTimeoutRef.current);
           threeFingerBlurTimeoutRef.current = null;
@@ -170,8 +194,6 @@ function ExamPage() {
     };
 
     const handleTouchEnd = (e) => {
-      // Unblur only if blur was due to 3-finger (not tab-switch etc.)
-      // We unblur after fingers lift + 1s delay
       if (e.touches.length < 3) {
         if (threeFingerBlurTimeoutRef.current) clearTimeout(threeFingerBlurTimeoutRef.current);
         threeFingerBlurTimeoutRef.current = setTimeout(() => {
@@ -193,21 +215,34 @@ function ExamPage() {
   }, []);
 
   /* ══════════════════════════════════════════
-     FEATURE 2 — Tab/App Switch → INSTANT Auto Submit
-     UPDATED: only 1 chance now (previously 3).
-     The moment the student leaves the page/tab/app,
-     the exam is auto-submitted immediately.
+     Tab/App Switch — UPDATED: 2 strikes.
+     1st switch  → warning banner shown, exam continues.
+     2nd switch  → instant auto submit.
      ══════════════════════════════════════════ */
   const autoSubmitRef = useRef(null); // store submitExam ref to avoid circular deps
 
   const handleTabSwitch = useCallback(() => {
     if (submitted) return;
-    if (tabSwitchCountRef.current >= 1) return; // already handled
     tabSwitchCountRef.current += 1;
 
-    setTabWarningMsg("❌ আপনি পরীক্ষা পেজ থেকে বের হয়ে গেছেন! পরীক্ষা স্বয়ংক্রিয়ভাবে জমা হচ্ছে...");
+    if (tabSwitchCountRef.current === 1) {
+      // First offense — warn only
+      setTabWarningIsFinal(false);
+      setTabWarningMsg("⚠️ আপনি পরীক্ষা পেজ থেকে বের হয়েছেন! এটি আপনার প্রথম ও শেষ সতর্কবার্তা — আবার বের হলে পরীক্ষা স্বয়ংক্রিয়ভাবে জমা হয়ে যাবে।");
+      setShowTabWarning(true);
+      triggerBlurOnly("⚠️ সতর্কতা — ফিরে আসুন", 4000);
+      if (navigator.vibrate) navigator.vibrate([25, 60, 25, 60, 40]); // sharp double-buzz warning
+      if (tabWarningTimeoutRef.current) clearTimeout(tabWarningTimeoutRef.current);
+      tabWarningTimeoutRef.current = setTimeout(() => setShowTabWarning(false), 4000);
+      return;
+    }
+
+    // Second offense — auto submit
+    setTabWarningIsFinal(true);
+    setTabWarningMsg("❌ আপনি দ্বিতীয়বার পরীক্ষা পেজ থেকে বের হয়েছেন! পরীক্ষা স্বয়ংক্রিয়ভাবে জমা হচ্ছে...");
     setShowTabWarning(true);
     triggerBlurOnly("Auto Submit হচ্ছে...", 6000);
+    if (navigator.vibrate) navigator.vibrate([40, 40, 40, 40, 80]); // firmer final buzz
     setTimeout(() => {
       if (autoSubmitRef.current) autoSubmitRef.current();
     }, 800);
@@ -274,7 +309,7 @@ function ExamPage() {
       window.location.reload();
     };
 
-    /* ── Visibility change now calls handleTabSwitch ── */
+    /* ── Visibility change calls handleTabSwitch ── */
     const handleVisibilityChange = () => {
       if (document.hidden) {
         handleTabSwitch();
@@ -403,7 +438,7 @@ function ExamPage() {
 
   /* ══════════════════════════════════════════
      FETCH EXAM + RESTORE PROGRESS
-     UPDATED: derives/stores an absolute examEndTime so the
+     Derives/stores an absolute examEndTime so the
      countdown is based on real elapsed wall-clock time.
      ══════════════════════════════════════════ */
   useEffect(() => {
@@ -452,7 +487,7 @@ function ExamPage() {
   }, [answers, name, roll, timeLeft, examEndTime, exam, submitted, code]);
 
   /* ══════════════════════════════════════════
-     Timer — UPDATED: now computed from the absolute
+     Timer — computed from the absolute
      examEndTime timestamp instead of a plain decrement,
      so it stays perfectly continuous even if the tab/app
      was backgrounded, throttled, or closed and reopened.
@@ -495,22 +530,27 @@ function ExamPage() {
 
   const timerColor = timeLeft !== null && timeLeft <= 60 ? "#ff4444" : "white";
 
-  /* ── handleAnswer vibrates + locks the answer once chosen ── */
+  /* ── handleAnswer — UPDATED: smoother multi-pulse haptic on selection ── */
   const handleAnswer = (qid, option) => {
     if (answers[qid]) return; // Already answered — locked, can't change
-    if (navigator.vibrate) navigator.vibrate(50); // Haptic feedback on selection
+    if (navigator.vibrate) navigator.vibrate([12, 15, 10]); // short soft double-tap feel
     setAnswers((prev) => ({ ...prev, [qid]: option }));
   };
 
   const clearProgress = () => localStorage.removeItem(getStorageKey(code));
 
-  /* ── Start exam only if name & roll are filled ── */
+  /* ── Start exam only if name & roll are filled, and this name hasn't already submitted ── */
   const handleStartExam = () => {
     if (!name.trim() || !roll.trim()) {
       alert("পরীক্ষা শুরু করতে অবশ্যই নাম ও রোল নম্বর দিতে হবে!");
       return;
     }
-    if (navigator.vibrate) navigator.vibrate(40);
+    if (isNameAlreadySubmitted(code, name)) {
+      if (navigator.vibrate) navigator.vibrate([40, 40, 40]);
+      alert("⚠️ এই নাম দিয়ে ইতিমধ্যে এই পরীক্ষা দেওয়া হয়ে গেছে! একই নামে দ্বিতীয়বার পরীক্ষা দেওয়া যাবে না।");
+      return;
+    }
+    if (navigator.vibrate) navigator.vibrate([18, 30, 22]); // smooth confirm pattern
     setExamStarted(true);
   };
 
@@ -526,6 +566,8 @@ function ExamPage() {
       });
       const data = await res.json();
       clearProgress();
+      markNameSubmitted(code, name); // NEW: lock this name out of retaking the exam
+      if (navigator.vibrate) navigator.vibrate([20, 40, 20, 40, 35]); // smooth success pattern
       setScore(data.score);
       setReviewData(data);
     } catch {
@@ -654,9 +696,8 @@ function ExamPage() {
 
   /* ══════════════════════════════════════════
      TAB WARNING BANNER
-     UPDATED: only 1 chance now — this banner always shows
-     the "auto submitting" message since a switch instantly
-     triggers submission.
+     UPDATED: shows a distinct look for the 1st (warning-only)
+     switch vs the 2nd (final, auto-submitting) switch.
      ══════════════════════════════════════════ */
   const TabWarningBanner = () =>
     showTabWarning ? (
@@ -677,7 +718,9 @@ function ExamPage() {
           style={{
             width: "90%",
             maxWidth: "420px",
-            background: "linear-gradient(135deg,#7f1d1d,#991b1b)",
+            background: tabWarningIsFinal
+              ? "linear-gradient(135deg,#7f1d1d,#991b1b)"
+              : "linear-gradient(135deg,#78350f,#b45309)",
             borderRadius: "24px",
             padding: "28px 22px",
             color: "white",
@@ -689,7 +732,9 @@ function ExamPage() {
             overflow: "hidden",
           }}
         >
-          <div style={{ fontSize: "clamp(34px,8vw,52px)", marginBottom: "14px" }}>🚫</div>
+          <div style={{ fontSize: "clamp(34px,8vw,52px)", marginBottom: "14px" }}>
+            {tabWarningIsFinal ? "🚫" : "⚠️"}
+          </div>
 
           <h2
             style={{
@@ -700,7 +745,7 @@ function ExamPage() {
               fontFamily: "'Sora', sans-serif",
             }}
           >
-            পরীক্ষা জমা হচ্ছে
+            {tabWarningIsFinal ? "পরীক্ষা জমা হচ্ছে" : "সতর্কবার্তা"}
           </h2>
 
           <div
