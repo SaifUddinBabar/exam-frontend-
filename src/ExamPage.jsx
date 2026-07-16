@@ -93,6 +93,9 @@ function ExamPage() {
   const [submitted, setSubmitted] = useState(false);
   const [timeLeft, setTimeLeft] = useState(null);
 
+  // ── NEW: Gate state — exam can't start without name & roll ──
+  const [examStarted, setExamStarted] = useState(false);
+
   // Security states
   const [blocked, setBlocked] = useState(false);
   const [blurContent, setBlurContent] = useState(false);
@@ -422,6 +425,8 @@ function ExamPage() {
             if (progress.name) setName(progress.name);
             if (progress.roll) setRoll(progress.roll);
             if (progress.answers) setAnswers(progress.answers);
+            // ── NEW: If name & roll were already saved, exam was already started ──
+            if (progress.name && progress.roll) setExamStarted(true);
             setTimeLeft(
               progress.timeLeft > 0 ? progress.timeLeft : (data.duration || 0) * 60
             );
@@ -474,8 +479,24 @@ function ExamPage() {
 
   const timerColor = timeLeft !== null && timeLeft <= 60 ? "#ff4444" : "white";
 
-  const handleAnswer = (qid, option) => setAnswers({ ...answers, [qid]: option });
+  /* ── NEW: handleAnswer now vibrates + locks the answer once chosen ── */
+  const handleAnswer = (qid, option) => {
+    if (answers[qid]) return; // Already answered — locked, can't change
+    if (navigator.vibrate) navigator.vibrate(50); // Haptic feedback on selection
+    setAnswers((prev) => ({ ...prev, [qid]: option }));
+  };
+
   const clearProgress = () => localStorage.removeItem(getStorageKey(code));
+
+  /* ── NEW: Start exam only if name & roll are filled ── */
+  const handleStartExam = () => {
+    if (!name.trim() || !roll.trim()) {
+      alert("পরীক্ষা শুরু করতে অবশ্যই নাম ও রোল নম্বর দিতে হবে!");
+      return;
+    }
+    if (navigator.vibrate) navigator.vibrate(40);
+    setExamStarted(true);
+  };
 
   const submitExam = useCallback(async () => {
     if (submitted) return;
@@ -1067,8 +1088,30 @@ const TabWarningBanner = () =>
           </div>
         </div>
 
-        {/* Questions */}
-        {exam.questions.map((q, index) => (
+        {/* ── NEW: Start Exam Gate — must fill name & roll before continuing ── */}
+        {!examStarted && (
+          <div style={{ display: "flex", justifyContent: "center", marginBottom: 26 }}>
+            <button
+              onClick={handleStartExam}
+              style={{
+                padding: "17px 28px", border: "none", borderRadius: 18,
+                background: "linear-gradient(135deg,#2563eb,#7c3aed)",
+                color: "white", fontSize: 18, fontWeight: 700, cursor: "pointer",
+                width: "100%", maxWidth: 350,
+                boxShadow: "0 8px 28px rgba(37,99,235,0.35)",
+                fontFamily: "'Sora', sans-serif", letterSpacing: "0.3px",
+                transition: "transform 0.15s ease",
+              }}
+              onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-2px)"; }}
+              onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; }}
+            >
+              ✅ পরীক্ষা শুরু করুন
+            </button>
+          </div>
+        )}
+
+        {/* Questions — only visible after exam is started */}
+        {examStarted && exam.questions.map((q, index) => (
           <div key={q._id} style={{ background: "white", borderRadius: 22, padding: "20px 18px", marginBottom: 18, boxShadow: "0 2px 8px rgba(37,99,235,0.06), 0 8px 28px rgba(37,99,235,0.10)", border: "1px solid rgba(226,232,240,0.8)" }}>
             <div style={{ display: "inline-flex", alignItems: "center", background: "linear-gradient(135deg,#eff6ff,#f5f3ff)", borderRadius: 10, padding: "3px 12px", marginBottom: 10, border: "1px solid #e0e7ff" }}>
               <span style={{ fontSize: 12, fontWeight: 700, color: "#3730a3", fontFamily: "'Sora', sans-serif" }}>Q{index + 1}</span>
@@ -1082,18 +1125,22 @@ const TabWarningBanner = () =>
             <div style={{ display: "grid", gap: 12 }}>
               {q.options.map((opt, i) => {
                 const selected = answers[q._id] === opt;
+                const locked = !!answers[q._id]; // ── NEW: once any option chosen, question is locked ──
                 return (
                   <button
                     key={i}
                     className="option-btn"
                     onClick={() => handleAnswer(q._id, opt)}
+                    disabled={locked && !selected}
                     style={{
                       padding: "14px 18px", borderRadius: 14, textAlign: "left",
                       border: selected ? "2px solid #2563eb" : "1.5px solid #e2e8f0",
                       background: selected ? "linear-gradient(135deg,#eff6ff,#f5f3ff)" : "#f8fafc",
-                      cursor: "pointer", fontSize: "clamp(14px,2.5vw,19px)", fontWeight: selected ? 600 : 500,
+                      cursor: locked ? "not-allowed" : "pointer",
+                      fontSize: "clamp(14px,2.5vw,19px)", fontWeight: selected ? 600 : 500,
                       lineHeight: 1.6, width: "100%", wordBreak: "break-word",
                       color: selected ? "#1e40af" : "#334155",
+                      opacity: locked && !selected ? 0.55 : 1,
                       boxShadow: selected ? "0 4px 14px rgba(37,99,235,0.15)" : "none",
                       fontFamily: "'Hind Siliguri', 'Sora', sans-serif",
                     }}
@@ -1106,27 +1153,29 @@ const TabWarningBanner = () =>
           </div>
         ))}
 
-        {/* Submit */}
-        <div style={{ display: "flex", justifyContent: "center", marginTop: 30, marginBottom: 40 }}>
-          <button
-            onClick={submitExam}
-            disabled={submitted}
-            style={{
-              padding: "17px 28px", border: "none", borderRadius: 18,
-              background: submitted ? "#94a3b8" : "linear-gradient(135deg,#22c55e,#16a34a)",
-              color: "white", fontSize: 19, fontWeight: 700,
-              cursor: submitted ? "not-allowed" : "pointer",
-              width: "100%", maxWidth: 350,
-              boxShadow: submitted ? "none" : "0 8px 28px rgba(34,197,94,0.35)",
-              fontFamily: "'Sora', sans-serif", letterSpacing: "0.3px",
-              transition: "transform 0.15s ease",
-            }}
-            onMouseEnter={e => { if (!submitted) e.currentTarget.style.transform = "translateY(-2px)"; }}
-            onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; }}
-          >
-            {submitted ? "⏳ Submitting..." : "🚀 Submit Exam"}
-          </button>
-        </div>
+        {/* Submit — only visible after exam is started */}
+        {examStarted && (
+          <div style={{ display: "flex", justifyContent: "center", marginTop: 30, marginBottom: 40 }}>
+            <button
+              onClick={submitExam}
+              disabled={submitted}
+              style={{
+                padding: "17px 28px", border: "none", borderRadius: 18,
+                background: submitted ? "#94a3b8" : "linear-gradient(135deg,#22c55e,#16a34a)",
+                color: "white", fontSize: 19, fontWeight: 700,
+                cursor: submitted ? "not-allowed" : "pointer",
+                width: "100%", maxWidth: 350,
+                boxShadow: submitted ? "none" : "0 8px 28px rgba(34,197,94,0.35)",
+                fontFamily: "'Sora', sans-serif", letterSpacing: "0.3px",
+                transition: "transform 0.15s ease",
+              }}
+              onMouseEnter={e => { if (!submitted) e.currentTarget.style.transform = "translateY(-2px)"; }}
+              onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; }}
+            >
+              {submitted ? "⏳ Submitting..." : "🚀 Submit Exam"}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
