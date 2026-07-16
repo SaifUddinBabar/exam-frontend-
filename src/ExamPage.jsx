@@ -93,6 +93,11 @@ function ExamPage() {
   const [submitted, setSubmitted] = useState(false);
   const [timeLeft, setTimeLeft] = useState(null);
 
+  // ── NEW: absolute exam end timestamp (ms) — timer is now calculated from
+  // real wall-clock time instead of a plain countdown, so it never "pauses"
+  // when the tab/app is backgrounded and always reflects true elapsed time ──
+  const [examEndTime, setExamEndTime] = useState(null);
+
   // ── NEW: Gate state — exam can't start without name & roll ──
   const [examStarted, setExamStarted] = useState(false);
 
@@ -105,7 +110,7 @@ function ExamPage() {
   const blurTimeoutRef = useRef(null);
   const devToolsRef = useRef(false);
 
-  // ── NEW: Tab-switch warning state ──
+  // ── Tab-switch state (now only 1 chance — instant auto submit) ──
   const tabSwitchCountRef = useRef(0);
   const [tabWarningMsg, setTabWarningMsg] = useState("");
   const [showTabWarning, setShowTabWarning] = useState(false);
@@ -188,38 +193,24 @@ function ExamPage() {
   }, []);
 
   /* ══════════════════════════════════════════
-     NEW FEATURE 2 — Tab Switch Warning + Auto Submit
-     1st switch  → warning toast (no blur penalty)
-     2nd switch  → stern warning
-     3rd+ switch → auto submit immediately
+     FEATURE 2 — Tab/App Switch → INSTANT Auto Submit
+     UPDATED: only 1 chance now (previously 3).
+     The moment the student leaves the page/tab/app,
+     the exam is auto-submitted immediately.
      ══════════════════════════════════════════ */
   const autoSubmitRef = useRef(null); // store submitExam ref to avoid circular deps
 
   const handleTabSwitch = useCallback(() => {
     if (submitted) return;
-
+    if (tabSwitchCountRef.current >= 1) return; // already handled
     tabSwitchCountRef.current += 1;
-    const count = tabSwitchCountRef.current;
 
-    if (count === 1) {
-      setTabWarningMsg("⚠️ সতর্কতা ১/২: ট্যাব বা অ্যাপ পরিবর্তন করবেন না! আরও একবার করলে পরীক্ষা শেষ হয়ে যাবে।");
-      setShowTabWarning(true);
-      triggerBlurOnly("ট্যাব পরিবর্তন ধরা পড়েছে!", 4000);
-      setTimeout(() => setShowTabWarning(false), 5000);
-    } else if (count === 2) {
-      setTabWarningMsg("🚨 সতর্কতা ২/২: এটাই শেষ সুযোগ! পরেরবার ট্যাব/অ্যাপ পরিবর্তন করলে পরীক্ষা স্বয়ংক্রিয়ভাবে জমা হয়ে যাবে!");
-      setShowTabWarning(true);
-      triggerBlurOnly("শেষ সতর্কতা!", 5000);
-      setTimeout(() => setShowTabWarning(false), 6000);
-    } else {
-      // 3rd time → auto submit
-      setTabWarningMsg("❌ ৩বার ট্যাব পরিবর্তন! পরীক্ষা স্বয়ংক্রিয়ভাবে জমা হচ্ছে...");
-      setShowTabWarning(true);
-      triggerBlurOnly("Auto Submit হচ্ছে...", 6000);
-      setTimeout(() => {
-        if (autoSubmitRef.current) autoSubmitRef.current();
-      }, 1500);
-    }
+    setTabWarningMsg("❌ আপনি পরীক্ষা পেজ থেকে বের হয়ে গেছেন! পরীক্ষা স্বয়ংক্রিয়ভাবে জমা হচ্ছে...");
+    setShowTabWarning(true);
+    triggerBlurOnly("Auto Submit হচ্ছে...", 6000);
+    setTimeout(() => {
+      if (autoSubmitRef.current) autoSubmitRef.current();
+    }, 800);
   }, [submitted, triggerBlurOnly]);
 
   /* ══════════════════════════════════════════
@@ -283,7 +274,7 @@ function ExamPage() {
       window.location.reload();
     };
 
-    /* ── UPDATED: Visibility change now calls handleTabSwitch ── */
+    /* ── Visibility change now calls handleTabSwitch ── */
     const handleVisibilityChange = () => {
       if (document.hidden) {
         handleTabSwitch();
@@ -412,6 +403,8 @@ function ExamPage() {
 
   /* ══════════════════════════════════════════
      FETCH EXAM + RESTORE PROGRESS
+     UPDATED: derives/stores an absolute examEndTime so the
+     countdown is based on real elapsed wall-clock time.
      ══════════════════════════════════════════ */
   useEffect(() => {
     fetch(`${API}/api/exams/${code}`)
@@ -425,17 +418,26 @@ function ExamPage() {
             if (progress.name) setName(progress.name);
             if (progress.roll) setRoll(progress.roll);
             if (progress.answers) setAnswers(progress.answers);
-            // ── NEW: If name & roll were already saved, exam was already started ──
             if (progress.name && progress.roll) setExamStarted(true);
-            setTimeLeft(
-              progress.timeLeft > 0 ? progress.timeLeft : (data.duration || 0) * 60
-            );
+
+            let endTime = progress.examEndTime;
+            if (!endTime) {
+              // Backward compatibility with older saved progress (no examEndTime yet)
+              const remaining = progress.timeLeft > 0 ? progress.timeLeft : (data.duration || 0) * 60;
+              endTime = Date.now() + remaining * 1000;
+            }
+            setExamEndTime(endTime);
+            setTimeLeft(Math.max(0, Math.round((endTime - Date.now()) / 1000)));
           } catch {
             localStorage.removeItem(getStorageKey(code));
-            if (data.duration) setTimeLeft(data.duration * 60);
+            const endTime = Date.now() + (data.duration || 0) * 60 * 1000;
+            setExamEndTime(endTime);
+            setTimeLeft((data.duration || 0) * 60);
           }
         } else {
-          if (data.duration) setTimeLeft(data.duration * 60);
+          const endTime = Date.now() + (data.duration || 0) * 60 * 1000;
+          setExamEndTime(endTime);
+          setTimeLeft((data.duration || 0) * 60);
         }
       });
   }, [code]);
@@ -445,17 +447,31 @@ function ExamPage() {
     if (!exam || submitted) return;
     localStorage.setItem(
       getStorageKey(code),
-      JSON.stringify({ answers, name, roll, timeLeft })
+      JSON.stringify({ answers, name, roll, timeLeft, examEndTime })
     );
-  }, [answers, name, roll, timeLeft, exam, submitted, code]);
+  }, [answers, name, roll, timeLeft, examEndTime, exam, submitted, code]);
 
-  /* Timer */
+  /* ══════════════════════════════════════════
+     Timer — UPDATED: now computed from the absolute
+     examEndTime timestamp instead of a plain decrement,
+     so it stays perfectly continuous even if the tab/app
+     was backgrounded, throttled, or closed and reopened.
+     ══════════════════════════════════════════ */
   useEffect(() => {
-    if (timeLeft === null || submitted) return;
-    if (timeLeft <= 0) { autoSubmitByTimer(); return; }
-    const timer = setInterval(() => setTimeLeft((p) => p - 1), 1000);
+    if (examEndTime === null || submitted) return;
+
+    const tick = () => {
+      const remaining = Math.max(0, Math.round((examEndTime - Date.now()) / 1000));
+      setTimeLeft(remaining);
+      if (remaining <= 0) {
+        autoSubmitByTimer();
+      }
+    };
+
+    tick(); // immediate correction for any time passed while away
+    const timer = setInterval(tick, 1000);
     return () => clearInterval(timer);
-  }, [timeLeft, submitted]);
+  }, [examEndTime, submitted]);
 
   /* Toast */
   useEffect(() => {
@@ -479,7 +495,7 @@ function ExamPage() {
 
   const timerColor = timeLeft !== null && timeLeft <= 60 ? "#ff4444" : "white";
 
-  /* ── NEW: handleAnswer now vibrates + locks the answer once chosen ── */
+  /* ── handleAnswer vibrates + locks the answer once chosen ── */
   const handleAnswer = (qid, option) => {
     if (answers[qid]) return; // Already answered — locked, can't change
     if (navigator.vibrate) navigator.vibrate(50); // Haptic feedback on selection
@@ -488,7 +504,7 @@ function ExamPage() {
 
   const clearProgress = () => localStorage.removeItem(getStorageKey(code));
 
-  /* ── NEW: Start exam only if name & roll are filled ── */
+  /* ── Start exam only if name & roll are filled ── */
   const handleStartExam = () => {
     if (!name.trim() || !roll.trim()) {
       alert("পরীক্ষা শুরু করতে অবশ্যই নাম ও রোল নম্বর দিতে হবে!");
@@ -637,212 +653,68 @@ function ExamPage() {
     ) : null;
 
   /* ══════════════════════════════════════════
-     NEW: TAB WARNING BANNER
+     TAB WARNING BANNER
+     UPDATED: only 1 chance now — this banner always shows
+     the "auto submitting" message since a switch instantly
+     triggers submission.
      ══════════════════════════════════════════ */
-  /* ══════════════════════════════════════════
-   TAB WARNING BANNER (CENTERED + RESPONSIVE)
-   ══════════════════════════════════════════ */
-const TabWarningBanner = () =>
-  showTabWarning ? (
-    <div
-      style={{
-        position: "fixed",
-        inset: 0,
-        zIndex: 999999,
-
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-
-        padding: "20px",
-        background: "rgba(0,0,0,0.15)",
-        backdropFilter: "blur(6px)",
-      }}
-    >
+  const TabWarningBanner = () =>
+    showTabWarning ? (
       <div
         style={{
-          width: "90%",
-          maxWidth: "420px",
-
-          background:
-            tabSwitchCountRef.current >= 3
-              ? "linear-gradient(135deg,#7f1d1d,#991b1b)"
-              : tabSwitchCountRef.current === 2
-              ? "linear-gradient(135deg,#92400e,#b45309)"
-              : "linear-gradient(135deg,#1e3a8a,#1d4ed8)",
-
-          borderRadius: "24px",
-          padding: "28px 22px",
-
-          color: "white",
-          textAlign: "center",
-
-          boxShadow:
-            "0 30px 80px rgba(0,0,0,0.45), 0 8px 30px rgba(0,0,0,0.25)",
-
-          border: "1px solid rgba(255,255,255,0.16)",
-          backdropFilter: "blur(18px)",
-
-          animation:
-            "scaleIn 0.35s cubic-bezier(0.34,1.56,0.64,1)",
-
-          overflow: "hidden",
+          position: "fixed",
+          inset: 0,
+          zIndex: 999999,
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          padding: "20px",
+          background: "rgba(0,0,0,0.15)",
+          backdropFilter: "blur(6px)",
         }}
       >
-        {/* Icon */}
         <div
           style={{
-            fontSize: "clamp(34px,8vw,52px)",
-            marginBottom: "14px",
+            width: "90%",
+            maxWidth: "420px",
+            background: "linear-gradient(135deg,#7f1d1d,#991b1b)",
+            borderRadius: "24px",
+            padding: "28px 22px",
+            color: "white",
+            textAlign: "center",
+            boxShadow: "0 30px 80px rgba(0,0,0,0.45), 0 8px 30px rgba(0,0,0,0.25)",
+            border: "1px solid rgba(255,255,255,0.16)",
+            backdropFilter: "blur(18px)",
+            animation: "scaleIn 0.35s cubic-bezier(0.34,1.56,0.64,1)",
+            overflow: "hidden",
           }}
         >
-          {tabSwitchCountRef.current >= 3
-            ? "🚫"
-            : tabSwitchCountRef.current === 2
-            ? "⚠️"
-            : "🔔"}
-        </div>
+          <div style={{ fontSize: "clamp(34px,8vw,52px)", marginBottom: "14px" }}>🚫</div>
 
-        {/* Title */}
-        <h2
-          style={{
-            margin: "0 0 12px",
-            fontSize: "clamp(18px,5vw,24px)",
-            fontWeight: 800,
-            lineHeight: 1.3,
-            fontFamily: "'Sora', sans-serif",
-          }}
-        >
-          {tabSwitchCountRef.current >= 3
-            ? "পরীক্ষা জমা হচ্ছে"
-            : tabSwitchCountRef.current === 2
-            ? "শেষ সতর্কতা!"
-            : "সতর্কতা"}
-        </h2>
-
-        {/* Message */}
-        <div
-          style={{
-            fontSize: "clamp(14px,4vw,18px)",
-            fontWeight: 500,
-            lineHeight: 1.8,
-            opacity: 0.96,
-            fontFamily: "'Hind Siliguri', sans-serif",
-          }}
-        >
-          {tabWarningMsg}
-        </div>
-
-        {/* Counter */}
-        {tabSwitchCountRef.current < 3 && (
-          <div
+          <h2
             style={{
-              marginTop: "18px",
-              display: "inline-flex",
-              alignItems: "center",
-              justifyContent: "center",
-
-              padding: "10px 18px",
-              borderRadius: "999px",
-
-              background: "rgba(255,255,255,0.14)",
-              border: "1px solid rgba(255,255,255,0.18)",
-
-              fontSize: "13px",
-              fontWeight: 600,
-              letterSpacing: "0.3px",
-              color: "rgba(255,255,255,0.95)",
+              margin: "0 0 12px",
+              fontSize: "clamp(18px,5vw,24px)",
+              fontWeight: 800,
+              lineHeight: 1.3,
               fontFamily: "'Sora', sans-serif",
             }}
           >
-            ⚠️ ট্যাব পরিবর্তন সংখ্যা:{" "}
-            {tabSwitchCountRef.current}/2
+            পরীক্ষা জমা হচ্ছে
+          </h2>
+
+          <div
+            style={{
+              fontSize: "clamp(14px,4vw,18px)",
+              fontWeight: 500,
+              lineHeight: 1.8,
+              opacity: 0.96,
+              fontFamily: "'Hind Siliguri', sans-serif",
+            }}
+          >
+            {tabWarningMsg}
           </div>
-        )}
-      </div>
-    </div>
-  ) : null;
-    showTabWarning ? (
-      <div style={{
-        position: "fixed", top: 64, left: "50%",
-        transform: "translateX(-50%)",
-        zIndex: 99990,
-        width: "calc(100% - 32px)", maxWidth: 560,
-        animation: "warningSlide 0.4s cubic-bezier(0.34,1.56,0.64,1) forwards",
-      }}>
-       <div
-  style={{
-    position: "fixed",
-    top: "50%",
-    left: "50%",
-    transform: "translate(-50%, -50%)",
-
-    width: "90%",
-    maxWidth: "400px",
-    zIndex: 999999,
-
-    background:
-      tabSwitchCountRef.current >= 3
-        ? "linear-gradient(135deg,#7f1d1d,#991b1b)"
-        : tabSwitchCountRef.current === 2
-        ? "linear-gradient(135deg,#92400e,#b45309)"
-        : "linear-gradient(135deg,#1e3a8a,#1d4ed8)",
-
-    borderRadius: "22px",
-    padding: "24px 22px",
-
-    color: "white",
-    textAlign: "center",
-
-    fontSize: "clamp(15px,4vw,18px)",
-    fontWeight: 600,
-    lineHeight: 1.7,
-
-    boxShadow:
-      "0 25px 60px rgba(0,0,0,0.35), 0 8px 25px rgba(0,0,0,0.2)",
-
-    border: "1px solid rgba(255,255,255,0.15)",
-    backdropFilter: "blur(18px)",
-
-    animation:
-      "scaleIn 0.35s cubic-bezier(0.34,1.56,0.64,1)",
-  }}
->
-  <div
-    style={{
-      fontSize: "clamp(22px,6vw,32px)",
-      marginBottom: "12px",
-    }}
-  >
-    {tabSwitchCountRef.current >= 3
-      ? "🚫"
-      : tabSwitchCountRef.current === 2
-      ? "⚠️"
-      : "🔔"}
-  </div>
-
-  <div>{tabWarningMsg}</div>
-
-  {tabSwitchCountRef.current < 3 && (
-    <div
-      style={{
-        marginTop: "14px",
-        padding: "8px 14px",
-        borderRadius: "999px",
-
-        background: "rgba(255,255,255,0.14)",
-        border: "1px solid rgba(255,255,255,0.16)",
-
-        fontSize: "13px",
-        fontWeight: 500,
-        opacity: 0.92,
-        display: "inline-block",
-      }}
-    >
-      ট্যাব পরিবর্তন সংখ্যা: {tabSwitchCountRef.current}/2
-    </div>
-  )}
-</div>
+        </div>
       </div>
     ) : null;
 
@@ -1030,10 +902,10 @@ const TabWarningBanner = () =>
       <BlockedOverlay />
       <WatermarkOverlay name={name} roll={roll} />
 
-      {/* ── NEW: Tab Warning Banner ── */}
+      {/* Tab Warning Banner */}
       <TabWarningBanner />
 
-      {/* ── SHARED Blur Overlay ── */}
+      {/* SHARED Blur Overlay */}
       <BlurOverlay />
 
       {/* Sticky Timer */}
@@ -1088,7 +960,7 @@ const TabWarningBanner = () =>
           </div>
         </div>
 
-        {/* ── NEW: Start Exam Gate — must fill name & roll before continuing ── */}
+        {/* Start Exam Gate — must fill name & roll before continuing */}
         {!examStarted && (
           <div style={{ display: "flex", justifyContent: "center", marginBottom: 26 }}>
             <button
@@ -1125,7 +997,7 @@ const TabWarningBanner = () =>
             <div style={{ display: "grid", gap: 12 }}>
               {q.options.map((opt, i) => {
                 const selected = answers[q._id] === opt;
-                const locked = !!answers[q._id]; // ── NEW: once any option chosen, question is locked ──
+                const locked = !!answers[q._id]; // once any option chosen, question is locked
                 return (
                   <button
                     key={i}
