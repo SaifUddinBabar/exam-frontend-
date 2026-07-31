@@ -151,6 +151,13 @@ const GlobalStyles = () => (
     }
     .btn-danger:hover { background: #fee2e2; border-color: rgba(220,38,38,0.35); transform: translateY(-1px); }
 
+    .btn-purple {
+      background: linear-gradient(135deg,#7c3aed,#5b21b6); color: #fff;
+      box-shadow: 0 2px 10px rgba(124,58,237,0.3), inset 0 1px 0 rgba(255,255,255,0.12);
+    }
+    .btn-purple:hover { box-shadow: 0 4px 18px rgba(124,58,237,0.4); transform: translateY(-1px); }
+    .btn-purple:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
     .btn-sm { padding: 7px 14px; font-size: 12.5px; border-radius: 9px; }
     .btn-lg { padding: 13px 28px; font-size: 15px; border-radius: 14px; }
 
@@ -177,6 +184,7 @@ const GlobalStyles = () => (
     .badge-red    { background: var(--red-bg); color: var(--red); border: 1px solid rgba(220,38,38,0.15); }
     .badge-amber  { background: var(--amber-bg); color: var(--amber); border: 1px solid rgba(217,119,6,0.2); }
     .badge-slate  { background: var(--bg-2); color: var(--ink-3); border: 1px solid var(--line-2); }
+    .badge-purple { background: #f5f3ff; color: #6d28d9; border: 1px solid rgba(124,58,237,0.2); }
 
     /* ── Tab ── */
     .tab-btn {
@@ -373,7 +381,7 @@ function Builder() {
   const [boardYear,    setBoardYear]    = useState("");
   const [boardName,    setBoardName]    = useState("");
   const [topic,        setTopic]        = useState("");
-const [topicList,    setTopicList]    = useState([]);
+  const [topicList,    setTopicList]    = useState([]);
   const [pdfCompact,   setPdfCompact]   = useState(false);
   const [examData,     setExamData]     = useState({ academy:"", title:"", duration:"60", subject:"ICT", marks:"25" });
   const [examList,     setExamList]     = useState([]);
@@ -381,6 +389,10 @@ const [topicList,    setTopicList]    = useState([]);
   const [loadingExams, setLoadingExams] = useState(false);
   const [activeTab,    setActiveTab]    = useState("builder");
   const [creating,     setCreating]     = useState(false);
+
+  // ── Auto Generate Model Test ──
+  const [autoGenerating, setAutoGenerating] = useState(false);
+  const [lastBreakdown,  setLastBreakdown]  = useState(null);
 
   const progress = Math.min(100, (selected.length / Math.max(1, Number(examData.marks))) * 100);
 
@@ -397,13 +409,14 @@ const [topicList,    setTopicList]    = useState([]);
     finally { setLoadingExams(false); }
   };
   useEffect(() => { if (activeTab === "exams") fetchExamList(); }, [activeTab]);
+
   useEffect(() => {
-  if (!chapter || chapter === "Board Questions") { setTopicList([]); setTopic(""); return; }
-  fetch(`${API}/api/questions/topics?subject=${examData.subject}&chapter=${encodeURIComponent(chapter)}`)
-    .then(r => r.json())
-    .then(setTopicList)
-    .catch(() => setTopicList([]));
-}, [chapter, examData.subject]);
+    if (!chapter || chapter === "Board Questions") { setTopicList([]); setTopic(""); return; }
+    fetch(`${API}/api/questions/topics?subject=${examData.subject}&chapter=${encodeURIComponent(chapter)}`)
+      .then(r => r.json())
+      .then(setTopicList)
+      .catch(() => setTopicList([]));
+  }, [chapter, examData.subject]);
 
   const deleteExam = async (code) => {
     if (!window.confirm("এই exam এবং সব submissions delete হয়ে যাবে। নিশ্চিত?")) return;
@@ -444,8 +457,6 @@ const [topicList,    setTopicList]    = useState([]);
       }).catch(() => setQuestions([]));
   }, [chapter, boardYear, boardName, topic, examData.subject]);
 
-  
-
   const handleChange  = (e) => setExamData({ ...examData, [e.target.name]: e.target.value });
   const toggleSelect  = (id) => {
     if (selected.includes(id)) { setSelected(p => p.filter(x => x !== id)); return; }
@@ -454,6 +465,57 @@ const [topicList,    setTopicList]    = useState([]);
   };
   const selectAll   = () => { setSelected(questions.map(q => q._id)); if (chapter==="Board Questions") setExamData(p=>({...p,marks:String(questions.length)})); };
   const deselectAll = () => setSelected([]);
+
+  // ── Auto Generate Model Test (fixed 40% easy / 40% medium / 20% hard) ──
+  const autoGenerateModelTest = async () => {
+    if (!chapter) return alert("আগে অধ্যায় নির্বাচন করুন");
+    if (chapter === "Board Questions") return alert("Board Questions এর জন্য Auto Generate প্রযোজ্য নয়");
+    if (!examData.marks || Number(examData.marks) <= 0) return alert("প্রশ্ন সংখ্যা ঠিকভাবে দিন");
+
+    setAutoGenerating(true);
+    setLastBreakdown(null);
+    try {
+      const p = new URLSearchParams();
+      p.append("subject", examData.subject);
+      p.append("chapter", chapter);
+      p.append("total", examData.marks);
+
+      const res = await fetch(`${API}/api/questions/auto-generate?${p}`);
+      const data = await res.json();
+
+      if (!res.ok) {
+        alert(data.message || "Auto Generate ব্যর্থ হয়েছে");
+        return;
+      }
+
+      const generated = data.questions || [];
+      if (generated.length === 0) {
+        alert("এই অধ্যায়ে যথেষ্ট প্রশ্ন পাওয়া যায়নি। আরও প্রশ্ন যোগ করুন।");
+        return;
+      }
+
+      setAllQuestions(prev => {
+        const merged = [...prev];
+        generated.forEach(x => { if (!merged.find(m => m._id === x._id)) merged.push(x); });
+        return merged;
+      });
+      setQuestions(prev => {
+        const merged = [...prev];
+        generated.forEach(x => { if (!merged.find(m => m._id === x._id)) merged.push(x); });
+        return merged;
+      });
+      setSelected(generated.map(q => q._id));
+      setLastBreakdown(data.breakdown);
+
+      if (data.breakdown && data.breakdown.found.easy + data.breakdown.found.medium + data.breakdown.found.hard < data.breakdown.total) {
+        // partial shortage handled by backend fill, just inform if it couldn't fully match
+      }
+    } catch {
+      alert("Auto Generate ব্যর্থ হয়েছে");
+    } finally {
+      setAutoGenerating(false);
+    }
+  };
 
   const createExam = async () => {
     if (!examData.academy) return alert("একাডেমির নাম লিখুন");
@@ -644,7 +706,7 @@ const downloadPDF = async () => {
               <div className="au d4">
                 <label className="field-label">অধ্যায় নির্বাচন</label>
                 <select className="p-input" value={chapter}
-                  onChange={e => { setChapter(e.target.value); setSelected([]); setAllQuestions([]); setBoardYear(""); setBoardName(""); setTopic(""); }}>
+                  onChange={e => { setChapter(e.target.value); setSelected([]); setAllQuestions([]); setBoardYear(""); setBoardName(""); setTopic(""); setLastBreakdown(null); }}>
                   <option value="">— অধ্যায় বেছে নিন —</option>
                   <option value="Introduction to ICT">Chapter 1 — ICT Introduction</option>
                   <option value="Communication Systems">Chapter 2 — Communication Systems</option>
@@ -699,6 +761,34 @@ const downloadPDF = async () => {
               </div>
 
             </div>
+
+            {/* ── Auto Generate Model Test ── */}
+            {chapter && chapter !== "Board Questions" && (
+              <div className="au" style={{ marginTop:28, paddingTop:24, borderTop:"1px solid var(--line)" }}>
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", flexWrap:"wrap", gap:14 }}>
+                  <div>
+                    <div style={{ fontFamily:"'Fraunces', Georgia, serif", fontSize:16, fontWeight:500, color:"var(--ink)", display:"flex", alignItems:"center", gap:8 }}>
+                      ⚡ Auto Generate Model Test
+                    </div>
+                    <div style={{ fontSize:12.5, color:"var(--ink-4)", marginTop:3 }}>
+                      এক ক্লিকে ডাটাবেজ থেকে র‍্যান্ডম প্রশ্ন — 40% Easy · 40% Medium · 20% Hard
+                    </div>
+                  </div>
+                  <button className="btn btn-purple btn-lg" onClick={autoGenerateModelTest} disabled={autoGenerating}>
+                    {autoGenerating ? "⏳ তৈরি হচ্ছে…" : "⚡ Auto Generate"}
+                  </button>
+                </div>
+
+                {lastBreakdown && (
+                  <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginTop:16 }}>
+                    <span className="badge badge-green">😊 Easy: {lastBreakdown.found.easy}/{lastBreakdown.requested.easy}</span>
+                    <span className="badge badge-amber">😐 Medium: {lastBreakdown.found.medium}/{lastBreakdown.requested.medium}</span>
+                    <span className="badge badge-red">🔥 Hard: {lastBreakdown.found.hard}/{lastBreakdown.requested.hard}</span>
+                    <span className="badge badge-purple">✓ মোট পাওয়া গেছে: {lastBreakdown.total}</span>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* ── Question header ── */}
@@ -739,6 +829,13 @@ const downloadPDF = async () => {
                     </div>
 
                     <div style={{ flex:1 }}>
+                      <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:8 }}>
+                        {q.difficulty && (
+                          <span className={`badge ${q.difficulty==="easy"?"badge-green":q.difficulty==="hard"?"badge-red":"badge-amber"}`}>
+                            {q.difficulty==="easy" ? "😊 Easy" : q.difficulty==="hard" ? "🔥 Hard" : "😐 Medium"}
+                          </span>
+                        )}
+                      </div>
                       <p style={{ color:"var(--ink)", fontSize:15, fontWeight:500, lineHeight:1.65, marginBottom:13, margin:"0 0 13px" }}>
                         {q.question}
                       </p>
