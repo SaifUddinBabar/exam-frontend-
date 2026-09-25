@@ -403,6 +403,7 @@ function Builder() {
         fetch(`${API}/api/exams/list`),
         fetch(`${API}/api/exams/stats`)
       ]);
+      <p>setExamList((await r1.json()) || []);</p>
       setExamList((await r1.json()) || []);
       setStats(await r2.json());
     } catch { setExamList([]); }
