@@ -1,16 +1,16 @@
-const downloadResult = async () => {
-  const html2pdf = (await import("html2pdf.js")).default;
-  const element = document.getElementById("result-sheet");
+import { useEffect, useState, useRef, useCallback } from "react";
+import { useParams } from "react-router-dom";
+import ResultPDF from "./ResultPdf";
 
-  if (!element) return;
+const API = import.meta.env.VITE_API_URL;
 
-  element.classList.add("pdf-mode");
+const getStorageKey = (code) => `exam_progress_${code}`;
 
-  // Give the browser time to apply PDF styles
-  await new Promise((resolve) => setTimeout(resolve, 300));
+// ── NEW: tracks which names have already completed this exam (per exam code) ──
+const getCompletedKey = (code) => `exam_completed_${code}`;
 
+const isNameAlreadySubmitted = (code, name) => {
   try {
-<<<<<<< HEAD
     const list = JSON.parse(localStorage.getItem(getCompletedKey(code)) || "[]");
     return list.some((n) => n.trim().toLowerCase() === name.trim().toLowerCase());
   } catch {
@@ -601,89 +601,31 @@ function ExamPage() {
   };
 
   const downloadResult = async () => {
-    const html2pdf = (await import("html2pdf.js")).default;
-
-    const element = document.getElementById("result-sheet");
-
-    if (!element) {
-      alert("Result sheet পাওয়া যায়নি!");
-      return;
-    }
-
-    // Hide overlays, toast and buttons while generating the PDF.
-    const pdfHideElements = document.querySelectorAll(".pdf-hide");
-    pdfHideElements.forEach((el) => {
-      el.style.display = "none";
-    });
-
-    // Put the result into a clean PDF state.
-    element.classList.add("pdf-mode");
-    document.body.classList.add("pdf-generating");
-
-    // Disable result-question animations/transforms/filters.
-    const reviewQuestions = document.querySelectorAll(".review-question");
-    reviewQuestions.forEach((el) => {
-      el.style.animation = "none";
-      el.style.transition = "none";
-      el.style.transform = "none";
-      el.style.filter = "none";
-      el.style.opacity = "1";
-    });
-
-    // Give the browser time to apply the PDF styles before capture.
-    await new Promise((resolve) => setTimeout(resolve, 500));
-
     try {
-      await html2pdf()
-        .set({
-          margin: [8, 8, 8, 8],
-          filename: `${exam.title || "exam-result"}.pdf`,
-          image: {
-            type: "jpeg",
-            quality: 0.98,
-          },
-          html2canvas: {
-            scale: 2,
-            useCORS: true,
-            allowTaint: false,
-            backgroundColor: "#f8fafc",
-            scrollX: 0,
-            scrollY: 0,
-            logging: false,
-          },
-          jsPDF: {
-            unit: "mm",
-            format: "a4",
-            orientation: "portrait",
-            compress: true,
-          },
-          // Do NOT use avoid-all here. It can create large blank pages
-          // when a long result contains many question cards.
-          pagebreak: {
-            mode: ["css", "legacy"],
-          },
-        })
-        .from(element)
-        .save();
+      const { pdf } = await import("@react-pdf/renderer");
+
+      const blob = await pdf(
+        <ResultPDF
+          exam={exam}
+          reviewData={reviewData}
+          score={score}
+        />
+      ).toBlob();
+
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+
+      link.href = url;
+      link.download = `${exam?.title || "exam-result"}.pdf`;
+
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      URL.revokeObjectURL(url);
     } catch (error) {
       console.error("PDF generation failed:", error);
       alert("PDF তৈরি করা যায়নি। আবার চেষ্টা করুন।");
-    } finally {
-      // Restore the normal result page.
-      pdfHideElements.forEach((el) => {
-        el.style.display = "";
-      });
-
-      reviewQuestions.forEach((el) => {
-        el.style.animation = "";
-        el.style.transition = "";
-        el.style.transform = "";
-        el.style.filter = "";
-        el.style.opacity = "";
-      });
-
-      document.body.classList.remove("pdf-generating");
-      element.classList.remove("pdf-mode");
     }
   };
 
@@ -728,45 +670,8 @@ function ExamPage() {
       filter: blur(0px);
       transition: filter 0.4s ease;
     }
-    .pdf-mode {
-      background: #f8fafc !important;
-      padding: 20px !important;
-      filter: none !important;
-      opacity: 1 !important;
-      transform: none !important;
-    }
-
-    /* Elements that must not appear while the PDF is being generated. */
-    .pdf-generating .pdf-hide {
-      display: none !important;
-    }
-
-    /* Keep result cards clean while html2canvas captures them. */
-    .pdf-mode .review-question {
-      animation: none !important;
-      transition: none !important;
-      transform: none !important;
-      filter: none !important;
-      opacity: 1 !important;
-      break-inside: auto !important;
-      page-break-inside: auto !important;
-    }
-
-    /* Stop all UI animations during PDF generation. */
-    .pdf-generating,
-    .pdf-generating * {
-      animation: none !important;
-      transition: none !important;
-      filter: none !important;
-    }
-
-    .pdf-mode img {
-      max-width: 300px !important;
-      height: auto !important;
-      filter: none !important;
-      opacity: 1 !important;
-      transform: none !important;
-    }
+    .pdf-mode { background: #f8fafc !important; padding: 20px !important; }
+    .pdf-mode .question { page-break-inside: avoid !important; break-inside: avoid !important; }
 
     @keyframes timerPulse   { 0%,100% { transform: scale(1); } 50% { transform: scale(1.06); } }
     @keyframes toastIn      { 0%   { transform: translateX(-50%) translateY(100px); opacity: 0; } 100% { transform: translateX(-50%) translateY(0); opacity: 1; } }
@@ -920,18 +825,13 @@ function ExamPage() {
         padding: "14px", fontFamily: "'Sora', 'Hind Siliguri', sans-serif",
       }}>
         <style>{globalStyles}</style>
-
-        <div className="pdf-hide">
-          <BlockedOverlay />
-          <WatermarkOverlay name={name} roll={roll} />
-          <BlurOverlay />
-        </div>
+        <BlockedOverlay />
+        <WatermarkOverlay name={name} roll={roll} />
+        <BlurOverlay />
 
         {showToast && (
-          <div
-            className="pdf-hide"
-            style={{
-              position: "fixed", bottom: 28, left: "50%",
+          <div style={{
+            position: "fixed", bottom: 28, left: "50%",
             transform: "translateX(-50%)", zIndex: 99998,
             width: "calc(100% - 32px)", maxWidth: 540,
             animation: toastVisible
@@ -990,10 +890,7 @@ function ExamPage() {
             </div>
           </div>
 
-          <div
-            className="pdf-hide"
-            style={{ display: "flex", justifyContent: "center", marginBottom: 28 }}
-          >
+          <div style={{ display: "flex", justifyContent: "center", marginBottom: 28 }}>
             <button
               onClick={downloadResult}
               style={{
@@ -1053,46 +950,177 @@ function ExamPage() {
         </div>
       </div>
     );
-=======
-    await html2pdf()
-      .set({
-        margin: [5, 5, 5, 5],
-
-        filename: `${exam.title || "exam-result"}.pdf`,
-
-        image: {
-          type: "jpeg",
-          quality: 0.98,
-        },
-
-        html2canvas: {
-          scale: 2,
-          useCORS: true,
-          backgroundColor: "#f8fafc",
-          scrollX: 0,
-          scrollY: 0,
-          windowWidth: document.documentElement.scrollWidth,
-        },
-
-        jsPDF: {
-          unit: "mm",
-          format: "a4",
-          orientation: "portrait",
-        },
-
-        // IMPORTANT:
-        // Avoid "avoid-all" because it can create unnecessary blank pages.
-        pagebreak: {
-          mode: ["css", "legacy"],
-          before: ".pdf-page-break",
-          avoid: [".review-question"],
-        },
-      })
-      .from(element)
-      .save();
-
-  } finally {
-    element.classList.remove("pdf-mode");
->>>>>>> c1ef7e0 (make pdf clear)
   }
-};
+
+  /* ══════════════════════════════════════════
+     LOADING
+     ══════════════════════════════════════════ */
+  if (!exam) {
+    return (
+      <div style={{ minHeight: "100vh", display: "flex", justifyContent: "center", alignItems: "center", fontSize: 28, fontWeight: "bold", background: "linear-gradient(135deg,#0f172a,#1e293b)", color: "white", fontFamily: "'Sora', sans-serif" }}>
+        Loading...
+      </div>
+    );
+  }
+
+  /* ══════════════════════════════════════════
+     EXAM PAGE
+     ══════════════════════════════════════════ */
+  return (
+    <div style={{ minHeight: "100vh", background: "linear-gradient(160deg,#0f172a 0%,#1e293b 100%)", padding: 14, fontFamily: "'Sora', 'Hind Siliguri', sans-serif" }}>
+      <style>{globalStyles}</style>
+      <BlockedOverlay />
+      <WatermarkOverlay name={name} roll={roll} />
+
+      {/* Tab Warning Banner */}
+      <TabWarningBanner />
+
+      {/* SHARED Blur Overlay */}
+      <BlurOverlay />
+
+      {/* Sticky Timer */}
+      <div style={{
+        position: "fixed", top: 0, left: 0, right: 0, zIndex: 1000,
+        display: "flex", justifyContent: "center", padding: "10px 16px",
+        background: "rgba(15,23,42,0.88)", backdropFilter: "blur(14px)",
+        borderBottom: "1px solid rgba(255,255,255,0.07)",
+        boxShadow: "0 4px 24px rgba(0,0,0,0.4)",
+      }}>
+        <div style={{
+          display: "flex", alignItems: "center", gap: 10,
+          background: timeLeft !== null && timeLeft <= 60 ? "rgba(255,68,68,0.12)" : "rgba(37,99,235,0.18)",
+          border: `1.5px solid ${timerColor}`,
+          borderRadius: 50, padding: "8px 26px",
+          animation: timeLeft !== null && timeLeft <= 60 ? "timerPulse 1s infinite" : "none",
+        }}>
+          <span style={{ fontSize: 18 }}>⏰</span>
+          <span style={{ fontSize: "clamp(16px,3vw,22px)", fontWeight: 800, color: timerColor, letterSpacing: "2.5px", fontFamily: "monospace" }}>
+            {timeLeft !== null ? formatTime() : "--:--"}
+          </span>
+        </div>
+      </div>
+
+      <div style={{ maxWidth: 860, margin: "auto", paddingTop: 66 }}>
+
+        {/* Exam title */}
+        <div style={{ background: "linear-gradient(135deg,#2563eb,#7c3aed)", borderRadius: 24, padding: "22px 20px", color: "white", marginBottom: 22, boxShadow: "0 12px 40px rgba(37,99,235,0.3)" }}>
+          <h1 style={{ fontSize: "clamp(22px,4.5vw,46px)", margin: 0, lineHeight: 1.25, fontWeight: 800, letterSpacing: "-0.3px" }}>
+            📝 {exam.title}
+          </h1>
+        </div>
+
+        {/* User info */}
+        <div style={{ background: "white", borderRadius: 20, padding: "18px 16px", marginBottom: 22, boxShadow: "0 2px 8px rgba(37,99,235,0.06), 0 8px 28px rgba(37,99,235,0.10)", border: "1px solid rgba(226,232,240,0.8)" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(200px,1fr))", gap: 14 }}>
+            {[
+              { placeholder: "Your Name", value: name, onChange: (e) => setName(e.target.value) },
+              { placeholder: "Your Roll", value: roll, onChange: (e) => setRoll(e.target.value) },
+            ].map((inp, i) => (
+              <input
+                key={i}
+                type="text"
+                placeholder={inp.placeholder}
+                value={inp.value}
+                onChange={inp.onChange}
+                style={{ padding: "14px 16px", borderRadius: 14, border: "1.5px solid #e2e8f0", fontSize: 15, width: "100%", outline: "none", fontFamily: "'Hind Siliguri', 'Sora', sans-serif", color: "#0f172a", background: "#f8fafc", transition: "border-color 0.2s" }}
+                onFocus={e => e.target.style.borderColor = "#2563eb"}
+                onBlur={e => e.target.style.borderColor = "#e2e8f0"}
+              />
+            ))}
+          </div>
+        </div>
+
+        {/* Start Exam Gate — must fill name & roll before continuing */}
+        {!examStarted && (
+          <div style={{ display: "flex", justifyContent: "center", marginBottom: 26 }}>
+            <button
+              onClick={handleStartExam}
+              style={{
+                padding: "17px 28px", border: "none", borderRadius: 18,
+                background: "linear-gradient(135deg,#2563eb,#7c3aed)",
+                color: "white", fontSize: 18, fontWeight: 700, cursor: "pointer",
+                width: "100%", maxWidth: 350,
+                boxShadow: "0 8px 28px rgba(37,99,235,0.35)",
+                fontFamily: "'Sora', sans-serif", letterSpacing: "0.3px",
+                transition: "transform 0.15s ease",
+              }}
+              onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-2px)"; }}
+              onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; }}
+            >
+              ✅ পরীক্ষা শুরু করুন
+            </button>
+          </div>
+        )}
+
+        {/* Questions — only visible after exam is started */}
+        {examStarted && exam.questions.map((q, index) => (
+          <div key={q._id} style={{ background: "white", borderRadius: 22, padding: "20px 18px", marginBottom: 18, boxShadow: "0 2px 8px rgba(37,99,235,0.06), 0 8px 28px rgba(37,99,235,0.10)", border: "1px solid rgba(226,232,240,0.8)" }}>
+            <div style={{ display: "inline-flex", alignItems: "center", background: "linear-gradient(135deg,#eff6ff,#f5f3ff)", borderRadius: 10, padding: "3px 12px", marginBottom: 10, border: "1px solid #e0e7ff" }}>
+              <span style={{ fontSize: 12, fontWeight: 700, color: "#3730a3", fontFamily: "'Sora', sans-serif" }}>Q{index + 1}</span>
+            </div>
+            <h2 style={{ fontSize: "clamp(17px,2.8vw,26px)", margin: "0 0 16px", color: "#0f172a", lineHeight: 1.6, fontWeight: 600, fontFamily: "'Hind Siliguri', 'Sora', sans-serif" }}>
+              {q.question}
+            </h2>
+            {q.image && (
+              <img src={q.image} alt="question" style={{ maxWidth: "300px", borderRadius: "12px", border: "1px solid #e2e8f0", marginBottom: "14px", display: "block", boxShadow: "0 4px 12px rgba(0,0,0,0.08)" }} />
+            )}
+            <div style={{ display: "grid", gap: 12 }}>
+              {q.options.map((opt, i) => {
+                const selected = answers[q._id] === opt;
+                const locked = !!answers[q._id]; // once any option chosen, question is locked
+                return (
+                  <button
+                    key={i}
+                    className="option-btn"
+                    onClick={() => handleAnswer(q._id, opt)}
+                    disabled={locked && !selected}
+                    style={{
+                      padding: "14px 18px", borderRadius: 14, textAlign: "left",
+                      border: selected ? "2px solid #2563eb" : "1.5px solid #e2e8f0",
+                      background: selected ? "linear-gradient(135deg,#eff6ff,#f5f3ff)" : "#f8fafc",
+                      cursor: locked ? "not-allowed" : "pointer",
+                      fontSize: "clamp(14px,2.5vw,19px)", fontWeight: selected ? 600 : 500,
+                      lineHeight: 1.6, width: "100%", wordBreak: "break-word",
+                      color: selected ? "#1e40af" : "#334155",
+                      opacity: locked && !selected ? 0.55 : 1,
+                      boxShadow: selected ? "0 4px 14px rgba(37,99,235,0.15)" : "none",
+                      fontFamily: "'Hind Siliguri', 'Sora', sans-serif",
+                    }}
+                  >
+                    {opt}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+
+        {/* Submit — only visible after exam is started */}
+        {examStarted && (
+          <div style={{ display: "flex", justifyContent: "center", marginTop: 30, marginBottom: 40 }}>
+            <button
+              onClick={submitExam}
+              disabled={submitted}
+              style={{
+                padding: "17px 28px", border: "none", borderRadius: 18,
+                background: submitted ? "#94a3b8" : "linear-gradient(135deg,#22c55e,#16a34a)",
+                color: "white", fontSize: 19, fontWeight: 700,
+                cursor: submitted ? "not-allowed" : "pointer",
+                width: "100%", maxWidth: 350,
+                boxShadow: submitted ? "none" : "0 8px 28px rgba(34,197,94,0.35)",
+                fontFamily: "'Sora', sans-serif", letterSpacing: "0.3px",
+                transition: "transform 0.15s ease",
+              }}
+              onMouseEnter={e => { if (!submitted) e.currentTarget.style.transform = "translateY(-2px)"; }}
+              onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; }}
+            >
+              {submitted ? "⏳ Submitting..." : "🚀 Submit Exam"}
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export default ExamPage;
