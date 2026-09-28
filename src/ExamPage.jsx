@@ -10,6 +10,1050 @@ const downloadResult = async () => {
   await new Promise((resolve) => setTimeout(resolve, 300));
 
   try {
+<<<<<<< HEAD
+    const list = JSON.parse(localStorage.getItem(getCompletedKey(code)) || "[]");
+    return list.some((n) => n.trim().toLowerCase() === name.trim().toLowerCase());
+  } catch {
+    return false;
+  }
+};
+
+const markNameSubmitted = (code, name) => {
+  try {
+    const list = JSON.parse(localStorage.getItem(getCompletedKey(code)) || "[]");
+    list.push(name.trim());
+    localStorage.setItem(getCompletedKey(code), JSON.stringify(list));
+  } catch {
+    // ignore storage errors
+  }
+};
+
+const getScoreComment = (score, name) => {
+  const n = name || "বন্ধু";
+  if (score >= 1 && score <= 5)  return `😔 ${n}, এবার ফলাফল একটু কম হয়েছে — কিন্তু এটাই শেষ কথা নয়! প্রতিটা ব্যর্থতা সাফল্যের প্রথম ধাপ। আবার চেষ্টা করো, তুমি অবশ্যই পারবে! 💪`;
+  if (score >= 6 && score <= 10) return `🙂 ${n}, তুমি চেষ্টা করেছ — সেটাই সবচেয়ে বড় কথা! একটু বেশি সময় দিলে পরের বার তুমি অনেক এগিয়ে যাবে। হাল ছেড়ো না! 🔥`;
+  if (score >= 11 && score <= 14) return `😊 বাহ ${n}! মাঝামাঝি ফলাফল এসেছে — তবে তোমার মধ্যে আরও অনেক সম্ভাবনা আছে। একটু মনোযোগ বাড়াও, সেরাটা বের হয়ে আসবেই! ⭐`;
+  if (score >= 15 && score <= 18) return `🌟 চমৎকার ${n}! তুমি সত্যিই ভালো করেছ! আর মাত্র কয়েক ধাপ — শীর্ষে পৌঁছানো তোমার পক্ষেই সম্ভব। এগিয়ে যাও! 🚀`;
+  if (score >= 19 && score <= 25) return `🏆 অবিশ্বাস্য ${n}! তুমি আজকে সত্যিকারের চ্যাম্পিয়ন! তোমার এই পরিশ্রম ও মেধা একদিন তোমাকে অনেক উঁচুতে নিয়ে যাবে। গর্বিত তোমাকে নিয়ে! 🎉✨`;
+  return "";
+};
+
+/* ══════════════════════════════════════════
+   WATERMARK CANVAS OVERLAY
+   ══════════════════════════════════════════ */
+function WatermarkOverlay({ name, roll }) {
+  const canvasRef = useRef(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const draw = () => {
+      const ctx = canvas.getContext("2d");
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      const text1 = name ? `${name}` : "Exam Portal";
+      const text2 = roll ? `Roll: ${roll}` : "";
+      const text3 = new Date().toLocaleString("bn-BD");
+
+      ctx.save();
+      ctx.globalAlpha = 0.045;
+      ctx.font = "bold 18px 'Hind Siliguri', sans-serif";
+      ctx.fillStyle = "#1e3a8a";
+
+      const step = 220;
+      for (let x = -200; x < canvas.width + 200; x += step) {
+        for (let y = 0; y < canvas.height + 100; y += 110) {
+          ctx.save();
+          ctx.translate(x, y);
+          ctx.rotate(-Math.PI / 6);
+          ctx.fillText(text1, 0, 0);
+          if (text2) ctx.fillText(text2, 0, 26);
+          ctx.font = "12px 'Sora', sans-serif";
+          ctx.fillText(text3, 0, 48);
+          ctx.restore();
+        }
+      }
+      ctx.restore();
+    };
+
+    draw();
+    const handler = () => draw();
+    window.addEventListener("resize", handler);
+    return () => window.removeEventListener("resize", handler);
+  }, [name, roll]);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      style={{
+        position: "fixed",
+        top: 0,
+        left: 0,
+        width: "100%",
+        height: "100%",
+        pointerEvents: "none",
+        zIndex: 9000,
+      }}
+    />
+  );
+}
+
+/* ══════════════════════════════════════════
+   MAIN COMPONENT
+   ══════════════════════════════════════════ */
+function ExamPage() {
+  const { code } = useParams();
+
+  const [exam, setExam] = useState(null);
+  const [answers, setAnswers] = useState({});
+  const [name, setName] = useState("");
+  const [roll, setRoll] = useState("");
+  const [score, setScore] = useState(null);
+  const [reviewData, setReviewData] = useState(null);
+  const [submitted, setSubmitted] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(null);
+
+  // ── absolute exam end timestamp (ms) — timer is calculated from
+  // real wall-clock time instead of a plain countdown, so it never "pauses"
+  // when the tab/app is backgrounded and always reflects true elapsed time ──
+  const [examEndTime, setExamEndTime] = useState(null);
+
+  // ── Gate state — exam can't start without name & roll ──
+  const [examStarted, setExamStarted] = useState(false);
+
+  // Security states
+  const [blocked, setBlocked] = useState(false);
+  const [blurContent, setBlurContent] = useState(false);
+  const [blurReason, setBlurReason] = useState("");
+  const [blockReason, setBlockReason] = useState("Screenshot Blocked");
+  const blockTimeoutRef = useRef(null);
+  const blurTimeoutRef = useRef(null);
+  const devToolsRef = useRef(false);
+
+  // ── Tab-switch state — UPDATED: 2 strikes now.
+  // 1st switch = warning only. 2nd switch = instant auto submit. ──
+  const tabSwitchCountRef = useRef(0);
+  const tabWarningTimeoutRef = useRef(null);
+  const [tabWarningMsg, setTabWarningMsg] = useState("");
+  const [showTabWarning, setShowTabWarning] = useState(false);
+  const [tabWarningIsFinal, setTabWarningIsFinal] = useState(false);
+
+  // ── 3-finger touch state ──
+  const threeFingerBlurTimeoutRef = useRef(null);
+
+  const [showToast, setShowToast] = useState(false);
+  const [toastVisible, setToastVisible] = useState(false);
+
+  /* ── triggerBlock ── */
+  const triggerBlock = useCallback((reason = "Screenshot Blocked") => {
+    setBlockReason(reason);
+    setBlocked(true);
+    setBlurContent(true);
+    setBlurReason(reason);
+    if (blockTimeoutRef.current) clearTimeout(blockTimeoutRef.current);
+    if (blurTimeoutRef.current) clearTimeout(blurTimeoutRef.current);
+    blockTimeoutRef.current = setTimeout(() => setBlocked(false), 3000);
+    blurTimeoutRef.current = setTimeout(() => {
+      setBlurContent(false);
+      setBlurReason("");
+    }, 3000);
+  }, []);
+
+  /* ── triggerBlurOnly (no block overlay) ── */
+  const triggerBlurOnly = useCallback((reason = "", durationMs = 5000) => {
+    setBlurContent(true);
+    setBlurReason(reason);
+    if (blurTimeoutRef.current) clearTimeout(blurTimeoutRef.current);
+    blurTimeoutRef.current = setTimeout(() => {
+      setBlurContent(false);
+      setBlurReason("");
+    }, durationMs);
+  }, []);
+
+  /* ══════════════════════════════════════════
+     3-Finger Touch Blur
+     Touch start → ≥3 fingers → blur immediately
+     Touch end / lift → unblur after 1 second
+     ══════════════════════════════════════════ */
+  useEffect(() => {
+    const handleTouchStart = (e) => {
+      if (e.touches.length >= 3) {
+        if (threeFingerBlurTimeoutRef.current) {
+          clearTimeout(threeFingerBlurTimeoutRef.current);
+          threeFingerBlurTimeoutRef.current = null;
+        }
+        if (blurTimeoutRef.current) {
+          clearTimeout(blurTimeoutRef.current);
+          blurTimeoutRef.current = null;
+        }
+        setBlurContent(true);
+        setBlurReason("🖐 3-আঙুল শনাক্ত — কন্টেন্ট লুকানো হয়েছে");
+      }
+    };
+
+    const handleTouchEnd = (e) => {
+      if (e.touches.length < 3) {
+        if (threeFingerBlurTimeoutRef.current) clearTimeout(threeFingerBlurTimeoutRef.current);
+        threeFingerBlurTimeoutRef.current = setTimeout(() => {
+          setBlurContent(false);
+          setBlurReason("");
+        }, 1000);
+      }
+    };
+
+    document.addEventListener("touchstart", handleTouchStart, { passive: true });
+    document.addEventListener("touchend", handleTouchEnd, { passive: true });
+    document.addEventListener("touchcancel", handleTouchEnd, { passive: true });
+
+    return () => {
+      document.removeEventListener("touchstart", handleTouchStart);
+      document.removeEventListener("touchend", handleTouchEnd);
+      document.removeEventListener("touchcancel", handleTouchEnd);
+    };
+  }, []);
+
+  /* ══════════════════════════════════════════
+     Tab/App Switch — UPDATED: 2 strikes.
+     1st switch  → warning banner shown, exam continues.
+     2nd switch  → instant auto submit.
+     ══════════════════════════════════════════ */
+  const autoSubmitRef = useRef(null); // store submitExam ref to avoid circular deps
+
+  const handleTabSwitch = useCallback(() => {
+    if (submitted) return;
+    tabSwitchCountRef.current += 1;
+
+    if (tabSwitchCountRef.current === 1) {
+      // First offense — warn only
+      setTabWarningIsFinal(false);
+      setTabWarningMsg("⚠️ আপনি পরীক্ষা পেজ থেকে বের হয়েছেন! এটি আপনার প্রথম ও শেষ সতর্কবার্তা — আবার বের হলে পরীক্ষা স্বয়ংক্রিয়ভাবে জমা হয়ে যাবে।");
+      setShowTabWarning(true);
+      triggerBlurOnly("⚠️ সতর্কতা — ফিরে আসুন", 4000);
+      if (navigator.vibrate) navigator.vibrate([25, 60, 25, 60, 40]); // sharp double-buzz warning
+      if (tabWarningTimeoutRef.current) clearTimeout(tabWarningTimeoutRef.current);
+      tabWarningTimeoutRef.current = setTimeout(() => setShowTabWarning(false), 4000);
+      return;
+    }
+
+    // Second offense — auto submit
+    setTabWarningIsFinal(true);
+    setTabWarningMsg("❌ আপনি দ্বিতীয়বার পরীক্ষা পেজ থেকে বের হয়েছেন! পরীক্ষা স্বয়ংক্রিয়ভাবে জমা হচ্ছে...");
+    setShowTabWarning(true);
+    triggerBlurOnly("Auto Submit হচ্ছে...", 6000);
+    if (navigator.vibrate) navigator.vibrate([40, 40, 40, 40, 80]); // firmer final buzz
+    setTimeout(() => {
+      if (autoSubmitRef.current) autoSubmitRef.current();
+    }, 800);
+  }, [submitted, triggerBlurOnly]);
+
+  /* ══════════════════════════════════════════
+     SECURITY LAYER 1 — Keyboard & Mouse
+     ══════════════════════════════════════════ */
+  useEffect(() => {
+    const handleContextMenu = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      triggerBlock("Right-click নিষিদ্ধ");
+      return false;
+    };
+
+    const handleKeyDown = (e) => {
+      const key = e.key.toLowerCase();
+      if (e.ctrlKey && ["c","u","s","a","p","x","v","f","g","h","j","k","l","n","t","w"].includes(key)) {
+        e.preventDefault(); e.stopPropagation();
+        triggerBlock("Keyboard shortcut blocked");
+        return;
+      }
+      if (e.metaKey && ["c","u","s","a","p","x","v"].includes(key)) {
+        e.preventDefault(); e.stopPropagation();
+        triggerBlock("Keyboard shortcut blocked");
+        return;
+      }
+      if (e.shiftKey && e.metaKey) {
+        e.preventDefault(); e.stopPropagation();
+        triggerBlock("Screenshot blocked");
+        return;
+      }
+      if (e.key === "PrintScreen") {
+        e.preventDefault(); e.stopPropagation();
+        navigator.clipboard.writeText("").catch(() => {});
+        triggerBlock("Screenshot নিষিদ্ধ");
+        return;
+      }
+      if (
+        e.key === "F12" ||
+        (e.ctrlKey && e.shiftKey && ["i","j","c","k"].includes(key)) ||
+        (e.metaKey && e.altKey && key === "i")
+      ) {
+        e.preventDefault(); e.stopPropagation();
+        triggerBlock("DevTools নিষিদ্ধ");
+        return;
+      }
+      if (e.altKey && e.key === "Tab") {
+        triggerBlock("Tab switching নিষিদ্ধ");
+      }
+    };
+
+    const blockClipboard = (e) => { e.preventDefault(); e.stopPropagation(); };
+    const handleDragStart = (e) => { e.preventDefault(); };
+    const handleDrop = (e) => { e.preventDefault(); };
+
+    const handleBeforePrint = (e) => {
+      e.preventDefault();
+      triggerBlock("Printing নিষিদ্ধ");
+    };
+    const handleAfterPrint = () => {
+      document.body.innerHTML = "";
+      window.location.reload();
+    };
+
+    /* ── Visibility change calls handleTabSwitch ── */
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        handleTabSwitch();
+      }
+    };
+
+    const handleWindowBlur = () => {
+      // Only blur the content, don't double-count as tab switch here
+      triggerBlurOnly("ফিরে আসুন — পরীক্ষা চলছে", 5000);
+    };
+    const handleWindowFocus = () => {
+      if (blurTimeoutRef.current) clearTimeout(blurTimeoutRef.current);
+      setBlurContent(false);
+      setBlurReason("");
+    };
+
+    const handleSelectStart = (e) => {
+      const tag = e.target.tagName.toLowerCase();
+      if (tag !== "input" && tag !== "textarea") e.preventDefault();
+    };
+
+    document.addEventListener("contextmenu", handleContextMenu, true);
+    document.addEventListener("keydown", handleKeyDown, true);
+    document.addEventListener("copy", blockClipboard, true);
+    document.addEventListener("cut", blockClipboard, true);
+    document.addEventListener("paste", blockClipboard, true);
+    document.addEventListener("dragstart", handleDragStart, true);
+    document.addEventListener("drop", handleDrop, true);
+    document.addEventListener("selectstart", handleSelectStart, true);
+    window.addEventListener("beforeprint", handleBeforePrint, true);
+    window.addEventListener("afterprint", handleAfterPrint);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("blur", handleWindowBlur);
+    window.addEventListener("focus", handleWindowFocus);
+
+    return () => {
+      document.removeEventListener("contextmenu", handleContextMenu, true);
+      document.removeEventListener("keydown", handleKeyDown, true);
+      document.removeEventListener("copy", blockClipboard, true);
+      document.removeEventListener("cut", blockClipboard, true);
+      document.removeEventListener("paste", blockClipboard, true);
+      document.removeEventListener("dragstart", handleDragStart, true);
+      document.removeEventListener("drop", handleDrop, true);
+      document.removeEventListener("selectstart", handleSelectStart, true);
+      window.removeEventListener("beforeprint", handleBeforePrint, true);
+      window.removeEventListener("afterprint", handleAfterPrint);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("blur", handleWindowBlur);
+      window.removeEventListener("focus", handleWindowFocus);
+    };
+  }, [triggerBlock, triggerBlurOnly, handleTabSwitch]);
+
+  /* ══════════════════════════════════════════
+     SECURITY LAYER 2 — DevTools Detection
+     ══════════════════════════════════════════ */
+  useEffect(() => {
+    let devToolsOpen = false;
+
+    const checkDevTools = () => {
+      const threshold = 160;
+      const widthDiff = window.outerWidth - window.innerWidth;
+      const heightDiff = window.outerHeight - window.innerHeight;
+      const isOpen = widthDiff > threshold || heightDiff > threshold;
+      if (isOpen && !devToolsOpen) {
+        devToolsOpen = true;
+        devToolsRef.current = true;
+        triggerBlock("DevTools ব্যবহার নিষিদ্ধ!");
+      } else if (!isOpen) {
+        devToolsOpen = false;
+        devToolsRef.current = false;
+      }
+    };
+
+    const debuggerTrap = () => {
+      const start = performance.now();
+      // eslint-disable-next-line no-debugger
+      debugger;
+      if (performance.now() - start > 80) {
+        triggerBlock("DevTools detected!");
+      }
+    };
+
+    window.addEventListener("resize", checkDevTools);
+    const interval1 = setInterval(checkDevTools, 1000);
+    const interval2 = setInterval(debuggerTrap, 3000);
+
+    return () => {
+      window.removeEventListener("resize", checkDevTools);
+      clearInterval(interval1);
+      clearInterval(interval2);
+    };
+  }, [triggerBlock]);
+
+  /* ══════════════════════════════════════════
+     SECURITY LAYER 3 — CSS Injection Protection
+     ══════════════════════════════════════════ */
+  useEffect(() => {
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((m) => {
+        m.addedNodes.forEach((node) => {
+          if (node.nodeName === "STYLE" || node.nodeName === "LINK") {
+            node.remove();
+          }
+        });
+      });
+    });
+    observer.observe(document.head, { childList: true, subtree: true });
+    return () => observer.disconnect();
+  }, []);
+
+  /* ══════════════════════════════════════════
+     SECURITY LAYER 4 — iOS / Mobile Screenshot
+     ══════════════════════════════════════════ */
+  useEffect(() => {
+    const handlePageHide = () => { setBlurContent(true); setBlurReason(""); };
+    const handlePageShow = () => {
+      setTimeout(() => { setBlurContent(false); setBlurReason(""); }, 800);
+    };
+    window.addEventListener("pagehide", handlePageHide);
+    window.addEventListener("pageshow", handlePageShow);
+    return () => {
+      window.removeEventListener("pagehide", handlePageHide);
+      window.removeEventListener("pageshow", handlePageShow);
+    };
+  }, []);
+
+  /* ══════════════════════════════════════════
+     FETCH EXAM + RESTORE PROGRESS
+     Derives/stores an absolute examEndTime so the
+     countdown is based on real elapsed wall-clock time.
+     ══════════════════════════════════════════ */
+  useEffect(() => {
+    fetch(`${API}/api/exams/${code}`)
+      .then((res) => res.json())
+      .then((data) => {
+        setExam(data);
+        const saved = localStorage.getItem(getStorageKey(code));
+        if (saved) {
+          try {
+            const progress = JSON.parse(saved);
+
+            let endTime = progress.examEndTime;
+            if (!endTime) {
+              // Backward compatibility with older saved progress (no examEndTime yet)
+              const remaining = progress.timeLeft > 0 ? progress.timeLeft : (data.duration || 0) * 60;
+              endTime = Date.now() + remaining * 1000;
+            }
+
+            // ── NEW: if this saved session's time already ran out (e.g. a
+            // previous student left mid-exam on this same device and never
+            // submitted), it's STALE — don't restore it or auto-submit on
+            // behalf of a new student. Wipe it and start a completely fresh
+            // session instead, so the exam link never appears "expired". ──
+            const remainingSeconds = Math.round((endTime - Date.now()) / 1000);
+            if (remainingSeconds <= 0) {
+              localStorage.removeItem(getStorageKey(code));
+              const freshEndTime = Date.now() + (data.duration || 0) * 60 * 1000;
+              setExamEndTime(freshEndTime);
+              setTimeLeft((data.duration || 0) * 60);
+            } else {
+              if (progress.name) setName(progress.name);
+              if (progress.roll) setRoll(progress.roll);
+              if (progress.answers) setAnswers(progress.answers);
+              if (progress.name && progress.roll) setExamStarted(true);
+              setExamEndTime(endTime);
+              setTimeLeft(remainingSeconds);
+            }
+          } catch {
+            localStorage.removeItem(getStorageKey(code));
+            const endTime = Date.now() + (data.duration || 0) * 60 * 1000;
+            setExamEndTime(endTime);
+            setTimeLeft((data.duration || 0) * 60);
+          }
+        } else {
+          const endTime = Date.now() + (data.duration || 0) * 60 * 1000;
+          setExamEndTime(endTime);
+          setTimeLeft((data.duration || 0) * 60);
+        }
+      });
+  }, [code]);
+
+  /* Save progress */
+  useEffect(() => {
+    if (!exam || submitted) return;
+    localStorage.setItem(
+      getStorageKey(code),
+      JSON.stringify({ answers, name, roll, timeLeft, examEndTime })
+    );
+  }, [answers, name, roll, timeLeft, examEndTime, exam, submitted, code]);
+
+  /* ══════════════════════════════════════════
+     Timer — computed from the absolute
+     examEndTime timestamp instead of a plain decrement,
+     so it stays perfectly continuous even if the tab/app
+     was backgrounded, throttled, or closed and reopened.
+     ══════════════════════════════════════════ */
+  useEffect(() => {
+    if (examEndTime === null || submitted) return;
+
+    const tick = () => {
+      const remaining = Math.max(0, Math.round((examEndTime - Date.now()) / 1000));
+      setTimeLeft(remaining);
+      if (remaining <= 0) {
+        autoSubmitByTimer();
+      }
+    };
+
+    tick(); // immediate correction for any time passed while away
+    const timer = setInterval(tick, 1000);
+    return () => clearInterval(timer);
+  }, [examEndTime, submitted]);
+
+  /* Toast */
+  useEffect(() => {
+    if (score !== null && reviewData) {
+      setTimeout(() => {
+        setShowToast(true);
+        setTimeout(() => setToastVisible(true), 50);
+        setTimeout(() => {
+          setToastVisible(false);
+          setTimeout(() => setShowToast(false), 600);
+        }, 6000);
+      }, 500);
+    }
+  }, [score, reviewData]);
+
+  const formatTime = () => {
+    const m = Math.floor(timeLeft / 60);
+    const s = timeLeft % 60;
+    return `${m}:${s.toString().padStart(2, "0")}`;
+  };
+
+  const timerColor = timeLeft !== null && timeLeft <= 60 ? "#ff4444" : "white";
+
+  /* ── handleAnswer — UPDATED: smoother multi-pulse haptic on selection ── */
+  const handleAnswer = (qid, option) => {
+    if (answers[qid]) return; // Already answered — locked, can't change
+    if (navigator.vibrate) navigator.vibrate([12, 15, 10]); // short soft double-tap feel
+    setAnswers((prev) => ({ ...prev, [qid]: option }));
+  };
+
+  const clearProgress = () => localStorage.removeItem(getStorageKey(code));
+
+  /* ── Start exam only if name & roll are filled, and this name hasn't already submitted ── */
+  const handleStartExam = () => {
+    if (!name.trim() || !roll.trim()) {
+      alert("পরীক্ষা শুরু করতে অবশ্যই নাম ও রোল নম্বর দিতে হবে!");
+      return;
+    }
+    if (isNameAlreadySubmitted(code, name)) {
+      if (navigator.vibrate) navigator.vibrate([40, 40, 40]);
+      alert("⚠️ এই নাম দিয়ে ইতিমধ্যে এই পরীক্ষা দেওয়া হয়ে গেছে! একই নামে দ্বিতীয়বার পরীক্ষা দেওয়া যাবে না।");
+      return;
+    }
+    if (navigator.vibrate) navigator.vibrate([18, 30, 22]); // smooth confirm pattern
+    setExamStarted(true);
+  };
+
+  const submitExam = useCallback(async () => {
+    if (submitted) return;
+    if (!name || !roll) { alert("Name & Roll Required"); return; }
+    setSubmitted(true);
+    try {
+      const res = await fetch(`${API}/api/exams/submit`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ examCode: code, name, roll, answers }),
+      });
+      const data = await res.json();
+      clearProgress();
+      markNameSubmitted(code, name); // NEW: lock this name out of retaking the exam
+      if (navigator.vibrate) navigator.vibrate([20, 40, 20, 40, 35]); // smooth success pattern
+      setScore(data.score);
+      setReviewData(data);
+    } catch {
+      setSubmitted(false);
+      alert("Submit Failed");
+    }
+  }, [submitted, name, roll, code, answers]);
+
+  // Keep autoSubmitRef in sync so handleTabSwitch can call it
+  autoSubmitRef.current = submitExam;
+
+  const autoSubmitByTimer = () => {
+    if (submitted) return;
+    alert("সময় শেষ! Auto Submit হচ্ছে");
+    submitExam();
+  };
+
+  const downloadResult = async () => {
+    const html2pdf = (await import("html2pdf.js")).default;
+
+    const element = document.getElementById("result-sheet");
+
+    if (!element) {
+      alert("Result sheet পাওয়া যায়নি!");
+      return;
+    }
+
+    // Hide overlays, toast and buttons while generating the PDF.
+    const pdfHideElements = document.querySelectorAll(".pdf-hide");
+    pdfHideElements.forEach((el) => {
+      el.style.display = "none";
+    });
+
+    // Put the result into a clean PDF state.
+    element.classList.add("pdf-mode");
+    document.body.classList.add("pdf-generating");
+
+    // Disable result-question animations/transforms/filters.
+    const reviewQuestions = document.querySelectorAll(".review-question");
+    reviewQuestions.forEach((el) => {
+      el.style.animation = "none";
+      el.style.transition = "none";
+      el.style.transform = "none";
+      el.style.filter = "none";
+      el.style.opacity = "1";
+    });
+
+    // Give the browser time to apply the PDF styles before capture.
+    await new Promise((resolve) => setTimeout(resolve, 500));
+
+    try {
+      await html2pdf()
+        .set({
+          margin: [8, 8, 8, 8],
+          filename: `${exam.title || "exam-result"}.pdf`,
+          image: {
+            type: "jpeg",
+            quality: 0.98,
+          },
+          html2canvas: {
+            scale: 2,
+            useCORS: true,
+            allowTaint: false,
+            backgroundColor: "#f8fafc",
+            scrollX: 0,
+            scrollY: 0,
+            logging: false,
+          },
+          jsPDF: {
+            unit: "mm",
+            format: "a4",
+            orientation: "portrait",
+            compress: true,
+          },
+          // Do NOT use avoid-all here. It can create large blank pages
+          // when a long result contains many question cards.
+          pagebreak: {
+            mode: ["css", "legacy"],
+          },
+        })
+        .from(element)
+        .save();
+    } catch (error) {
+      console.error("PDF generation failed:", error);
+      alert("PDF তৈরি করা যায়নি। আবার চেষ্টা করুন।");
+    } finally {
+      // Restore the normal result page.
+      pdfHideElements.forEach((el) => {
+        el.style.display = "";
+      });
+
+      reviewQuestions.forEach((el) => {
+        el.style.animation = "";
+        el.style.transition = "";
+        el.style.transform = "";
+        el.style.filter = "";
+        el.style.opacity = "";
+      });
+
+      document.body.classList.remove("pdf-generating");
+      element.classList.remove("pdf-mode");
+    }
+  };
+
+  /* ══════════════════════════════════════════
+     GLOBAL STYLES
+     ══════════════════════════════════════════ */
+  const globalStyles = `
+    @import url('https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=Sora:wght@400;500;600;700;800&display=swap');
+
+    *, *::before, *::after {
+      user-select: none !important;
+      -webkit-user-select: none !important;
+      -moz-user-select: none !important;
+      -ms-user-select: none !important;
+      -webkit-touch-callout: none !important;
+      box-sizing: border-box;
+    }
+    input, textarea {
+      user-select: text !important;
+      -webkit-user-select: text !important;
+    }
+    img {
+      pointer-events: none !important;
+      -webkit-user-drag: none !important;
+      -moz-user-drag: none !important;
+    }
+    img::after {
+      content: '';
+      display: block;
+      position: absolute;
+      inset: 0;
+    }
+    @media print {
+      html, body { display: none !important; visibility: hidden !important; }
+    }
+    .content-blur {
+      filter: blur(18px) !important;
+      transition: filter 0.15s ease;
+      pointer-events: none;
+    }
+    .content-unblur {
+      filter: blur(0px);
+      transition: filter 0.4s ease;
+    }
+    .pdf-mode {
+      background: #f8fafc !important;
+      padding: 20px !important;
+      filter: none !important;
+      opacity: 1 !important;
+      transform: none !important;
+    }
+
+    /* Elements that must not appear while the PDF is being generated. */
+    .pdf-generating .pdf-hide {
+      display: none !important;
+    }
+
+    /* Keep result cards clean while html2canvas captures them. */
+    .pdf-mode .review-question {
+      animation: none !important;
+      transition: none !important;
+      transform: none !important;
+      filter: none !important;
+      opacity: 1 !important;
+      break-inside: auto !important;
+      page-break-inside: auto !important;
+    }
+
+    /* Stop all UI animations during PDF generation. */
+    .pdf-generating,
+    .pdf-generating * {
+      animation: none !important;
+      transition: none !important;
+      filter: none !important;
+    }
+
+    .pdf-mode img {
+      max-width: 300px !important;
+      height: auto !important;
+      filter: none !important;
+      opacity: 1 !important;
+      transform: none !important;
+    }
+
+    @keyframes timerPulse   { 0%,100% { transform: scale(1); } 50% { transform: scale(1.06); } }
+    @keyframes toastIn      { 0%   { transform: translateX(-50%) translateY(100px); opacity: 0; } 100% { transform: translateX(-50%) translateY(0); opacity: 1; } }
+    @keyframes toastOut     { 0%   { transform: translateX(-50%) translateY(0); opacity: 1; } 100% { transform: translateX(-50%) translateY(100px); opacity: 0; } }
+    @keyframes fadeInUp     { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes scaleIn      { from { opacity: 0; transform: scale(0.92); } to { opacity: 1; transform: scale(1); } }
+    @keyframes blockPulse   { 0%,100% { transform: scale(1); } 50% { transform: scale(1.04); } }
+    @keyframes warningSlide { 0% { transform: translateY(-80px); opacity: 0; } 100% { transform: translateY(0); opacity: 1; } }
+
+    .stat-card { transition: transform 0.2s ease, box-shadow 0.2s ease; }
+    .stat-card:hover { transform: translateY(-3px); box-shadow: 0 16px 40px rgba(0,0,0,0.15) !important; }
+    .option-btn { transition: all 0.18s ease; }
+    .option-btn:hover { transform: translateX(4px); }
+    .review-question { animation: fadeInUp 0.4s ease both; }
+  `;
+
+  /* ══════════════════════════════════════════
+     BLOCKED OVERLAY
+     ══════════════════════════════════════════ */
+  const BlockedOverlay = () =>
+    blocked ? (
+      <div style={{
+        position: "fixed", inset: 0, zIndex: 99999,
+        background: "rgba(0,0,0,0.97)",
+        display: "flex", flexDirection: "column",
+        alignItems: "center", justifyContent: "center",
+        color: "white", animation: "blockPulse 0.4s ease",
+      }}>
+        <div style={{ fontSize: 72, marginBottom: 20, animation: "blockPulse 0.6s infinite" }}>🚫</div>
+        <h2 style={{ fontSize: 28, fontWeight: 800, marginBottom: 12, fontFamily: "'Sora', sans-serif", letterSpacing: "-0.3px" }}>
+          {blockReason}
+        </h2>
+        <p style={{ color: "rgba(255,255,255,0.55)", fontSize: 15, fontFamily: "'Hind Siliguri', sans-serif", textAlign: "center", maxWidth: 340 }}>
+          এই পরীক্ষায় এই কার্যক্রম সম্পূর্ণ নিষিদ্ধ।<br />সন্দেহজনক কার্যকলাপ লগ করা হচ্ছে।
+        </p>
+        <div style={{
+          marginTop: 24, padding: "10px 28px",
+          background: "rgba(255,68,68,0.15)", borderRadius: 50,
+          border: "1px solid rgba(255,68,68,0.35)",
+          fontSize: 13, color: "rgba(255,200,200,0.8)",
+          fontFamily: "'Sora', sans-serif",
+        }}>
+          ⚠️ কার্যকলাপ রেকর্ড হচ্ছে
+        </div>
+      </div>
+    ) : null;
+
+  /* ══════════════════════════════════════════
+     TAB WARNING BANNER
+     UPDATED: shows a distinct look for the 1st (warning-only)
+     switch vs the 2nd (final, auto-submitting) switch.
+     ══════════════════════════════════════════ */
+  const TabWarningBanner = () =>
+    showTabWarning ? (
+      <div
+        style={{
+          position: "fixed",
+          inset: 0,
+          zIndex: 999999,
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          padding: "20px",
+          background: "rgba(0,0,0,0.15)",
+          backdropFilter: "blur(6px)",
+        }}
+      >
+        <div
+          style={{
+            width: "90%",
+            maxWidth: "420px",
+            background: tabWarningIsFinal
+              ? "linear-gradient(135deg,#7f1d1d,#991b1b)"
+              : "linear-gradient(135deg,#78350f,#b45309)",
+            borderRadius: "24px",
+            padding: "28px 22px",
+            color: "white",
+            textAlign: "center",
+            boxShadow: "0 30px 80px rgba(0,0,0,0.45), 0 8px 30px rgba(0,0,0,0.25)",
+            border: "1px solid rgba(255,255,255,0.16)",
+            backdropFilter: "blur(18px)",
+            animation: "scaleIn 0.35s cubic-bezier(0.34,1.56,0.64,1)",
+            overflow: "hidden",
+          }}
+        >
+          <div style={{ fontSize: "clamp(34px,8vw,52px)", marginBottom: "14px" }}>
+            {tabWarningIsFinal ? "🚫" : "⚠️"}
+          </div>
+
+          <h2
+            style={{
+              margin: "0 0 12px",
+              fontSize: "clamp(18px,5vw,24px)",
+              fontWeight: 800,
+              lineHeight: 1.3,
+              fontFamily: "'Sora', sans-serif",
+            }}
+          >
+            {tabWarningIsFinal ? "পরীক্ষা জমা হচ্ছে" : "সতর্কবার্তা"}
+          </h2>
+
+          <div
+            style={{
+              fontSize: "clamp(14px,4vw,18px)",
+              fontWeight: 500,
+              lineHeight: 1.8,
+              opacity: 0.96,
+              fontFamily: "'Hind Siliguri', sans-serif",
+            }}
+          >
+            {tabWarningMsg}
+          </div>
+        </div>
+      </div>
+    ) : null;
+
+  /* ══════════════════════════════════════════
+     BLUR OVERLAY (shared — used by all blur triggers)
+     ══════════════════════════════════════════ */
+  const BlurOverlay = () =>
+    blurContent ? (
+      <div style={{
+        position: "fixed", inset: 0, zIndex: 9500,
+        backdropFilter: "blur(22px)",
+        background: "rgba(0,0,0,0.55)",
+        display: "flex", flexDirection: "column",
+        alignItems: "center", justifyContent: "center",
+        color: "white",
+        transition: "opacity 0.2s ease",
+      }}>
+        <div style={{ fontSize: 56, marginBottom: 16 }}>🔒</div>
+        <p style={{ fontSize: 20, fontWeight: 700, fontFamily: "'Sora', sans-serif", textAlign: "center", maxWidth: 320 }}>
+          {blurReason || "ফিরে আসুন — পরীক্ষা চলছে"}
+        </p>
+        <p style={{ fontSize: 14, opacity: 0.6, fontFamily: "'Hind Siliguri', sans-serif", marginTop: 8, textAlign: "center" }}>
+          পরীক্ষার বাইরে গেলে কন্টেন্ট লুকানো হয়
+        </p>
+      </div>
+    ) : null;
+
+  /* ══════════════════════════════════════════
+     RESULT PAGE
+     ══════════════════════════════════════════ */
+  if (score !== null && reviewData) {
+    const wrong = reviewData.questions.length - score;
+    const percentage = Math.round((score / reviewData.questions.length) * 100);
+
+    return (
+      <div style={{
+        minHeight: "100vh", background: "#f0f4ff",
+        padding: "14px", fontFamily: "'Sora', 'Hind Siliguri', sans-serif",
+      }}>
+        <style>{globalStyles}</style>
+
+        <div className="pdf-hide">
+          <BlockedOverlay />
+          <WatermarkOverlay name={name} roll={roll} />
+          <BlurOverlay />
+        </div>
+
+        {showToast && (
+          <div
+            className="pdf-hide"
+            style={{
+              position: "fixed", bottom: 28, left: "50%",
+            transform: "translateX(-50%)", zIndex: 99998,
+            width: "calc(100% - 32px)", maxWidth: 540,
+            animation: toastVisible
+              ? "toastIn 0.5s cubic-bezier(0.34,1.56,0.64,1) forwards"
+              : "toastOut 0.45s ease forwards",
+          }}>
+            <div style={{
+              background: "linear-gradient(135deg,#1e3a8a 0%,#4c1d95 100%)",
+              borderRadius: 20, padding: "18px 22px", color: "white",
+              fontSize: "clamp(13px,2vw,17px)", fontWeight: 600, lineHeight: 1.8,
+              boxShadow: "0 24px 64px rgba(30,58,138,0.45), 0 4px 16px rgba(0,0,0,0.3)",
+              border: "1px solid rgba(255,255,255,0.18)", textAlign: "center",
+              backdropFilter: "blur(12px)", fontFamily: "'Hind Siliguri', sans-serif",
+            }}>
+              {getScoreComment(score, name)}
+            </div>
+          </div>
+        )}
+
+        <div id="result-sheet" style={{ maxWidth: 860, margin: "0 auto", width: "100%" }}>
+          <div style={{
+            background: "linear-gradient(135deg,#2563eb 0%,#7c3aed 100%)",
+            borderRadius: 28, padding: "28px 22px", color: "white", marginBottom: 28,
+            boxShadow: "0 20px 60px rgba(37,99,235,0.35), 0 4px 20px rgba(0,0,0,0.15)",
+            animation: "scaleIn 0.5s ease both",
+          }}>
+            <h1 style={{ fontSize: "clamp(26px,5vw,48px)", margin: "0 0 6px", fontWeight: 800, lineHeight: 1.2, fontFamily: "'Sora', sans-serif" }}>
+              🎉 Exam Completed
+            </h1>
+            <h2 style={{ fontSize: "clamp(15px,2.5vw,22px)", margin: "0 0 24px", opacity: 0.85, fontWeight: 500, wordBreak: "break-word" }}>
+              {exam.title}
+            </h2>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))", gap: 14 }}>
+              {[
+                { label: "Score",      value: `${score}/${reviewData.questions.length}`, bg: "rgba(255,255,255,0.15)", border: "rgba(255,255,255,0.25)" },
+                { label: "Correct",    value: `✅ ${score}`,    bg: "rgba(34,197,94,0.2)",    border: "rgba(34,197,94,0.4)" },
+                { label: "Wrong",      value: `❌ ${wrong}`,    bg: "rgba(239,68,68,0.18)",   border: "rgba(239,68,68,0.35)" },
+                { label: "Percentage", value: `${percentage}%`, bg: "rgba(255,255,255,0.12)", border: "rgba(255,255,255,0.22)" },
+              ].map((s, i) => (
+                <div key={i} className="stat-card" style={{
+                  background: s.bg, padding: "18px 16px", borderRadius: 18,
+                  border: `1.5px solid ${s.border}`, boxShadow: "0 4px 16px rgba(0,0,0,0.1)",
+                }}>
+                  <p style={{ opacity: 0.8, margin: "0 0 8px", fontSize: 13, fontWeight: 600, letterSpacing: "0.5px", textTransform: "uppercase" }}>{s.label}</p>
+                  <p style={{ fontSize: "clamp(26px,4.5vw,44px)", margin: 0, fontWeight: 800, lineHeight: 1, fontFamily: "'Sora', sans-serif" }}>{s.value}</p>
+                </div>
+              ))}
+            </div>
+            <div style={{
+              background: "rgba(255,255,255,0.13)", borderRadius: 18, padding: "18px 20px",
+              marginTop: 18, fontSize: "clamp(14px,2.2vw,19px)", fontWeight: 600,
+              textAlign: "center", lineHeight: 1.9, letterSpacing: "0.2px",
+              border: "1px solid rgba(255,255,255,0.22)", fontFamily: "'Hind Siliguri', sans-serif",
+            }}>
+              {getScoreComment(score, name)}
+            </div>
+          </div>
+
+          <div
+            className="pdf-hide"
+            style={{ display: "flex", justifyContent: "center", marginBottom: 28 }}
+          >
+            <button
+              onClick={downloadResult}
+              style={{
+                padding: "15px 28px", border: "none", borderRadius: 16,
+                background: "linear-gradient(135deg,#16a34a,#15803d)",
+                color: "white", fontSize: 17, fontWeight: 700, cursor: "pointer",
+                width: "100%", maxWidth: 340,
+                boxShadow: "0 8px 24px rgba(22,163,74,0.35)",
+                fontFamily: "'Sora', sans-serif", letterSpacing: "0.3px",
+                transition: "transform 0.15s ease, box-shadow 0.15s ease",
+              }}
+              onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = "0 12px 32px rgba(22,163,74,0.45)"; }}
+              onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "0 8px 24px rgba(22,163,74,0.35)"; }}
+            >
+              📄 Download Result PDF
+            </button>
+          </div>
+
+          {reviewData.questions.map((q, index) => {
+            const userAns = reviewData.answers[q._id];
+            const correct = q.correctAnswer;
+            return (
+              <div key={index} className="review-question" style={{
+                background: "white", padding: "22px 20px", borderRadius: 22, marginBottom: 18,
+                boxShadow: "0 2px 8px rgba(37,99,235,0.06), 0 8px 28px rgba(37,99,235,0.10)",
+                border: "1px solid rgba(226,232,240,0.8)",
+                animationDelay: `${index * 0.04}s`,
+              }}>
+                <div style={{ display: "inline-flex", alignItems: "center", background: "linear-gradient(135deg,#eff6ff,#f5f3ff)", borderRadius: 10, padding: "4px 12px", marginBottom: 12, border: "1px solid #e0e7ff" }}>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: "#3730a3", fontFamily: "'Sora', sans-serif" }}>Q{index + 1}</span>
+                </div>
+                <h2 style={{ fontSize: "clamp(16px,2.6vw,24px)", marginBottom: 14, color: "#0f172a", lineHeight: 1.6, wordBreak: "break-word", fontFamily: "'Hind Siliguri', 'Sora', sans-serif", fontWeight: 600, margin: "0 0 14px 0" }}>
+                  {q.question}
+                </h2>
+                {q.image && (
+                  <img src={q.image} alt="question" style={{ maxWidth: "300px", borderRadius: "12px", border: "1px solid #e2e8f0", marginBottom: "16px", display: "block", boxShadow: "0 4px 12px rgba(0,0,0,0.08)" }} />
+                )}
+                <div style={{ display: "grid", gap: 10 }}>
+                  {q.options.map((opt, i) => {
+                    const isCorrect = opt === correct;
+                    const isWrong = opt === userAns && opt !== correct;
+                    let bg = "#f8fafc", border = "#e2e8f0", color = "#334155";
+                    if (isCorrect) { bg = "#f0fdf4"; border = "#86efac"; color = "#14532d"; }
+                    if (isWrong)   { bg = "#fff1f2"; border = "#fca5a5"; color = "#7f1d1d"; }
+                    return (
+                      <div key={i} style={{ padding: "13px 16px", borderRadius: 14, background: bg, border: `1.5px solid ${border}`, color, fontSize: "clamp(14px,2.4vw,18px)", fontWeight: 500, lineHeight: 1.6, wordBreak: "break-word", fontFamily: "'Hind Siliguri', sans-serif", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+                        <span>{opt}</span>
+                        {isCorrect && <span style={{ fontSize: 13, fontWeight: 700, color: "#16a34a", whiteSpace: "nowrap", background: "#dcfce7", padding: "2px 10px", borderRadius: 20 }}>✅ Correct</span>}
+                        {isWrong   && <span style={{ fontSize: 13, fontWeight: 700, color: "#dc2626", whiteSpace: "nowrap", background: "#fee2e2", padding: "2px 10px", borderRadius: 20 }}>❌ Your Answer</span>}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+=======
     await html2pdf()
       .set({
         margin: [5, 5, 5, 5],
@@ -49,5 +1093,6 @@ const downloadResult = async () => {
 
   } finally {
     element.classList.remove("pdf-mode");
+>>>>>>> c1ef7e0 (make pdf clear)
   }
 };
