@@ -601,21 +601,89 @@ function ExamPage() {
 
   const downloadResult = async () => {
     const html2pdf = (await import("html2pdf.js")).default;
+
     const element = document.getElementById("result-sheet");
+
+    if (!element) {
+      alert("Result sheet পাওয়া যায়নি!");
+      return;
+    }
+
+    // Hide overlays, toast and buttons while generating the PDF.
+    const pdfHideElements = document.querySelectorAll(".pdf-hide");
+    pdfHideElements.forEach((el) => {
+      el.style.display = "none";
+    });
+
+    // Put the result into a clean PDF state.
     element.classList.add("pdf-mode");
-    await new Promise((r) => setTimeout(r, 300));
-    await html2pdf()
-      .set({
-        margin: [5, 5, 5, 5],
-        filename: `${exam.title || "exam-result"}.pdf`,
-        image: { type: "jpeg", quality: 1 },
-        html2canvas: { scale: 2, useCORS: true, backgroundColor: "#f8fafc", scrollY: 0 },
-        jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
-        pagebreak: { mode: ["avoid-all", "css", "legacy"] },
-      })
-      .from(element)
-      .save();
-    element.classList.remove("pdf-mode");
+    document.body.classList.add("pdf-generating");
+
+    // Disable result-question animations/transforms/filters.
+    const reviewQuestions = document.querySelectorAll(".review-question");
+    reviewQuestions.forEach((el) => {
+      el.style.animation = "none";
+      el.style.transition = "none";
+      el.style.transform = "none";
+      el.style.filter = "none";
+      el.style.opacity = "1";
+    });
+
+    // Give the browser time to apply the PDF styles before capture.
+    await new Promise((resolve) => setTimeout(resolve, 500));
+
+    try {
+      await html2pdf()
+        .set({
+          margin: [8, 8, 8, 8],
+          filename: `${exam.title || "exam-result"}.pdf`,
+          image: {
+            type: "jpeg",
+            quality: 0.98,
+          },
+          html2canvas: {
+            scale: 2,
+            useCORS: true,
+            allowTaint: false,
+            backgroundColor: "#f8fafc",
+            scrollX: 0,
+            scrollY: 0,
+            logging: false,
+          },
+          jsPDF: {
+            unit: "mm",
+            format: "a4",
+            orientation: "portrait",
+            compress: true,
+          },
+          // Do NOT use avoid-all here. It can create large blank pages
+          // when a long result contains many question cards.
+          pagebreak: {
+            mode: ["css", "legacy"],
+          },
+        })
+        .from(element)
+        .save();
+    } catch (error) {
+      console.error("PDF generation failed:", error);
+      alert("PDF তৈরি করা যায়নি। আবার চেষ্টা করুন।");
+    } finally {
+      // Restore the normal result page.
+      pdfHideElements.forEach((el) => {
+        el.style.display = "";
+      });
+
+      reviewQuestions.forEach((el) => {
+        el.style.animation = "";
+        el.style.transition = "";
+        el.style.transform = "";
+        el.style.filter = "";
+        el.style.opacity = "";
+      });
+
+      document.body.classList.remove("pdf-generating");
+      element.classList.remove("pdf-mode");
+    }
   };
 
   /* ══════════════════════════════════════════
@@ -659,8 +727,45 @@ function ExamPage() {
       filter: blur(0px);
       transition: filter 0.4s ease;
     }
-    .pdf-mode { background: #f8fafc !important; padding: 20px !important; }
-    .pdf-mode .question { page-break-inside: avoid !important; break-inside: avoid !important; }
+    .pdf-mode {
+      background: #f8fafc !important;
+      padding: 20px !important;
+      filter: none !important;
+      opacity: 1 !important;
+      transform: none !important;
+    }
+
+    /* Elements that must not appear while the PDF is being generated. */
+    .pdf-generating .pdf-hide {
+      display: none !important;
+    }
+
+    /* Keep result cards clean while html2canvas captures them. */
+    .pdf-mode .review-question {
+      animation: none !important;
+      transition: none !important;
+      transform: none !important;
+      filter: none !important;
+      opacity: 1 !important;
+      break-inside: auto !important;
+      page-break-inside: auto !important;
+    }
+
+    /* Stop all UI animations during PDF generation. */
+    .pdf-generating,
+    .pdf-generating * {
+      animation: none !important;
+      transition: none !important;
+      filter: none !important;
+    }
+
+    .pdf-mode img {
+      max-width: 300px !important;
+      height: auto !important;
+      filter: none !important;
+      opacity: 1 !important;
+      transform: none !important;
+    }
 
     @keyframes timerPulse   { 0%,100% { transform: scale(1); } 50% { transform: scale(1.06); } }
     @keyframes toastIn      { 0%   { transform: translateX(-50%) translateY(100px); opacity: 0; } 100% { transform: translateX(-50%) translateY(0); opacity: 1; } }
@@ -814,13 +919,18 @@ function ExamPage() {
         padding: "14px", fontFamily: "'Sora', 'Hind Siliguri', sans-serif",
       }}>
         <style>{globalStyles}</style>
-        <BlockedOverlay />
-        <WatermarkOverlay name={name} roll={roll} />
-        <BlurOverlay />
+
+        <div className="pdf-hide">
+          <BlockedOverlay />
+          <WatermarkOverlay name={name} roll={roll} />
+          <BlurOverlay />
+        </div>
 
         {showToast && (
-          <div style={{
-            position: "fixed", bottom: 28, left: "50%",
+          <div
+            className="pdf-hide"
+            style={{
+              position: "fixed", bottom: 28, left: "50%",
             transform: "translateX(-50%)", zIndex: 99998,
             width: "calc(100% - 32px)", maxWidth: 540,
             animation: toastVisible
@@ -879,7 +989,10 @@ function ExamPage() {
             </div>
           </div>
 
-          <div style={{ display: "flex", justifyContent: "center", marginBottom: 28 }}>
+          <div
+            className="pdf-hide"
+            style={{ display: "flex", justifyContent: "center", marginBottom: 28 }}
+          >
             <button
               onClick={downloadResult}
               style={{
