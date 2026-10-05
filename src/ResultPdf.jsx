@@ -1,37 +1,26 @@
 import React from "react";
+
 import {
   Document,
   Page,
   Text,
   View,
   StyleSheet,
-  Image,
   Font,
 } from "@react-pdf/renderer";
 
-/*
-|--------------------------------------------------------------------------
-| Bengali Font
-|--------------------------------------------------------------------------
-| Put this file here:
-|
-| public/fonts/NotoSansBengali-Regular.ttf
-|
-| Then Vite/React will serve it from:
-| /fonts/NotoSansBengali-Regular.ttf
-|--------------------------------------------------------------------------
-*/
+/* =========================================================
+   BENGALI FONT
+   ========================================================= */
 
 Font.register({
   family: "NotoBengali",
   src: "/fonts/NotoSansBengali-Regular.ttf",
 });
 
-/*
-|--------------------------------------------------------------------------
-| Styles
-|--------------------------------------------------------------------------
-*/
+/* =========================================================
+   STYLES
+   ========================================================= */
 
 const styles = StyleSheet.create({
   page: {
@@ -39,12 +28,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#f8fafc",
     fontFamily: "NotoBengali",
   },
-
-  /*
-  |--------------------------------------------------------------------------
-  | Header
-  |--------------------------------------------------------------------------
-  */
 
   header: {
     backgroundColor: "#2563eb",
@@ -67,12 +50,6 @@ const styles = StyleSheet.create({
     color: "#e0e7ff",
     lineHeight: 1.5,
   },
-
-  /*
-  |--------------------------------------------------------------------------
-  | Statistics
-  |--------------------------------------------------------------------------
-  */
 
   stats: {
     flexDirection: "row",
@@ -101,12 +78,6 @@ const styles = StyleSheet.create({
     color: "#0f172a",
   },
 
-  /*
-  |--------------------------------------------------------------------------
-  | Question Card
-  |--------------------------------------------------------------------------
-  */
-
   question: {
     backgroundColor: "#ffffff",
     padding: 14,
@@ -127,30 +98,11 @@ const styles = StyleSheet.create({
 
   questionText: {
     fontFamily: "NotoBengali",
-    fontSize: 10.5,
-    lineHeight: 1.65,
+    fontSize: 10,
+    lineHeight: 1.5,
     color: "#0f172a",
     marginBottom: 10,
   },
-
-  /*
-  |--------------------------------------------------------------------------
-  | Question Image
-  |--------------------------------------------------------------------------
-  */
-
-  questionImage: {
-    width: 220,
-    maxHeight: 180,
-    objectFit: "contain",
-    marginBottom: 10,
-  },
-
-  /*
-  |--------------------------------------------------------------------------
-  | Options
-  |--------------------------------------------------------------------------
-  */
 
   option: {
     padding: 8,
@@ -163,16 +115,10 @@ const styles = StyleSheet.create({
 
   optionText: {
     fontFamily: "NotoBengali",
-    fontSize: 9.5,
-    lineHeight: 1.55,
+    fontSize: 9,
+    lineHeight: 1.4,
     color: "#334155",
   },
-
-  /*
-  |--------------------------------------------------------------------------
-  | Correct / Wrong
-  |--------------------------------------------------------------------------
-  */
 
   correct: {
     backgroundColor: "#f0fdf4",
@@ -192,12 +138,6 @@ const styles = StyleSheet.create({
     color: "#7f1d1d",
   },
 
-  /*
-  |--------------------------------------------------------------------------
-  | Status labels
-  |--------------------------------------------------------------------------
-  */
-
   correctLabel: {
     fontFamily: "Helvetica",
     fontSize: 8,
@@ -211,34 +151,20 @@ const styles = StyleSheet.create({
   },
 });
 
-/*
-|--------------------------------------------------------------------------
-| Result PDF Component
-|--------------------------------------------------------------------------
-*/
+/* =========================================================
+   RESULT PDF
+   ========================================================= */
 
 export default function ResultPDF({
   exam,
   reviewData,
   score,
 }) {
-  /*
-  |--------------------------------------------------------------------------
-  | Safe data
-  |--------------------------------------------------------------------------
-  */
-
   const questions = Array.isArray(reviewData?.questions)
     ? reviewData.questions
     : [];
 
   const answers = reviewData?.answers || {};
-
-  /*
-  |--------------------------------------------------------------------------
-  | Score
-  |--------------------------------------------------------------------------
-  */
 
   const safeScore = Number.isFinite(Number(score))
     ? Number(score)
@@ -258,12 +184,6 @@ export default function ResultPDF({
         )
       : 0;
 
-  /*
-  |--------------------------------------------------------------------------
-  | Render
-  |--------------------------------------------------------------------------
-  */
-
   return (
     <Document
       title={`${exam?.title || "Exam"} - Result`}
@@ -275,9 +195,7 @@ export default function ResultPDF({
         style={styles.page}
         wrap
       >
-        {/* =========================================================
-            HEADER
-        ========================================================= */}
+        {/* HEADER */}
 
         <View style={styles.header}>
           <Text style={styles.title}>
@@ -288,13 +206,9 @@ export default function ResultPDF({
             {exam?.title || "Exam Result"}
           </Text>
 
-          {/* =======================================================
-              STATS
-          ======================================================= */}
+          {/* STATS */}
 
           <View style={styles.stats}>
-            {/* SCORE */}
-
             <View style={styles.stat}>
               <Text style={styles.statLabel}>
                 SCORE
@@ -304,8 +218,6 @@ export default function ResultPDF({
                 {safeScore}/{totalQuestions}
               </Text>
             </View>
-
-            {/* CORRECT */}
 
             <View style={styles.stat}>
               <Text style={styles.statLabel}>
@@ -317,8 +229,6 @@ export default function ResultPDF({
               </Text>
             </View>
 
-            {/* WRONG */}
-
             <View style={styles.stat}>
               <Text style={styles.statLabel}>
                 WRONG
@@ -328,8 +238,6 @@ export default function ResultPDF({
                 {wrong}
               </Text>
             </View>
-
-            {/* PERCENTAGE */}
 
             <View
               style={[
@@ -350,9 +258,7 @@ export default function ResultPDF({
           </View>
         </View>
 
-        {/* =========================================================
-            QUESTIONS
-        ========================================================= */}
+        {/* QUESTIONS */}
 
         {questions.map((q, index) => {
           const userAns = answers[q?._id];
@@ -362,7 +268,10 @@ export default function ResultPDF({
 
           return (
             <View
-              key={q?._id || `question-${index}`}
+              key={
+                q?._id ||
+                `question-${index}`
+              }
               style={styles.question}
               wrap
             >
@@ -372,91 +281,86 @@ export default function ResultPDF({
                 Q{index + 1}
               </Text>
 
-              {/* QUESTION TEXT */}
+              {/* QUESTION */}
 
               <Text style={styles.questionText}>
                 {q?.question || ""}
               </Text>
 
-              {/* ===================================================
-                  QUESTION IMAGE
-              =================================================== */}
-
-              {q?.image ? (
-                <Image
-                  src={q.image}
-                  style={styles.questionImage}
-                />
-              ) : null}
-
-              {/* ===================================================
-                  OPTIONS
-              =================================================== */}
+              {/* OPTIONS */}
 
               {Array.isArray(q?.options) &&
-                q.options.map((opt, optionIndex) => {
-                  const isCorrect =
-                    opt === correctAnswer;
+                q.options.map(
+                  (opt, optionIndex) => {
+                    const isCorrect =
+                      opt === correctAnswer;
 
-                  const isWrong =
-                    opt === userAns &&
-                    opt !== correctAnswer;
+                    const isWrong =
+                      opt === userAns &&
+                      opt !== correctAnswer;
 
-                  return (
-                    <View
-                      key={optionIndex}
-                      style={[
-                        styles.option,
-
-                        isCorrect
-                          ? styles.correct
-                          : null,
-
-                        isWrong
-                          ? styles.wrong
-                          : null,
-                      ]}
-                    >
-                      <Text
+                    return (
+                      <View
+                        key={optionIndex}
                         style={[
-                          styles.optionText,
+                          styles.option,
 
                           isCorrect
-                            ? styles.correctText
+                            ? styles.correct
                             : null,
 
                           isWrong
-                            ? styles.wrongText
+                            ? styles.wrong
                             : null,
                         ]}
                       >
-                        {opt}
+                        <Text
+                          style={[
+                            styles.optionText,
 
-                        {isCorrect ? (
-                          <>
-                            {"   "}
-                            <Text
-                              style={styles.correctLabel}
-                            >
-                              ✓ Correct
-                            </Text>
-                          </>
-                        ) : null}
+                            isCorrect
+                              ? styles.correctText
+                              : null,
 
-                        {isWrong ? (
-                          <>
-                            {"   "}
-                            <Text
-                              style={styles.wrongLabel}
-                            >
-                              ✕ Your Answer
-                            </Text>
-                          </>
-                        ) : null}
-                      </Text>
-                    </View>
-                  );
-                })}
+                            isWrong
+                              ? styles.wrongText
+                              : null,
+                          ]}
+                        >
+                          {opt}
+
+                          {isCorrect ? (
+                            <>
+                              {"   "}
+
+                              <Text
+                                style={
+                                  styles.correctLabel
+                                }
+                              >
+                                ✓ Correct
+                              </Text>
+                            </>
+                          ) : null}
+
+                          {isWrong ? (
+                            <>
+                              {"   "}
+
+                              <Text
+                                style={
+                                  styles.wrongLabel
+                                }
+                              >
+                                ✕ Your Answer
+                              </Text>
+                            </>
+                          ) : null}
+                        </Text>
+                      </View>
+                    );
+                  }
+                )}
             </View>
           );
         })}

@@ -407,19 +407,24 @@ function ExamPage() {
   /* ══════════════════════════════════════════
      SECURITY LAYER 3 — CSS Injection Protection
      ══════════════════════════════════════════ */
-  useEffect(() => {
-    const observer = new MutationObserver((mutations) => {
-      mutations.forEach((m) => {
-        m.addedNodes.forEach((node) => {
-          if (node.nodeName === "STYLE" || node.nodeName === "LINK") {
-            node.remove();
-          }
-        });
+useEffect(() => {
+  const observer = new MutationObserver((mutations) => {
+    mutations.forEach((m) => {
+      m.addedNodes.forEach((node) => {
+        if (node.nodeName === "STYLE" || node.nodeName === "LINK") {
+          node.remove();
+        }
       });
     });
-    observer.observe(document.head, { childList: true, subtree: true });
-    return () => observer.disconnect();
-  }, []);
+  });
+
+  observer.observe(document.head, {
+    childList: true,
+    subtree: true
+  });
+
+  return () => observer.disconnect();
+}, []);
 
   /* ══════════════════════════════════════════
      SECURITY LAYER 4 — iOS / Mobile Screenshot
@@ -600,34 +605,47 @@ function ExamPage() {
     submitExam();
   };
 
-  const downloadResult = async () => {
-    try {
-      const { pdf } = await import("@react-pdf/renderer");
+const downloadResult = async () => {
+  try {
+    const { pdf } = await import("@react-pdf/renderer");
 
-      const blob = await pdf(
-        <ResultPDF
-          exam={exam}
-          reviewData={reviewData}
-          score={score}
-        />
-      ).toBlob();
+    const blob = await pdf(
+      <ResultPDF
+        exam={exam}
+        reviewData={reviewData}
+        score={score}
+      />
+    ).toBlob();
 
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-
-      link.href = url;
-      link.download = `${exam?.title || "exam-result"}.pdf`;
-
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-
-      URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error("PDF generation failed:", error);
-      alert("PDF তৈরি করা যায়নি। আবার চেষ্টা করুন।");
+    if (!blob || blob.size === 0) {
+      throw new Error("Generated PDF is empty");
     }
-  };
+
+    const url = URL.createObjectURL(blob);
+
+    const link = document.createElement("a");
+
+    const safeTitle = (exam?.title || "exam-result")
+      .replace(/[\\/:*?"<>|]/g, "_")
+      .trim();
+
+    link.href = url;
+    link.download = `${safeTitle}.pdf`;
+    link.style.display = "none";
+
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    setTimeout(() => {
+      URL.revokeObjectURL(url);
+    }, 3000);
+
+  } catch (error) {
+    console.error("PDF generation failed:", error);
+    alert("PDF তৈরি করা যায়নি। আবার চেষ্টা করুন।");
+  }
+};
 
   /* ══════════════════════════════════════════
      GLOBAL STYLES
