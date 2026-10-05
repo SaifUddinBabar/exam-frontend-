@@ -1,10 +1,24 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 
 function OrganizationAdmins() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [organizationFilter, setOrganizationFilter] = useState("All");
   const [showModal, setShowModal] = useState(false);
+  const [screenWidth, setScreenWidth] = useState(
+    typeof window !== "undefined" ? window.innerWidth : 1200
+  );
+
+  useEffect(() => {
+    const handleResize = () => setScreenWidth(window.innerWidth);
+
+    window.addEventListener("resize", handleResize);
+
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  const isMobile = screenWidth <= 640;
+  const isTablet = screenWidth > 640 && screenWidth <= 1000;
 
   const admins = [
     {
@@ -15,7 +29,7 @@ function OrganizationAdmins() {
       role: "Owner",
       students: 1240,
       status: "Active",
-      lastLogin: "Today, 10:42 AM"
+      lastLogin: "Today, 10:42 AM",
     },
     {
       id: 2,
@@ -25,7 +39,7 @@ function OrganizationAdmins() {
       role: "Admin",
       students: 856,
       status: "Active",
-      lastLogin: "Today, 09:18 AM"
+      lastLogin: "Today, 09:18 AM",
     },
     {
       id: 3,
@@ -35,7 +49,7 @@ function OrganizationAdmins() {
       role: "Admin",
       students: 642,
       status: "Pending",
-      lastLogin: "Never"
+      lastLogin: "Never",
     },
     {
       id: 4,
@@ -45,7 +59,7 @@ function OrganizationAdmins() {
       role: "Owner",
       students: 523,
       status: "Active",
-      lastLogin: "Yesterday, 06:30 PM"
+      lastLogin: "Yesterday, 06:30 PM",
     },
     {
       id: 5,
@@ -55,7 +69,7 @@ function OrganizationAdmins() {
       role: "Admin",
       students: 934,
       status: "Inactive",
-      lastLogin: "Sep 28, 2026"
+      lastLogin: "Sep 28, 2026",
     },
     {
       id: 6,
@@ -65,296 +79,228 @@ function OrganizationAdmins() {
       role: "Admin",
       students: 718,
       status: "Active",
-      lastLogin: "Today, 08:51 AM"
-    }
+      lastLogin: "Today, 08:51 AM",
+    },
   ];
 
   const organizations = [
     "All",
-    ...new Set(admins.map((admin) => admin.organization))
+    ...new Set(admins.map((admin) => admin.organization)),
   ];
 
   const filteredAdmins = admins.filter((admin) => {
+    const searchText = search.toLowerCase().trim();
+
     const matchesSearch =
-      admin.name.toLowerCase().includes(search.toLowerCase()) ||
-      admin.email.toLowerCase().includes(search.toLowerCase()) ||
-      admin.organization.toLowerCase().includes(search.toLowerCase());
+      admin.name.toLowerCase().includes(searchText) ||
+      admin.email.toLowerCase().includes(searchText) ||
+      admin.organization.toLowerCase().includes(searchText);
 
     const matchesStatus =
-      statusFilter === "All" ||
-      admin.status === statusFilter;
+      statusFilter === "All" || admin.status === statusFilter;
 
     const matchesOrganization =
       organizationFilter === "All" ||
       admin.organization === organizationFilter;
 
-    return (
-      matchesSearch &&
-      matchesStatus &&
-      matchesOrganization
-    );
+    return matchesSearch && matchesStatus && matchesOrganization;
   });
 
+  const getStatusStyle = (status) => {
+    if (status === "Active") return styles.activeBadge;
+    if (status === "Pending") return styles.pendingBadge;
+    return styles.inactiveBadge;
+  };
+
   return (
-    <div style={styles.container}>
-
-      {/* =========================
-          HEADER
-      ========================= */}
-
-      <div style={styles.header}>
-
+    <div
+      style={{
+        ...styles.container,
+        padding: isMobile ? "2px" : "0",
+      }}
+    >
+      {/* HEADER */}
+      <div
+        style={{
+          ...styles.header,
+          flexDirection: isMobile ? "column" : "row",
+          alignItems: isMobile ? "stretch" : "center",
+          marginBottom: isMobile ? "18px" : "25px",
+        }}
+      >
         <div>
-          <h2 style={styles.title}>
+          <h2
+            style={{
+              ...styles.title,
+              fontSize: isMobile ? "21px" : "24px",
+            }}
+          >
             Organization Admins
           </h2>
 
-          <p style={styles.subtitle}>
+          <p
+            style={{
+              ...styles.subtitle,
+              fontSize: isMobile ? "12px" : "13px",
+            }}
+          >
             Manage administrators and owners of all organizations.
           </p>
         </div>
 
         <button
-          style={styles.addButton}
+          style={{
+            ...styles.addButton,
+            width: isMobile ? "100%" : "auto",
+          }}
           onClick={() => setShowModal(true)}
         >
           + Add Admin
         </button>
-
       </div>
 
+      {/* SUMMARY CARDS */}
+      <div
+        style={{
+          ...styles.summaryGrid,
+          gridTemplateColumns: isMobile
+            ? "repeat(2, minmax(0, 1fr))"
+            : isTablet
+            ? "repeat(2, minmax(0, 1fr))"
+            : "repeat(4, minmax(0, 1fr))",
+          gap: isMobile ? "10px" : "18px",
+          marginBottom: isMobile ? "16px" : "22px",
+        }}
+      >
+        <SummaryCard
+          icon="👨‍💼"
+          label="Total Admins"
+          value="186"
+          background="#eef2ff"
+          isMobile={isMobile}
+        />
 
-      {/* =========================
-          SUMMARY CARDS
-      ========================= */}
+        <SummaryCard
+          icon="✓"
+          label="Active Admins"
+          value="171"
+          background="#ecfdf5"
+          isMobile={isMobile}
+        />
 
-      <div style={styles.summaryGrid}>
+        <SummaryCard
+          icon="⏳"
+          label="Pending"
+          value="8"
+          background="#fff7ed"
+          isMobile={isMobile}
+        />
 
-        <div style={styles.summaryCard}>
-          <div
-            style={{
-              ...styles.summaryIcon,
-              background: "#eef2ff"
-            }}
-          >
-            👨‍💼
-          </div>
-
-          <div>
-            <p style={styles.summaryLabel}>
-              Total Admins
-            </p>
-
-            <h3 style={styles.summaryValue}>
-              186
-            </h3>
-          </div>
-        </div>
-
-
-        <div style={styles.summaryCard}>
-          <div
-            style={{
-              ...styles.summaryIcon,
-              background: "#ecfdf5"
-            }}
-          >
-            ✓
-          </div>
-
-          <div>
-            <p style={styles.summaryLabel}>
-              Active Admins
-            </p>
-
-            <h3 style={styles.summaryValue}>
-              171
-            </h3>
-          </div>
-        </div>
-
-
-        <div style={styles.summaryCard}>
-          <div
-            style={{
-              ...styles.summaryIcon,
-              background: "#fff7ed"
-            }}
-          >
-            ⏳
-          </div>
-
-          <div>
-            <p style={styles.summaryLabel}>
-              Pending
-            </p>
-
-            <h3 style={styles.summaryValue}>
-              8
-            </h3>
-          </div>
-        </div>
-
-
-        <div style={styles.summaryCard}>
-          <div
-            style={{
-              ...styles.summaryIcon,
-              background: "#fef2f2"
-            }}
-          >
-            ⛔
-          </div>
-
-          <div>
-            <p style={styles.summaryLabel}>
-              Inactive
-            </p>
-
-            <h3 style={styles.summaryValue}>
-              7
-            </h3>
-          </div>
-        </div>
-
+        <SummaryCard
+          icon="⛔"
+          label="Inactive"
+          value="7"
+          background="#fef2f2"
+          isMobile={isMobile}
+        />
       </div>
 
-
-      {/* =========================
-          TABLE PANEL
-      ========================= */}
-
-      <div style={styles.panel}>
-
-        {/* Filters */}
-
-        <div style={styles.filterBar}>
-
-          <div style={styles.searchBox}>
-
-            <span style={styles.searchIcon}>
-              🔍
-            </span>
+      {/* TABLE PANEL */}
+      <div
+        style={{
+          ...styles.panel,
+          padding: isMobile ? "12px" : "20px",
+          borderRadius: isMobile ? "12px" : "14px",
+        }}
+      >
+        {/* FILTER BAR */}
+        <div
+          style={{
+            ...styles.filterBar,
+            flexDirection: isMobile ? "column" : "row",
+            alignItems: isMobile ? "stretch" : "center",
+            gap: isMobile ? "9px" : "12px",
+            marginBottom: isMobile ? "14px" : "20px",
+          }}
+        >
+          <div
+            style={{
+              ...styles.searchBox,
+              width: isMobile ? "100%" : "auto",
+              minWidth: isMobile ? "0" : "250px",
+              height: isMobile ? "40px" : "42px",
+            }}
+          >
+            <span style={styles.searchIcon}>🔍</span>
 
             <input
               type="text"
               placeholder="Search admin, email or organization..."
               value={search}
-              onChange={(e) =>
-                setSearch(e.target.value)
-              }
-              style={styles.searchInput}
+              onChange={(e) => setSearch(e.target.value)}
+              style={{
+                ...styles.searchInput,
+                fontSize: isMobile ? "11px" : "12px",
+              }}
             />
-
           </div>
-
 
           <select
             value={organizationFilter}
-            onChange={(e) =>
-              setOrganizationFilter(e.target.value)
-            }
-            style={styles.select}
+            onChange={(e) => setOrganizationFilter(e.target.value)}
+            style={{
+              ...styles.select,
+              width: isMobile ? "100%" : "auto",
+              minWidth: isMobile ? "0" : "150px",
+              height: isMobile ? "40px" : "42px",
+            }}
           >
-
             {organizations.map((organization) => (
-              <option
-                key={organization}
-                value={organization}
-              >
+              <option key={organization} value={organization}>
                 {organization === "All"
                   ? "All Organizations"
                   : organization}
               </option>
             ))}
-
           </select>
-
 
           <select
             value={statusFilter}
-            onChange={(e) =>
-              setStatusFilter(e.target.value)
-            }
-            style={styles.select}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            style={{
+              ...styles.select,
+              width: isMobile ? "100%" : "auto",
+              minWidth: isMobile ? "0" : "150px",
+              height: isMobile ? "40px" : "42px",
+            }}
           >
-
-            <option value="All">
-              All Status
-            </option>
-
-            <option value="Active">
-              Active
-            </option>
-
-            <option value="Pending">
-              Pending
-            </option>
-
-            <option value="Inactive">
-              Inactive
-            </option>
-
+            <option value="All">All Status</option>
+            <option value="Active">Active</option>
+            <option value="Pending">Pending</option>
+            <option value="Inactive">Inactive</option>
           </select>
-
         </div>
 
-
-        {/* Table */}
-
+        {/* TABLE */}
         <div style={styles.tableWrapper}>
-
           <table style={styles.table}>
-
             <thead>
-
               <tr>
-
-                <th style={styles.th}>
-                  Administrator
-                </th>
-
-                <th style={styles.th}>
-                  Organization
-                </th>
-
-                <th style={styles.th}>
-                  Role
-                </th>
-
-                <th style={styles.th}>
-                  Students
-                </th>
-
-                <th style={styles.th}>
-                  Last Login
-                </th>
-
-                <th style={styles.th}>
-                  Status
-                </th>
-
-                <th style={styles.th}>
-                  Actions
-                </th>
-
+                <th style={styles.th}>Administrator</th>
+                <th style={styles.th}>Organization</th>
+                <th style={styles.th}>Role</th>
+                <th style={styles.th}>Students</th>
+                <th style={styles.th}>Last Login</th>
+                <th style={styles.th}>Status</th>
+                <th style={styles.th}>Actions</th>
               </tr>
-
             </thead>
 
-
             <tbody>
-
               {filteredAdmins.map((admin) => (
-
                 <tr key={admin.id}>
-
-                  {/* Admin */}
-
                   <td style={styles.td}>
-
                     <div style={styles.adminCell}>
-
                       <div style={styles.avatar}>
                         {admin.name
                           .split(" ")
@@ -364,37 +310,19 @@ function OrganizationAdmins() {
                       </div>
 
                       <div>
-
-                        <p style={styles.adminName}>
-                          {admin.name}
-                        </p>
-
-                        <p style={styles.adminEmail}>
-                          {admin.email}
-                        </p>
-
+                        <p style={styles.adminName}>{admin.name}</p>
+                        <p style={styles.adminEmail}>{admin.email}</p>
                       </div>
-
                     </div>
-
                   </td>
 
-
-                  {/* Organization */}
-
                   <td style={styles.td}>
-
                     <span style={styles.organizationName}>
                       {admin.organization}
                     </span>
-
                   </td>
 
-
-                  {/* Role */}
-
                   <td style={styles.td}>
-
                     <span
                       style={
                         admin.role === "Owner"
@@ -404,57 +332,25 @@ function OrganizationAdmins() {
                     >
                       {admin.role}
                     </span>
-
                   </td>
 
-
-                  {/* Students */}
-
                   <td style={styles.td}>
-
                     <span style={styles.studentCount}>
                       {admin.students.toLocaleString()}
                     </span>
-
                   </td>
 
-
-                  {/* Last Login */}
-
-                  <td style={styles.td}>
-                    {admin.lastLogin}
-                  </td>
-
-
-                  {/* Status */}
+                  <td style={styles.td}>{admin.lastLogin}</td>
 
                   <td style={styles.td}>
-
-                    <span
-                      style={
-                        admin.status === "Active"
-                          ? styles.activeBadge
-                          : admin.status === "Pending"
-                          ? styles.pendingBadge
-                          : styles.inactiveBadge
-                      }
-                    >
-                      <span style={styles.statusDot}>
-                        ●
-                      </span>
-
+                    <span style={getStatusStyle(admin.status)}>
+                      <span style={styles.statusDot}>●</span>
                       {admin.status}
                     </span>
-
                   </td>
 
-
-                  {/* Actions */}
-
                   <td style={styles.td}>
-
                     <div style={styles.actions}>
-
                       <button
                         style={styles.actionButton}
                         title="View"
@@ -472,138 +368,116 @@ function OrganizationAdmins() {
                       <button
                         style={{
                           ...styles.actionButton,
-                          color: "#ef4444"
+                          color: "#ef4444",
                         }}
                         title="Delete"
                       >
                         🗑
                       </button>
-
                     </div>
-
                   </td>
-
                 </tr>
-
               ))}
-
             </tbody>
-
           </table>
 
-
-          {/* Empty State */}
-
           {filteredAdmins.length === 0 && (
-
             <div style={styles.emptyState}>
+              <div style={styles.emptyIcon}>🔍</div>
 
-              <div style={styles.emptyIcon}>
-                🔍
-              </div>
-
-              <h3>
+              <h3 style={{ margin: "0 0 6px" }}>
                 No administrators found
               </h3>
 
-              <p>
+              <p style={{ margin: 0 }}>
                 Try changing your search or filters.
               </p>
-
             </div>
-
           )}
-
         </div>
 
-
-        {/* Pagination */}
-
-        <div style={styles.pagination}>
-
+        {/* PAGINATION */}
+        <div
+          style={{
+            ...styles.pagination,
+            flexDirection: isMobile ? "column" : "row",
+            justifyContent: isMobile ? "center" : "space-between",
+            alignItems: "center",
+          }}
+        >
           <p style={styles.paginationText}>
             Showing {filteredAdmins.length} of 186 administrators
           </p>
 
           <div style={styles.pageButtons}>
-
-            <button style={styles.pageButton}>
-              ‹
-            </button>
+            <button style={styles.pageButton}>‹</button>
 
             <button
               style={{
                 ...styles.pageButton,
-                ...styles.activePage
+                ...styles.activePage,
               }}
             >
               1
             </button>
 
-            <button style={styles.pageButton}>
-              2
-            </button>
+            <button style={styles.pageButton}>2</button>
+            <button style={styles.pageButton}>3</button>
+            <button style={styles.pageButton}>4</button>
 
-            <button style={styles.pageButton}>
-              3
-            </button>
-
-            <button style={styles.pageButton}>
-              4
-            </button>
-
-            <button style={styles.pageButton}>
-              ›
-            </button>
-
+            <button style={styles.pageButton}>›</button>
           </div>
-
         </div>
-
       </div>
 
-
-      {/* =========================
-          ADD ADMIN MODAL
-      ========================= */}
-
+      {/* ADD ADMIN MODAL */}
       {showModal && (
-
-        <div style={styles.overlay}>
-
-          <div style={styles.modal}>
-
+        <div
+          style={{
+            ...styles.overlay,
+            padding: isMobile ? "12px" : "20px",
+          }}
+          onClick={() => setShowModal(false)}
+        >
+          <div
+            style={{
+              ...styles.modal,
+              maxHeight: isMobile ? "92vh" : "90vh",
+              overflowY: "auto",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
             <div style={styles.modalHeader}>
-
               <div>
-
-                <h3 style={styles.modalTitle}>
+                <h3
+                  style={{
+                    ...styles.modalTitle,
+                    fontSize: isMobile ? "16px" : "17px",
+                  }}
+                >
                   Add Organization Admin
                 </h3>
 
                 <p style={styles.modalSubtitle}>
                   Create an administrator for an organization.
                 </p>
-
               </div>
 
               <button
                 style={styles.closeButton}
-                onClick={() =>
-                  setShowModal(false)
-                }
+                onClick={() => setShowModal(false)}
               >
                 ×
               </button>
-
             </div>
 
-
-            <div style={styles.form}>
-
-              <label style={styles.label}>
-                Full Name
-              </label>
+            <div
+              style={{
+                ...styles.form,
+                padding: isMobile ? "16px" : "20px",
+              }}
+            >
+              <label style={styles.label}>Full Name</label>
 
               <input
                 type="text"
@@ -611,10 +485,7 @@ function OrganizationAdmins() {
                 style={styles.input}
               />
 
-
-              <label style={styles.label}>
-                Email Address
-              </label>
+              <label style={styles.label}>Email Address</label>
 
               <input
                 type="email"
@@ -622,106 +493,125 @@ function OrganizationAdmins() {
                 style={styles.input}
               />
 
-
-              <label style={styles.label}>
-                Organization
-              </label>
+              <label style={styles.label}>Organization</label>
 
               <select style={styles.input}>
-
                 {organizations
-                  .filter(
-                    (organization) =>
-                      organization !== "All"
-                  )
+                  .filter((organization) => organization !== "All")
                   .map((organization) => (
-                    <option
-                      key={organization}
-                    >
+                    <option key={organization} value={organization}>
                       {organization}
                     </option>
                   ))}
-
               </select>
 
-
-              <label style={styles.label}>
-                Role
-              </label>
+              <label style={styles.label}>Role</label>
 
               <select style={styles.input}>
-
-                <option>
-                  Admin
-                </option>
-
-                <option>
-                  Owner
-                </option>
-
+                <option>Admin</option>
+                <option>Owner</option>
               </select>
 
-
-              <div style={styles.modalActions}>
-
+              <div
+                style={{
+                  ...styles.modalActions,
+                  flexDirection: isMobile ? "column-reverse" : "row",
+                }}
+              >
                 <button
-                  style={styles.cancelButton}
-                  onClick={() =>
-                    setShowModal(false)
-                  }
+                  style={{
+                    ...styles.cancelButton,
+                    width: isMobile ? "100%" : "auto",
+                  }}
+                  onClick={() => setShowModal(false)}
                 >
                   Cancel
                 </button>
 
-                <button style={styles.saveButton}>
+                <button
+                  style={{
+                    ...styles.saveButton,
+                    width: isMobile ? "100%" : "auto",
+                  }}
+                >
                   Create Admin
                 </button>
-
               </div>
-
             </div>
-
           </div>
-
         </div>
-
       )}
-
     </div>
   );
 }
 
+function SummaryCard({
+  icon,
+  label,
+  value,
+  background,
+  isMobile,
+}) {
+  return (
+    <div
+      style={{
+        ...styles.summaryCard,
+        padding: isMobile ? "13px" : "18px",
+        gap: isMobile ? "9px" : "13px",
+      }}
+    >
+      <div
+        style={{
+          ...styles.summaryIcon,
+          width: isMobile ? "36px" : "42px",
+          height: isMobile ? "36px" : "42px",
+          fontSize: isMobile ? "15px" : "17px",
+          background,
+        }}
+      >
+        {icon}
+      </div>
 
-/* =====================================================
-   STYLES
-===================================================== */
+      <div style={{ minWidth: 0 }}>
+        <p style={styles.summaryLabel}>{label}</p>
+
+        <h3
+          style={{
+            ...styles.summaryValue,
+            fontSize: isMobile ? "18px" : "22px",
+          }}
+        >
+          {value}
+        </h3>
+      </div>
+    </div>
+  );
+}
 
 const styles = {
-
   container: {
-    width: "100%"
+    width: "100%",
+    boxSizing: "border-box",
   },
 
   header: {
     display: "flex",
     justifyContent: "space-between",
-    alignItems: "center",
     gap: "20px",
-    marginBottom: "25px",
-    flexWrap: "wrap"
+    flexWrap: "wrap",
   },
 
   title: {
     margin: 0,
-    fontSize: "24px",
     fontWeight: "700",
-    color: "#111827"
+    color: "#111827",
+    lineHeight: "1.25",
   },
 
   subtitle: {
     margin: "6px 0 0",
-    fontSize: "13px",
-    color: "#6b7280"
+    color: "#6b7280",
+    lineHeight: "1.5",
   },
 
   addButton: {
@@ -735,95 +625,89 @@ const styles = {
     fontWeight: "600",
     cursor: "pointer",
     boxShadow:
-      "0 6px 16px rgba(99,102,241,0.22)"
+      "0 6px 16px rgba(99,102,241,0.22)",
+    minHeight: "42px",
   },
 
   summaryGrid: {
     display: "grid",
-    gridTemplateColumns:
-      "repeat(4, minmax(0, 1fr))",
-    gap: "18px",
-    marginBottom: "22px"
+    width: "100%",
   },
 
   summaryCard: {
     background: "#fff",
     border: "1px solid #e5e7eb",
     borderRadius: "14px",
-    padding: "18px",
     display: "flex",
     alignItems: "center",
-    gap: "13px",
     boxShadow:
-      "0 2px 8px rgba(15,23,42,0.03)"
+      "0 2px 8px rgba(15,23,42,0.03)",
+    minWidth: 0,
+    boxSizing: "border-box",
   },
 
   summaryIcon: {
-    width: "42px",
-    height: "42px",
     borderRadius: "11px",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    fontSize: "17px"
+    flexShrink: 0,
   },
 
   summaryLabel: {
     margin: 0,
-    fontSize: "11px",
-    color: "#6b7280"
+    fontSize: "10px",
+    color: "#6b7280",
+    whiteSpace: "nowrap",
   },
 
   summaryValue: {
     margin: "4px 0 0",
-    fontSize: "22px",
-    color: "#111827"
+    color: "#111827",
+    fontWeight: "700",
   },
 
   panel: {
     background: "#fff",
     border: "1px solid #e5e7eb",
-    borderRadius: "14px",
-    padding: "20px",
     boxShadow:
-      "0 2px 8px rgba(15,23,42,0.03)"
+      "0 2px 8px rgba(15,23,42,0.03)",
+    boxSizing: "border-box",
+    width: "100%",
   },
 
   filterBar: {
     display: "flex",
-    alignItems: "center",
-    gap: "12px",
-    marginBottom: "20px",
-    flexWrap: "wrap"
+    flexWrap: "wrap",
   },
 
   searchBox: {
     flex: 1,
-    minWidth: "250px",
-    height: "42px",
     border: "1px solid #e5e7eb",
     borderRadius: "9px",
     display: "flex",
     alignItems: "center",
     padding: "0 12px",
-    background: "#fff"
+    background: "#fff",
+    boxSizing: "border-box",
   },
 
   searchIcon: {
     fontSize: "13px",
-    marginRight: "8px"
+    marginRight: "8px",
+    flexShrink: 0,
   },
 
   searchInput: {
     width: "100%",
     border: "none",
     outline: "none",
-    fontSize: "12px",
-    color: "#374151"
+    color: "#374151",
+    background: "transparent",
+    minWidth: 0,
   },
 
   select: {
-    height: "42px",
     border: "1px solid #e5e7eb",
     borderRadius: "9px",
     padding: "0 12px",
@@ -832,18 +716,19 @@ const styles = {
     fontSize: "11px",
     outline: "none",
     cursor: "pointer",
-    minWidth: "150px"
+    boxSizing: "border-box",
   },
 
   tableWrapper: {
     width: "100%",
-    overflowX: "auto"
+    overflowX: "auto",
+    WebkitOverflowScrolling: "touch",
   },
 
   table: {
     width: "100%",
     borderCollapse: "collapse",
-    minWidth: "950px"
+    minWidth: "950px",
   },
 
   th: {
@@ -852,24 +737,24 @@ const styles = {
     fontSize: "10px",
     color: "#9ca3af",
     fontWeight: "600",
-    borderBottom:
-      "1px solid #eef0f3",
-    whiteSpace: "nowrap"
+    borderBottom: "1px solid #eef0f3",
+    whiteSpace: "nowrap",
+    background: "#fafafa",
   },
 
   td: {
     padding: "14px 10px",
     fontSize: "11px",
     color: "#4b5563",
-    borderBottom:
-      "1px solid #f3f4f6",
-    whiteSpace: "nowrap"
+    borderBottom: "1px solid #f3f4f6",
+    whiteSpace: "nowrap",
   },
 
   adminCell: {
     display: "flex",
     alignItems: "center",
-    gap: "10px"
+    gap: "10px",
+    minWidth: "240px",
   },
 
   avatar: {
@@ -883,31 +768,32 @@ const styles = {
     alignItems: "center",
     justifyContent: "center",
     fontSize: "11px",
-    fontWeight: "700"
+    fontWeight: "700",
+    flexShrink: 0,
   },
 
   adminName: {
     margin: 0,
     fontSize: "12px",
     fontWeight: "600",
-    color: "#111827"
+    color: "#111827",
   },
 
   adminEmail: {
     margin: "4px 0 0",
     fontSize: "9px",
-    color: "#9ca3af"
+    color: "#9ca3af",
   },
 
   organizationName: {
     fontSize: "11px",
     fontWeight: "500",
-    color: "#374151"
+    color: "#374151",
   },
 
   studentCount: {
     fontWeight: "600",
-    color: "#374151"
+    color: "#374151",
   },
 
   ownerBadge: {
@@ -916,7 +802,7 @@ const styles = {
     padding: "5px 9px",
     borderRadius: "20px",
     fontSize: "9px",
-    fontWeight: "600"
+    fontWeight: "600",
   },
 
   adminBadge: {
@@ -925,44 +811,50 @@ const styles = {
     padding: "5px 9px",
     borderRadius: "20px",
     fontSize: "9px",
-    fontWeight: "600"
+    fontWeight: "600",
   },
 
   activeBadge: {
+    display: "inline-flex",
+    alignItems: "center",
     background: "#ecfdf5",
     color: "#059669",
     padding: "5px 9px",
     borderRadius: "20px",
     fontSize: "9px",
-    fontWeight: "600"
+    fontWeight: "600",
   },
 
   pendingBadge: {
+    display: "inline-flex",
+    alignItems: "center",
     background: "#fff7ed",
     color: "#ea580c",
     padding: "5px 9px",
     borderRadius: "20px",
     fontSize: "9px",
-    fontWeight: "600"
+    fontWeight: "600",
   },
 
   inactiveBadge: {
+    display: "inline-flex",
+    alignItems: "center",
     background: "#fef2f2",
     color: "#dc2626",
     padding: "5px 9px",
     borderRadius: "20px",
     fontSize: "9px",
-    fontWeight: "600"
+    fontWeight: "600",
   },
 
   statusDot: {
     fontSize: "7px",
-    marginRight: "5px"
+    marginRight: "5px",
   },
 
   actions: {
     display: "flex",
-    gap: "5px"
+    gap: "5px",
   },
 
   actionButton: {
@@ -972,18 +864,19 @@ const styles = {
     background: "#fff",
     borderRadius: "7px",
     cursor: "pointer",
-    fontSize: "12px"
+    fontSize: "12px",
+    flexShrink: 0,
   },
 
   emptyState: {
     textAlign: "center",
     padding: "50px 20px",
-    color: "#6b7280"
+    color: "#6b7280",
   },
 
   emptyIcon: {
     fontSize: "30px",
-    marginBottom: "10px"
+    marginBottom: "10px",
   },
 
   pagination: {
@@ -991,21 +884,19 @@ const styles = {
     paddingTop: "16px",
     borderTop: "1px solid #f0f1f3",
     display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
     gap: "15px",
-    flexWrap: "wrap"
+    flexWrap: "wrap",
   },
 
   paginationText: {
     margin: 0,
     fontSize: "10px",
-    color: "#9ca3af"
+    color: "#9ca3af",
   },
 
   pageButtons: {
     display: "flex",
-    gap: "5px"
+    gap: "5px",
   },
 
   pageButton: {
@@ -1016,13 +907,13 @@ const styles = {
     borderRadius: "7px",
     cursor: "pointer",
     fontSize: "11px",
-    color: "#6b7280"
+    color: "#6b7280",
   },
 
   activePage: {
     background: "#6366f1",
     color: "#fff",
-    borderColor: "#6366f1"
+    borderColor: "#6366f1",
   },
 
   overlay: {
@@ -1033,7 +924,7 @@ const styles = {
     alignItems: "center",
     justifyContent: "center",
     zIndex: 2000,
-    padding: "20px"
+    boxSizing: "border-box",
   },
 
   modal: {
@@ -1041,30 +932,29 @@ const styles = {
     maxWidth: "480px",
     background: "#fff",
     borderRadius: "16px",
-    boxShadow:
-      "0 25px 60px rgba(0,0,0,0.2)",
-    overflow: "hidden"
+    boxShadow: "0 25px 60px rgba(0,0,0,0.2)",
+    overflow: "hidden",
+    boxSizing: "border-box",
   },
 
   modalHeader: {
     padding: "20px",
-    borderBottom:
-      "1px solid #eef0f3",
+    borderBottom: "1px solid #eef0f3",
     display: "flex",
     justifyContent: "space-between",
-    alignItems: "flex-start"
+    alignItems: "flex-start",
+    gap: "15px",
   },
 
   modalTitle: {
     margin: 0,
-    fontSize: "17px",
-    color: "#111827"
+    color: "#111827",
   },
 
   modalSubtitle: {
     margin: "5px 0 0",
     fontSize: "11px",
-    color: "#9ca3af"
+    color: "#9ca3af",
   },
 
   closeButton: {
@@ -1075,11 +965,12 @@ const styles = {
     borderRadius: "7px",
     cursor: "pointer",
     fontSize: "20px",
-    color: "#6b7280"
+    color: "#6b7280",
+    flexShrink: 0,
   },
 
   form: {
-    padding: "20px"
+    boxSizing: "border-box",
   },
 
   label: {
@@ -1088,7 +979,7 @@ const styles = {
     marginTop: "15px",
     fontSize: "11px",
     fontWeight: "600",
-    color: "#374151"
+    color: "#374151",
   },
 
   input: {
@@ -1101,14 +992,14 @@ const styles = {
     fontSize: "12px",
     outline: "none",
     color: "#374151",
-    background: "#fff"
+    background: "#fff",
   },
 
   modalActions: {
     display: "flex",
     justifyContent: "flex-end",
     gap: "10px",
-    marginTop: "24px"
+    marginTop: "24px",
   },
 
   cancelButton: {
@@ -1118,7 +1009,8 @@ const styles = {
     padding: "10px 15px",
     borderRadius: "8px",
     fontSize: "11px",
-    cursor: "pointer"
+    cursor: "pointer",
+    minHeight: "40px",
   },
 
   saveButton: {
@@ -1130,8 +1022,9 @@ const styles = {
     borderRadius: "8px",
     fontSize: "11px",
     fontWeight: "600",
-    cursor: "pointer"
-  }
+    cursor: "pointer",
+    minHeight: "40px",
+  },
 };
 
 export default OrganizationAdmins;

@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 
 const questions = [
   {
@@ -17,8 +17,7 @@ const questions = [
   },
   {
     id: 2,
-    question:
-      "Which layer of the OSI model is responsible for routing?",
+    question: "Which layer of the OSI model is responsible for routing?",
     subject: "ICT",
     chapter: "Networking",
     topic: "OSI Model",
@@ -45,8 +44,7 @@ const questions = [
   },
   {
     id: 4,
-    question:
-      "Which data structure follows the FIFO principle?",
+    question: "Which data structure follows the FIFO principle?",
     subject: "Computer Science",
     chapter: "Data Structures",
     topic: "Queue",
@@ -73,8 +71,7 @@ const questions = [
   },
   {
     id: 6,
-    question:
-      "Which HTML tag is used to create an unordered list?",
+    question: "Which HTML tag is used to create an unordered list?",
     subject: "ICT",
     chapter: "HTML",
     topic: "Lists",
@@ -108,13 +105,34 @@ function QuestionBank() {
   const [typeFilter, setTypeFilter] = useState("All");
   const [showModal, setShowModal] = useState(false);
 
+  const [screenWidth, setScreenWidth] = useState(
+    typeof window !== "undefined" ? window.innerWidth : 1200
+  );
+
+  useEffect(() => {
+    const handleResize = () => {
+      setScreenWidth(window.innerWidth);
+    };
+
+    window.addEventListener("resize", handleResize);
+
+    return () => {
+      window.removeEventListener("resize", handleResize);
+    };
+  }, []);
+
+  const isMobile = screenWidth <= 640;
+  const isTablet = screenWidth > 640 && screenWidth <= 1000;
+
   const filteredQuestions = useMemo(() => {
     return questions.filter((item) => {
+      const query = search.toLowerCase();
+
       const matchesSearch =
-        item.question.toLowerCase().includes(search.toLowerCase()) ||
-        item.subject.toLowerCase().includes(search.toLowerCase()) ||
-        item.chapter.toLowerCase().includes(search.toLowerCase()) ||
-        item.topic.toLowerCase().includes(search.toLowerCase());
+        item.question.toLowerCase().includes(query) ||
+        item.subject.toLowerCase().includes(query) ||
+        item.chapter.toLowerCase().includes(query) ||
+        item.topic.toLowerCase().includes(query);
 
       const matchesSubject =
         subjectFilter === "All" || item.subject === subjectFilter;
@@ -123,7 +141,8 @@ function QuestionBank() {
         difficultyFilter === "All" ||
         item.difficulty === difficultyFilter;
 
-      const matchesType = typeFilter === "All" || item.type === typeFilter;
+      const matchesType =
+        typeFilter === "All" || item.type === typeFilter;
 
       return (
         matchesSearch &&
@@ -171,23 +190,26 @@ function QuestionBank() {
 
   const styles = {
     page: {
-      padding: "30px",
+      width: "100%",
+      minHeight: "100%",
+      boxSizing: "border-box",
+      padding: isMobile ? "16px 12px" : isTablet ? "22px 16px" : "30px",
       background: "#f8fafc",
-      minHeight: "100vh",
       color: "#0f172a",
     },
 
     header: {
       display: "flex",
       justifyContent: "space-between",
-      alignItems: "center",
-      marginBottom: "28px",
-      gap: "20px",
+      alignItems: isMobile ? "stretch" : "center",
+      marginBottom: isMobile ? "20px" : "28px",
+      gap: "15px",
+      flexDirection: isMobile ? "column" : "row",
     },
 
     title: {
       margin: 0,
-      fontSize: "28px",
+      fontSize: isMobile ? "22px" : "28px",
       fontWeight: 800,
       letterSpacing: "-0.6px",
     },
@@ -195,7 +217,8 @@ function QuestionBank() {
     subtitle: {
       margin: "7px 0 0",
       color: "#64748b",
-      fontSize: "14px",
+      fontSize: isMobile ? "12px" : "14px",
+      lineHeight: 1.5,
     },
 
     primaryButton: {
@@ -208,21 +231,27 @@ function QuestionBank() {
       fontWeight: 700,
       cursor: "pointer",
       boxShadow: "0 8px 20px rgba(79,70,229,0.20)",
+      width: isMobile ? "100%" : "auto",
     },
 
     statsGrid: {
       display: "grid",
-      gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
-      gap: "18px",
-      marginBottom: "26px",
+      gridTemplateColumns: isMobile
+        ? "repeat(2, minmax(0, 1fr))"
+        : isTablet
+        ? "repeat(2, minmax(0, 1fr))"
+        : "repeat(4, minmax(0, 1fr))",
+      gap: isMobile ? "10px" : "18px",
+      marginBottom: "22px",
     },
 
     statCard: {
       background: "white",
       border: "1px solid #e2e8f0",
       borderRadius: "14px",
-      padding: "20px",
+      padding: isMobile ? "14px" : "20px",
       boxShadow: "0 4px 15px rgba(15,23,42,0.04)",
+      minWidth: 0,
     },
 
     statTop: {
@@ -232,33 +261,36 @@ function QuestionBank() {
     },
 
     statIcon: {
-      width: "42px",
-      height: "42px",
+      width: isMobile ? "36px" : "42px",
+      height: isMobile ? "36px" : "42px",
       borderRadius: "11px",
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
-      fontSize: "19px",
+      fontSize: isMobile ? "16px" : "19px",
       fontWeight: 800,
     },
 
     statLabel: {
-      marginTop: "15px",
+      marginTop: "12px",
       color: "#64748b",
-      fontSize: "13px",
+      fontSize: isMobile ? "10px" : "13px",
       fontWeight: 600,
+      whiteSpace: "nowrap",
+      overflow: "hidden",
+      textOverflow: "ellipsis",
     },
 
     statValue: {
       marginTop: "5px",
-      fontSize: "25px",
+      fontSize: isMobile ? "19px" : "25px",
       fontWeight: 800,
     },
 
     statChange: {
-      marginTop: "7px",
+      marginTop: "6px",
       color: "#059669",
-      fontSize: "12px",
+      fontSize: isMobile ? "9px" : "12px",
       fontWeight: 700,
     },
 
@@ -266,23 +298,26 @@ function QuestionBank() {
       background: "white",
       border: "1px solid #e2e8f0",
       borderRadius: "14px",
-      padding: "18px",
+      padding: isMobile ? "12px" : "18px",
       marginBottom: "18px",
       display: "flex",
-      gap: "12px",
+      gap: "10px",
       flexWrap: "wrap",
       alignItems: "center",
       boxShadow: "0 4px 15px rgba(15,23,42,0.03)",
+      flexDirection: isMobile ? "column" : "row",
     },
 
     searchWrapper: {
       flex: 1,
-      minWidth: "260px",
+      minWidth: isMobile ? "100%" : "260px",
+      width: isMobile ? "100%" : "auto",
       position: "relative",
     },
 
     searchInput: {
       width: "100%",
+      height: "42px",
       boxSizing: "border-box",
       padding: "12px 14px 12px 40px",
       border: "1px solid #e2e8f0",
@@ -301,14 +336,17 @@ function QuestionBank() {
     },
 
     select: {
-      padding: "12px 14px",
+      height: "42px",
+      padding: "0 14px",
       border: "1px solid #e2e8f0",
       borderRadius: "9px",
       background: "#f8fafc",
       color: "#334155",
       fontSize: "13px",
       outline: "none",
-      minWidth: "145px",
+      minWidth: isMobile ? "100%" : "145px",
+      width: isMobile ? "100%" : "auto",
+      boxSizing: "border-box",
     },
 
     tableCard: {
@@ -320,11 +358,13 @@ function QuestionBank() {
     },
 
     tableHeader: {
-      padding: "19px 20px",
+      padding: isMobile ? "15px" : "19px 20px",
       borderBottom: "1px solid #e2e8f0",
       display: "flex",
       justifyContent: "space-between",
-      alignItems: "center",
+      alignItems: isMobile ? "flex-start" : "center",
+      gap: "10px",
+      flexDirection: isMobile ? "column" : "row",
     },
 
     tableTitle: {
@@ -340,6 +380,8 @@ function QuestionBank() {
 
     tableWrapper: {
       overflowX: "auto",
+      width: "100%",
+      WebkitOverflowScrolling: "touch",
     },
 
     table: {
@@ -358,6 +400,7 @@ function QuestionBank() {
       letterSpacing: "0.5px",
       fontWeight: 800,
       borderBottom: "1px solid #e2e8f0",
+      whiteSpace: "nowrap",
     },
 
     td: {
@@ -366,6 +409,7 @@ function QuestionBank() {
       fontSize: "13px",
       color: "#334155",
       verticalAlign: "middle",
+      whiteSpace: "nowrap",
     },
 
     questionText: {
@@ -373,6 +417,7 @@ function QuestionBank() {
       color: "#0f172a",
       fontWeight: 650,
       lineHeight: 1.45,
+      whiteSpace: "normal",
     },
 
     secondary: {
@@ -403,13 +448,16 @@ function QuestionBank() {
       height: "32px",
       cursor: "pointer",
       fontSize: "13px",
+      flexShrink: 0,
     },
 
     pagination: {
-      padding: "16px 20px",
+      padding: isMobile ? "14px" : "16px 20px",
       display: "flex",
       justifyContent: "space-between",
       alignItems: "center",
+      gap: "12px",
+      flexDirection: isMobile ? "column" : "row",
       color: "#64748b",
       fontSize: "12px",
     },
@@ -443,24 +491,27 @@ function QuestionBank() {
       alignItems: "center",
       justifyContent: "center",
       zIndex: 1000,
-      padding: "20px",
+      padding: isMobile ? "12px" : "20px",
+      boxSizing: "border-box",
     },
 
     modal: {
       width: "100%",
       maxWidth: "620px",
+      maxHeight: "calc(100vh - 24px)",
       background: "white",
       borderRadius: "16px",
       boxShadow: "0 25px 70px rgba(15,23,42,0.25)",
-      overflow: "hidden",
+      overflowY: "auto",
     },
 
     modalHeader: {
-      padding: "22px 24px",
+      padding: isMobile ? "16px" : "22px 24px",
       borderBottom: "1px solid #e2e8f0",
       display: "flex",
       justifyContent: "space-between",
       alignItems: "center",
+      gap: "12px",
     },
 
     modalTitle: {
@@ -477,15 +528,16 @@ function QuestionBank() {
       borderRadius: "8px",
       cursor: "pointer",
       fontSize: "17px",
+      flexShrink: 0,
     },
 
     modalBody: {
-      padding: "24px",
+      padding: isMobile ? "16px" : "24px",
     },
 
     formGrid: {
       display: "grid",
-      gridTemplateColumns: "1fr 1fr",
+      gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
       gap: "16px",
     },
 
@@ -496,7 +548,7 @@ function QuestionBank() {
     },
 
     fullWidth: {
-      gridColumn: "1 / -1",
+      gridColumn: isMobile ? "auto" : "1 / -1",
     },
 
     label: {
@@ -506,19 +558,23 @@ function QuestionBank() {
     },
 
     input: {
+      width: "100%",
+      boxSizing: "border-box",
       padding: "11px 12px",
       border: "1px solid #cbd5e1",
       borderRadius: "8px",
       outline: "none",
       fontSize: "13px",
+      background: "#fff",
     },
 
     modalFooter: {
-      padding: "18px 24px",
+      padding: isMobile ? "15px 16px" : "18px 24px",
       borderTop: "1px solid #e2e8f0",
       display: "flex",
       justifyContent: "flex-end",
       gap: "10px",
+      flexDirection: isMobile ? "column-reverse" : "row",
     },
 
     cancelButton: {
@@ -582,6 +638,7 @@ function QuestionBank() {
       <div style={styles.header}>
         <div>
           <h1 style={styles.title}>Question Bank</h1>
+
           <p style={styles.subtitle}>
             Manage, organize and monitor questions across the entire platform.
           </p>
@@ -612,8 +669,12 @@ function QuestionBank() {
             </div>
 
             <div style={styles.statLabel}>{stat.label}</div>
+
             <div style={styles.statValue}>{stat.value}</div>
-            <div style={styles.statChange}>{stat.change} this month</div>
+
+            <div style={styles.statChange}>
+              {stat.change} this month
+            </div>
           </div>
         ))}
       </div>
@@ -694,7 +755,10 @@ function QuestionBank() {
               {filteredQuestions.map((item) => (
                 <tr key={item.id}>
                   <td style={styles.td}>
-                    <div style={styles.questionText}>{item.question}</div>
+                    <div style={styles.questionText}>
+                      {item.question}
+                    </div>
+
                     <div style={styles.secondary}>
                       ID: QB-{String(item.id).padStart(5, "0")} • {item.type}
                     </div>
@@ -812,7 +876,14 @@ function QuestionBank() {
 
       {/* ADD QUESTION MODAL */}
       {showModal && (
-        <div style={styles.overlay}>
+        <div
+          style={styles.overlay}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setShowModal(false);
+            }
+          }}
+        >
           <div style={styles.modal}>
             <div style={styles.modalHeader}>
               <h2 style={styles.modalTitle}>Add New Question</h2>
@@ -903,6 +974,7 @@ function QuestionBank() {
                     style={{
                       ...styles.input,
                       resize: "vertical",
+                      minHeight: "100px",
                     }}
                     placeholder="Write your question here..."
                   />

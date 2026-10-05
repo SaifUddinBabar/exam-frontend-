@@ -1,68 +1,126 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 
 function AdminSettings() {
   const [activeTab, setActiveTab] = useState("general");
 
   const [platformName, setPlatformName] = useState("Exam Builder");
-  const [supportEmail, setSupportEmail] = useState("support@exambuilder.com");
+  const [supportEmail, setSupportEmail] = useState(
+    "support@exambuilder.com"
+  );
   const [timezone, setTimezone] = useState("Asia/Dhaka");
+
   const [maintenanceMode, setMaintenanceMode] = useState(false);
   const [emailNotifications, setEmailNotifications] = useState(true);
   const [newOrganizationApproval, setNewOrganizationApproval] =
     useState(true);
 
+  // Responsive screen detection
+  const [screenWidth, setScreenWidth] = useState(
+    typeof window !== "undefined" ? window.innerWidth : 1200
+  );
+
+  useEffect(() => {
+    const handleResize = () => {
+      setScreenWidth(window.innerWidth);
+    };
+
+    window.addEventListener("resize", handleResize);
+
+    return () => {
+      window.removeEventListener("resize", handleResize);
+    };
+  }, []);
+
+  const isMobile = screenWidth <= 640;
+  const isTablet = screenWidth > 640 && screenWidth <= 900;
+
   const styles = {
     page: {
-      padding: "30px",
+      padding: isMobile ? "14px" : isTablet ? "20px" : "30px",
       background: "#f8fafc",
       minHeight: "100vh",
       color: "#0f172a",
+      boxSizing: "border-box",
+      width: "100%",
+      overflowX: "hidden",
     },
 
     header: {
-      marginBottom: "28px",
+      marginBottom: isMobile ? "18px" : "28px",
     },
 
     title: {
       margin: 0,
-      fontSize: "28px",
+      fontSize: isMobile ? "22px" : isTablet ? "25px" : "28px",
       fontWeight: 800,
       letterSpacing: "-0.6px",
+      lineHeight: 1.2,
     },
 
     subtitle: {
       margin: "7px 0 0",
       color: "#64748b",
-      fontSize: "14px",
+      fontSize: isMobile ? "12px" : "14px",
+      lineHeight: 1.5,
+      maxWidth: "700px",
     },
 
     layout: {
       display: "grid",
-      gridTemplateColumns: "220px minmax(0, 1fr)",
-      gap: "22px",
+      gridTemplateColumns: isMobile
+        ? "1fr"
+        : isTablet
+        ? "170px minmax(0, 1fr)"
+        : "220px minmax(0, 1fr)",
+      gap: isMobile ? "14px" : "22px",
       alignItems: "start",
+      minWidth: 0,
+      width: "100%",
     },
 
     sidebar: {
       background: "white",
       border: "1px solid #e2e8f0",
       borderRadius: "14px",
-      padding: "8px",
+      padding: isMobile ? "6px" : "8px",
       boxShadow: "0 4px 15px rgba(15,23,42,0.04)",
+
+      display: isMobile ? "flex" : "block",
+      gap: isMobile ? "5px" : undefined,
+
+      overflowX: isMobile ? "auto" : "visible",
+      overflowY: "hidden",
+
+      scrollbarWidth: "none",
+      WebkitOverflowScrolling: "touch",
+
+      minWidth: 0,
+      width: "100%",
+      boxSizing: "border-box",
     },
 
     tab: {
-      width: "100%",
-      padding: "12px 13px",
+      width: isMobile ? "auto" : "100%",
+      minWidth: isMobile ? "max-content" : undefined,
+
+      padding: isMobile ? "10px 13px" : "12px 13px",
+
       border: "none",
       borderRadius: "9px",
       background: "transparent",
       color: "#64748b",
       textAlign: "left",
-      fontSize: "13px",
+
+      fontSize: isMobile ? "12px" : "13px",
       fontWeight: 650,
       cursor: "pointer",
-      marginBottom: "3px",
+
+      marginBottom: isMobile ? 0 : "3px",
+
+      whiteSpace: "nowrap",
+      flexShrink: 0,
+
+      transition: "0.2s",
     },
 
     activeTab: {
@@ -74,36 +132,45 @@ function AdminSettings() {
     content: {
       background: "white",
       border: "1px solid #e2e8f0",
-      borderRadius: "14px",
+      borderRadius: isMobile ? "11px" : "14px",
       boxShadow: "0 4px 15px rgba(15,23,42,0.04)",
       overflow: "hidden",
+
+      minWidth: 0,
+      width: "100%",
+      boxSizing: "border-box",
     },
 
     sectionHeader: {
-      padding: "22px 24px",
+      padding: isMobile ? "17px" : "22px 24px",
       borderBottom: "1px solid #e2e8f0",
     },
 
     sectionTitle: {
       margin: 0,
-      fontSize: "18px",
+      fontSize: isMobile ? "16px" : "18px",
       fontWeight: 800,
+      lineHeight: 1.3,
     },
 
     sectionDescription: {
       margin: "6px 0 0",
       color: "#64748b",
-      fontSize: "12px",
+      fontSize: isMobile ? "11px" : "12px",
+      lineHeight: 1.5,
     },
 
     sectionBody: {
-      padding: "24px",
+      padding: isMobile ? "16px" : "24px",
+      minWidth: 0,
+      boxSizing: "border-box",
     },
 
     formGrid: {
       display: "grid",
-      gridTemplateColumns: "1fr 1fr",
-      gap: "20px",
+      gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr",
+      gap: isMobile ? "15px" : "20px",
+      minWidth: 0,
     },
 
     fullWidth: {
@@ -114,10 +181,11 @@ function AdminSettings() {
       display: "flex",
       flexDirection: "column",
       gap: "7px",
+      minWidth: 0,
     },
 
     label: {
-      fontSize: "12px",
+      fontSize: isMobile ? "11px" : "12px",
       fontWeight: 750,
       color: "#334155",
     },
@@ -125,26 +193,29 @@ function AdminSettings() {
     input: {
       width: "100%",
       boxSizing: "border-box",
-      padding: "11px 12px",
+      padding: isMobile ? "10px 11px" : "11px 12px",
       border: "1px solid #cbd5e1",
       borderRadius: "8px",
       outline: "none",
-      fontSize: "13px",
+      fontSize: isMobile ? "12px" : "13px",
       color: "#334155",
       background: "white",
+      minWidth: 0,
     },
 
     helpText: {
       color: "#94a3b8",
       fontSize: "11px",
+      lineHeight: 1.4,
     },
 
     footer: {
-      padding: "17px 24px",
+      padding: isMobile ? "14px 16px" : "17px 24px",
       borderTop: "1px solid #e2e8f0",
       display: "flex",
+      flexDirection: isMobile ? "column-reverse" : "row",
       justifyContent: "flex-end",
-      gap: "10px",
+      gap: "9px",
     },
 
     cancelButton: {
@@ -155,6 +226,8 @@ function AdminSettings() {
       color: "#475569",
       cursor: "pointer",
       fontWeight: 650,
+      width: isMobile ? "100%" : "auto",
+      boxSizing: "border-box",
     },
 
     saveButton: {
@@ -165,27 +238,36 @@ function AdminSettings() {
       color: "white",
       cursor: "pointer",
       fontWeight: 700,
+      width: isMobile ? "100%" : "auto",
+      boxSizing: "border-box",
     },
 
     settingRow: {
       display: "flex",
       justifyContent: "space-between",
-      alignItems: "center",
-      gap: "20px",
-      padding: "18px 0",
+      alignItems: isMobile ? "flex-start" : "center",
+      gap: isMobile ? "12px" : "20px",
+      padding: isMobile ? "16px 0" : "18px 0",
       borderBottom: "1px solid #f1f5f9",
+      minWidth: 0,
+    },
+
+    settingContent: {
+      flex: 1,
+      minWidth: 0,
     },
 
     settingTitle: {
-      fontSize: "13px",
+      fontSize: isMobile ? "12px" : "13px",
       fontWeight: 750,
       color: "#0f172a",
+      lineHeight: 1.4,
     },
 
     settingDescription: {
       marginTop: "5px",
       color: "#64748b",
-      fontSize: "11px",
+      fontSize: isMobile ? "10.5px" : "11px",
       lineHeight: 1.5,
       maxWidth: "600px",
     },
@@ -199,6 +281,9 @@ function AdminSettings() {
       cursor: "pointer",
       flexShrink: 0,
       transition: "0.2s",
+      display: "flex",
+      alignItems: "center",
+      boxSizing: "border-box",
     },
 
     toggleCircle: {
@@ -207,11 +292,12 @@ function AdminSettings() {
       borderRadius: "50%",
       background: "white",
       transition: "0.2s",
+      flexShrink: 0,
     },
 
     dangerBox: {
       marginTop: "25px",
-      padding: "18px",
+      padding: isMobile ? "15px" : "18px",
       borderRadius: "10px",
       background: "#fef2f2",
       border: "1px solid #fecaca",
@@ -220,14 +306,15 @@ function AdminSettings() {
     dangerTitle: {
       margin: 0,
       color: "#991b1b",
-      fontSize: "14px",
+      fontSize: isMobile ? "13px" : "14px",
       fontWeight: 800,
     },
 
     dangerText: {
       margin: "6px 0 13px",
       color: "#b91c1c",
-      fontSize: "11px",
+      fontSize: isMobile ? "10.5px" : "11px",
+      lineHeight: 1.5,
     },
 
     dangerButton: {
@@ -239,24 +326,30 @@ function AdminSettings() {
       cursor: "pointer",
       fontSize: "12px",
       fontWeight: 700,
+      width: isMobile ? "100%" : "auto",
+      boxSizing: "border-box",
     },
 
     securityCard: {
-      padding: "17px",
+      padding: isMobile ? "14px" : "17px",
       border: "1px solid #e2e8f0",
       borderRadius: "10px",
-      marginBottom: "13px",
+      marginBottom: "12px",
+      minWidth: 0,
     },
 
     securityTop: {
       display: "flex",
       justifyContent: "space-between",
-      alignItems: "center",
+      alignItems: "flex-start",
+      gap: "10px",
+      flexWrap: "wrap",
     },
 
     securityName: {
-      fontSize: "13px",
+      fontSize: isMobile ? "12px" : "13px",
       fontWeight: 750,
+      lineHeight: 1.4,
     },
 
     securityBadge: {
@@ -266,39 +359,48 @@ function AdminSettings() {
       color: "#047857",
       fontSize: "10px",
       fontWeight: 800,
+      whiteSpace: "nowrap",
     },
 
     securityText: {
       margin: "7px 0 0",
       color: "#64748b",
-      fontSize: "11px",
+      fontSize: isMobile ? "10.5px" : "11px",
       lineHeight: 1.5,
     },
 
     activityItem: {
       display: "flex",
       alignItems: "center",
-      gap: "13px",
-      padding: "15px 0",
+      gap: isMobile ? "10px" : "13px",
+      padding: isMobile ? "13px 0" : "15px 0",
       borderBottom: "1px solid #f1f5f9",
+      minWidth: 0,
     },
 
     activityIcon: {
-      width: "38px",
-      height: "38px",
+      width: isMobile ? "34px" : "38px",
+      height: isMobile ? "34px" : "38px",
       borderRadius: "10px",
       background: "#eef2ff",
       color: "#4f46e5",
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
-      fontSize: "16px",
+      fontSize: isMobile ? "14px" : "16px",
       flexShrink: 0,
     },
 
+    activityContent: {
+      minWidth: 0,
+      flex: 1,
+    },
+
     activityTitle: {
-      fontSize: "12px",
+      fontSize: isMobile ? "11px" : "12px",
       fontWeight: 700,
+      lineHeight: 1.4,
+      wordBreak: "break-word",
     },
 
     activityTime: {
@@ -316,9 +418,12 @@ function AdminSettings() {
     { id: "activity", icon: "◷", label: "Activity Log" },
   ];
 
+  // Toggle Component
   const Toggle = ({ enabled, onClick }) => (
     <button
+      type="button"
       onClick={onClick}
+      aria-pressed={enabled}
       style={{
         ...styles.toggle,
         background: enabled ? "#4f46e5" : "#cbd5e1",
@@ -333,6 +438,7 @@ function AdminSettings() {
     </button>
   );
 
+  // GENERAL
   const renderGeneral = () => (
     <>
       <div style={styles.sectionHeader}>
@@ -350,6 +456,7 @@ function AdminSettings() {
             <label style={styles.label}>Platform Name</label>
 
             <input
+              type="text"
               style={styles.input}
               value={platformName}
               onChange={(e) => setPlatformName(e.target.value)}
@@ -364,6 +471,7 @@ function AdminSettings() {
             <label style={styles.label}>Support Email</label>
 
             <input
+              type="email"
               style={styles.input}
               value={supportEmail}
               onChange={(e) => setSupportEmail(e.target.value)}
@@ -392,7 +500,7 @@ function AdminSettings() {
           <div style={styles.formGroup}>
             <label style={styles.label}>Default Language</label>
 
-            <select style={styles.input}>
+            <select style={styles.input} defaultValue="English">
               <option>English</option>
               <option>Bangla</option>
             </select>
@@ -407,10 +515,11 @@ function AdminSettings() {
             <label style={styles.label}>Platform Description</label>
 
             <textarea
-              rows="4"
+              rows={isMobile ? 5 : 4}
               style={{
                 ...styles.input,
                 resize: "vertical",
+                lineHeight: 1.5,
               }}
               defaultValue="A complete online examination and coaching management platform for modern educational organizations."
             />
@@ -419,13 +528,18 @@ function AdminSettings() {
       </div>
 
       <div style={styles.footer}>
-        <button style={styles.cancelButton}>Discard</button>
+        <button type="button" style={styles.cancelButton}>
+          Discard
+        </button>
 
-        <button style={styles.saveButton}>Save Changes</button>
+        <button type="button" style={styles.saveButton}>
+          Save Changes
+        </button>
       </div>
     </>
   );
 
+  // NOTIFICATIONS
   const renderNotifications = () => (
     <>
       <div style={styles.sectionHeader}>
@@ -438,7 +552,7 @@ function AdminSettings() {
 
       <div style={styles.sectionBody}>
         <div style={styles.settingRow}>
-          <div>
+          <div style={styles.settingContent}>
             <div style={styles.settingTitle}>Email Notifications</div>
 
             <div style={styles.settingDescription}>
@@ -456,7 +570,7 @@ function AdminSettings() {
         </div>
 
         <div style={styles.settingRow}>
-          <div>
+          <div style={styles.settingContent}>
             <div style={styles.settingTitle}>
               New Organization Approval
             </div>
@@ -476,7 +590,7 @@ function AdminSettings() {
         </div>
 
         <div style={styles.settingRow}>
-          <div>
+          <div style={styles.settingContent}>
             <div style={styles.settingTitle}>Payment Alerts</div>
 
             <div style={styles.settingDescription}>
@@ -488,8 +602,13 @@ function AdminSettings() {
           <Toggle enabled={true} onClick={() => {}} />
         </div>
 
-        <div style={styles.settingRow}>
-          <div>
+        <div
+          style={{
+            ...styles.settingRow,
+            borderBottom: "none",
+          }}
+        >
+          <div style={styles.settingContent}>
             <div style={styles.settingTitle}>Exam Activity Alerts</div>
 
             <div style={styles.settingDescription}>
@@ -503,13 +622,18 @@ function AdminSettings() {
       </div>
 
       <div style={styles.footer}>
-        <button style={styles.cancelButton}>Discard</button>
+        <button type="button" style={styles.cancelButton}>
+          Discard
+        </button>
 
-        <button style={styles.saveButton}>Save Changes</button>
+        <button type="button" style={styles.saveButton}>
+          Save Changes
+        </button>
       </div>
     </>
   );
 
+  // SECURITY
   const renderSecurity = () => (
     <>
       <div style={styles.sectionHeader}>
@@ -538,9 +662,7 @@ function AdminSettings() {
 
         <div style={styles.securityCard}>
           <div style={styles.securityTop}>
-            <div style={styles.securityName}>
-              Password Policy
-            </div>
+            <div style={styles.securityName}>Password Policy</div>
 
             <span style={styles.securityBadge}>Strong</span>
           </div>
@@ -553,9 +675,7 @@ function AdminSettings() {
 
         <div style={styles.securityCard}>
           <div style={styles.securityTop}>
-            <div style={styles.securityName}>
-              Session Timeout
-            </div>
+            <div style={styles.securityName}>Session Timeout</div>
 
             <span style={styles.securityBadge}>30 Minutes</span>
           </div>
@@ -582,13 +702,15 @@ function AdminSettings() {
         </div>
 
         <div style={styles.dangerBox}>
-          <h3 style={styles.dangerTitle}>Reset Security Sessions</h3>
+          <h3 style={styles.dangerTitle}>
+            Reset Security Sessions
+          </h3>
 
           <p style={styles.dangerText}>
             This will sign out all administrator sessions across the platform.
           </p>
 
-          <button style={styles.dangerButton}>
+          <button type="button" style={styles.dangerButton}>
             Sign Out All Sessions
           </button>
         </div>
@@ -596,6 +718,7 @@ function AdminSettings() {
     </>
   );
 
+  // PLATFORM
   const renderPlatform = () => (
     <>
       <div style={styles.sectionHeader}>
@@ -608,7 +731,7 @@ function AdminSettings() {
 
       <div style={styles.sectionBody}>
         <div style={styles.settingRow}>
-          <div>
+          <div style={styles.settingContent}>
             <div style={styles.settingTitle}>Maintenance Mode</div>
 
             <div style={styles.settingDescription}>
@@ -624,8 +747,10 @@ function AdminSettings() {
         </div>
 
         <div style={styles.settingRow}>
-          <div>
-            <div style={styles.settingTitle}>Allow New Registrations</div>
+          <div style={styles.settingContent}>
+            <div style={styles.settingTitle}>
+              Allow New Registrations
+            </div>
 
             <div style={styles.settingDescription}>
               Allow new coaching centers and organizations to register on the
@@ -637,8 +762,10 @@ function AdminSettings() {
         </div>
 
         <div style={styles.settingRow}>
-          <div>
-            <div style={styles.settingTitle}>Automatic Data Backup</div>
+          <div style={styles.settingContent}>
+            <div style={styles.settingTitle}>
+              Automatic Data Backup
+            </div>
 
             <div style={styles.settingDescription}>
               Automatically create regular backups of important platform data.
@@ -648,9 +775,16 @@ function AdminSettings() {
           <Toggle enabled={true} onClick={() => {}} />
         </div>
 
-        <div style={styles.settingRow}>
-          <div>
-            <div style={styles.settingTitle}>Exam Result Publishing</div>
+        <div
+          style={{
+            ...styles.settingRow,
+            borderBottom: "none",
+          }}
+        >
+          <div style={styles.settingContent}>
+            <div style={styles.settingTitle}>
+              Exam Result Publishing
+            </div>
 
             <div style={styles.settingDescription}>
               Allow organizations to publish examination results immediately
@@ -663,13 +797,18 @@ function AdminSettings() {
       </div>
 
       <div style={styles.footer}>
-        <button style={styles.cancelButton}>Discard</button>
+        <button type="button" style={styles.cancelButton}>
+          Discard
+        </button>
 
-        <button style={styles.saveButton}>Save Changes</button>
+        <button type="button" style={styles.saveButton}>
+          Save Changes
+        </button>
       </div>
     </>
   );
 
+  // ACTIVITY
   const renderActivity = () => {
     const activities = [
       {
@@ -717,6 +856,7 @@ function AdminSettings() {
         <div style={styles.sectionBody}>
           {activities.map((activity, index) => (
             <div
+              key={index}
               style={{
                 ...styles.activityItem,
                 borderBottom:
@@ -724,11 +864,12 @@ function AdminSettings() {
                     ? "none"
                     : styles.activityItem.borderBottom,
               }}
-              key={index}
             >
-              <div style={styles.activityIcon}>{activity.icon}</div>
+              <div style={styles.activityIcon}>
+                {activity.icon}
+              </div>
 
-              <div>
+              <div style={styles.activityContent}>
                 <div style={styles.activityTitle}>
                   {activity.title}
                 </div>
@@ -777,10 +918,11 @@ function AdminSettings() {
 
       {/* CONTENT */}
       <div style={styles.layout}>
-        {/* SIDEBAR */}
+        {/* SETTINGS NAVIGATION */}
         <div style={styles.sidebar}>
           {tabs.map((tab) => (
             <button
+              type="button"
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               style={{
@@ -790,7 +932,11 @@ function AdminSettings() {
                   : {}),
               }}
             >
-              <span style={{ marginRight: "9px" }}>
+              <span
+                style={{
+                  marginRight: isMobile ? "7px" : "9px",
+                }}
+              >
                 {tab.icon}
               </span>
 
@@ -799,8 +945,10 @@ function AdminSettings() {
           ))}
         </div>
 
-        {/* MAIN */}
-        <div style={styles.content}>{renderContent()}</div>
+        {/* MAIN CONTENT */}
+        <div style={styles.content}>
+          {renderContent()}
+        </div>
       </div>
     </div>
   );
