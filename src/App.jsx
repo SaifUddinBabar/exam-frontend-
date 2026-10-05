@@ -1,4 +1,10 @@
-import { Routes, Route, Link, Navigate, useLocation } from "react-router-dom";
+import {
+  Routes,
+  Route,
+  Link,
+  Navigate,
+  useLocation,
+} from "react-router-dom";
 
 // =========================
 // MAIN APP COMPONENTS
@@ -8,7 +14,12 @@ import Ranking from "./RankingPage";
 import RankingPage from "./RankingPage";
 
 // =========================
-// ADMIN COMPONENTS
+// LOGIN
+// =========================
+import Login from "./Login/Login";
+
+// =========================
+// SUPER ADMIN
 // =========================
 import AdminApp from "./admin/AdminApp";
 import AdminDashboard from "./admin/AdminDashboard";
@@ -19,22 +30,35 @@ import OrganizationAdmins from "./admin/OrganizationAdmins";
 import Organizations from "./admin/Organizations";
 import QuestionBank from "./admin/QuestionBank";
 import Students from "./admin/Students";
+
+// =========================
+// BUILDER
+// =========================
 import Builder from "./admin/Builder";
 
 // =========================
-// EXAM BUILDER
+// COACHING OWNER
 // =========================
+import OrganizationApp from "./organization/OrganizationApp";
+
 
 function App() {
   const location = useLocation();
 
-  // Exam page হলে normal navbar hide
-  const isExamPage = location.pathname.startsWith("/exam");
+  // =====================================
+  // EXAM PAGE
+  // =====================================
+  const isExamPage =
+    location.pathname.startsWith("/exam");
 
-  // Admin অথবা Builder page হলে normal navbar hide
+  // =====================================
+  // HIDE NORMAL NAVBAR
+  // =====================================
   const isAdminPage =
     location.pathname.startsWith("/admin") ||
+    location.pathname.startsWith("/organization") ||
     location.pathname === "/" ||
+    location.pathname === "/login" ||
     location.pathname === "/builder";
 
   return (
@@ -62,21 +86,36 @@ function App() {
         </nav>
       )}
 
+      {/* =====================================
+          ALL ROUTES
+      ===================================== */}
       <Routes>
 
         {/* =====================================
-            MAIN LANDING PAGE
-            / → ADMIN DASHBOARD
+            LOGIN
         ===================================== */}
         <Route
           path="/"
-          element={<AdminApp />}
+          element={<Login />}
+        />
+
+        <Route
+          path="/login"
+          element={<Login />}
+        />
+
+
+        {/* =====================================
+            COACHING OWNER
+        ===================================== */}
+        <Route
+          path="/organization/*"
+          element={<OrganizationApp />}
         />
 
 
         {/* =====================================
             EXAM BUILDER
-            /builder → Builder.jsx
         ===================================== */}
         <Route
           path="/builder"
@@ -112,7 +151,7 @@ function App() {
 
 
         {/* =====================================
-            SUPER ADMIN DIRECT ROUTES
+            SUPER ADMIN
         ===================================== */}
 
         {/* Admin Main */}
@@ -121,9 +160,12 @@ function App() {
           element={<AdminApp />}
         />
 
-{
-  <Route path="/admin/builder" element={<Builder />} />
-}
+        {/* Admin Builder */}
+        <Route
+          path="/admin/builder"
+          element={<Builder />}
+        />
+
         {/* Admin Dashboard */}
         <Route
           path="/admin/dashboard"
@@ -172,15 +214,26 @@ function App() {
           element={<AdminSettings />}
         />
 
-{
-  <Route path="/admin/builder" element={<Builder />} />
-}
 
         {/* =====================================
             UNKNOWN ADMIN URL
         ===================================== */}
         <Route
           path="/admin/*"
+          element={
+            <Navigate
+              to="/"
+              replace
+            />
+          }
+        />
+
+
+        {/* =====================================
+            UNKNOWN URL
+        ===================================== */}
+        <Route
+          path="*"
           element={
             <Navigate
               to="/"
