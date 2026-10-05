@@ -6,14 +6,45 @@ import {
   View,
   StyleSheet,
   Image,
+  Font,
 } from "@react-pdf/renderer";
+
+/*
+|--------------------------------------------------------------------------
+| Bengali Font
+|--------------------------------------------------------------------------
+| Put this file here:
+|
+| public/fonts/NotoSansBengali-Regular.ttf
+|
+| Then Vite/React will serve it from:
+| /fonts/NotoSansBengali-Regular.ttf
+|--------------------------------------------------------------------------
+*/
+
+Font.register({
+  family: "NotoBengali",
+  src: "/fonts/NotoSansBengali-Regular.ttf",
+});
+
+/*
+|--------------------------------------------------------------------------
+| Styles
+|--------------------------------------------------------------------------
+*/
 
 const styles = StyleSheet.create({
   page: {
     padding: 30,
     backgroundColor: "#f8fafc",
-    fontFamily: "Helvetica",
+    fontFamily: "NotoBengali",
   },
+
+  /*
+  |--------------------------------------------------------------------------
+  | Header
+  |--------------------------------------------------------------------------
+  */
 
   header: {
     backgroundColor: "#2563eb",
@@ -23,6 +54,7 @@ const styles = StyleSheet.create({
   },
 
   title: {
+    fontFamily: "Helvetica",
     fontSize: 24,
     color: "#ffffff",
     fontWeight: "bold",
@@ -30,9 +62,17 @@ const styles = StyleSheet.create({
   },
 
   examTitle: {
+    fontFamily: "NotoBengali",
     fontSize: 14,
     color: "#e0e7ff",
+    lineHeight: 1.5,
   },
+
+  /*
+  |--------------------------------------------------------------------------
+  | Statistics
+  |--------------------------------------------------------------------------
+  */
 
   stats: {
     flexDirection: "row",
@@ -48,16 +88,24 @@ const styles = StyleSheet.create({
   },
 
   statLabel: {
+    fontFamily: "Helvetica",
     fontSize: 8,
     color: "#64748b",
     marginBottom: 5,
   },
 
   statValue: {
+    fontFamily: "Helvetica",
     fontSize: 16,
     fontWeight: "bold",
     color: "#0f172a",
   },
+
+  /*
+  |--------------------------------------------------------------------------
+  | Question Card
+  |--------------------------------------------------------------------------
+  */
 
   question: {
     backgroundColor: "#ffffff",
@@ -70,6 +118,7 @@ const styles = StyleSheet.create({
   },
 
   questionNumber: {
+    fontFamily: "Helvetica",
     fontSize: 9,
     color: "#3730a3",
     marginBottom: 7,
@@ -77,16 +126,31 @@ const styles = StyleSheet.create({
   },
 
   questionText: {
-    fontSize: 11,
-    lineHeight: 1.5,
+    fontFamily: "NotoBengali",
+    fontSize: 10.5,
+    lineHeight: 1.65,
     color: "#0f172a",
     marginBottom: 10,
   },
 
+  /*
+  |--------------------------------------------------------------------------
+  | Question Image
+  |--------------------------------------------------------------------------
+  */
+
   questionImage: {
     width: 220,
+    maxHeight: 180,
+    objectFit: "contain",
     marginBottom: 10,
   },
+
+  /*
+  |--------------------------------------------------------------------------
+  | Options
+  |--------------------------------------------------------------------------
+  */
 
   option: {
     padding: 8,
@@ -95,46 +159,127 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#e2e8f0",
     borderStyle: "solid",
-    fontSize: 9,
+  },
+
+  optionText: {
+    fontFamily: "NotoBengali",
+    fontSize: 9.5,
+    lineHeight: 1.55,
     color: "#334155",
   },
+
+  /*
+  |--------------------------------------------------------------------------
+  | Correct / Wrong
+  |--------------------------------------------------------------------------
+  */
 
   correct: {
     backgroundColor: "#f0fdf4",
     borderColor: "#86efac",
+  },
+
+  correctText: {
     color: "#14532d",
   },
 
   wrong: {
     backgroundColor: "#fff1f2",
     borderColor: "#fca5a5",
+  },
+
+  wrongText: {
     color: "#7f1d1d",
   },
+
+  /*
+  |--------------------------------------------------------------------------
+  | Status labels
+  |--------------------------------------------------------------------------
+  */
+
+  correctLabel: {
+    fontFamily: "Helvetica",
+    fontSize: 8,
+    color: "#15803d",
+  },
+
+  wrongLabel: {
+    fontFamily: "Helvetica",
+    fontSize: 8,
+    color: "#dc2626",
+  },
 });
+
+/*
+|--------------------------------------------------------------------------
+| Result PDF Component
+|--------------------------------------------------------------------------
+*/
 
 export default function ResultPDF({
   exam,
   reviewData,
   score,
 }) {
-  const questions = reviewData?.questions || [];
+  /*
+  |--------------------------------------------------------------------------
+  | Safe data
+  |--------------------------------------------------------------------------
+  */
+
+  const questions = Array.isArray(reviewData?.questions)
+    ? reviewData.questions
+    : [];
+
   const answers = reviewData?.answers || {};
 
-  const wrong = questions.length - score;
+  /*
+  |--------------------------------------------------------------------------
+  | Score
+  |--------------------------------------------------------------------------
+  */
+
+  const safeScore = Number.isFinite(Number(score))
+    ? Number(score)
+    : 0;
+
+  const totalQuestions = questions.length;
+
+  const wrong = Math.max(
+    0,
+    totalQuestions - safeScore
+  );
 
   const percentage =
-    questions.length > 0
-      ? Math.round((score / questions.length) * 100)
+    totalQuestions > 0
+      ? Math.round(
+          (safeScore / totalQuestions) * 100
+        )
       : 0;
 
+  /*
+  |--------------------------------------------------------------------------
+  | Render
+  |--------------------------------------------------------------------------
+  */
+
   return (
-    <Document>
+    <Document
+      title={`${exam?.title || "Exam"} - Result`}
+      author="Exam Builder"
+      subject="Exam Result"
+    >
+      <Page
+        size="A4"
+        style={styles.page}
+        wrap
+      >
+        {/* =========================================================
+            HEADER
+        ========================================================= */}
 
-      <Page size="A4" style={styles.page}>
-
-        {/* HEADER */}
         <View style={styles.header}>
-
           <Text style={styles.title}>
             Exam Completed
           </Text>
@@ -143,8 +288,12 @@ export default function ResultPDF({
             {exam?.title || "Exam Result"}
           </Text>
 
-          {/* STATS */}
+          {/* =======================================================
+              STATS
+          ======================================================= */}
+
           <View style={styles.stats}>
+            {/* SCORE */}
 
             <View style={styles.stat}>
               <Text style={styles.statLabel}>
@@ -152,9 +301,11 @@ export default function ResultPDF({
               </Text>
 
               <Text style={styles.statValue}>
-                {score}/{questions.length}
+                {safeScore}/{totalQuestions}
               </Text>
             </View>
+
+            {/* CORRECT */}
 
             <View style={styles.stat}>
               <Text style={styles.statLabel}>
@@ -162,9 +313,11 @@ export default function ResultPDF({
               </Text>
 
               <Text style={styles.statValue}>
-                {score}
+                {safeScore}
               </Text>
             </View>
+
+            {/* WRONG */}
 
             <View style={styles.stat}>
               <Text style={styles.statLabel}>
@@ -176,10 +329,14 @@ export default function ResultPDF({
               </Text>
             </View>
 
+            {/* PERCENTAGE */}
+
             <View
               style={[
                 styles.stat,
-                { marginRight: 0 },
+                {
+                  marginRight: 0,
+                },
               ]}
             >
               <Text style={styles.statLabel}>
@@ -190,89 +347,120 @@ export default function ResultPDF({
                 {percentage}%
               </Text>
             </View>
-
           </View>
         </View>
 
-        {/* QUESTIONS */}
+        {/* =========================================================
+            QUESTIONS
+        ========================================================= */}
 
         {questions.map((q, index) => {
+          const userAns = answers[q?._id];
 
-          const userAns = answers[q._id];
-          const correct = q.correctAnswer;
+          const correctAnswer =
+            q?.correctAnswer ?? "";
 
           return (
             <View
-              key={q._id || index}
+              key={q?._id || `question-${index}`}
               style={styles.question}
+              wrap
             >
+              {/* QUESTION NUMBER */}
 
               <Text style={styles.questionNumber}>
                 Q{index + 1}
               </Text>
 
+              {/* QUESTION TEXT */}
+
               <Text style={styles.questionText}>
-                {q.question || ""}
+                {q?.question || ""}
               </Text>
 
-              {/* QUESTION IMAGE */}
+              {/* ===================================================
+                  QUESTION IMAGE
+              =================================================== */}
 
-              {q.image && (
+              {q?.image ? (
                 <Image
                   src={q.image}
                   style={styles.questionImage}
                 />
-              )}
+              ) : null}
 
-              {/* OPTIONS */}
+              {/* ===================================================
+                  OPTIONS
+              =================================================== */}
 
-              {q.options?.map((opt, i) => {
+              {Array.isArray(q?.options) &&
+                q.options.map((opt, optionIndex) => {
+                  const isCorrect =
+                    opt === correctAnswer;
 
-                const isCorrect =
-                  opt === correct;
+                  const isWrong =
+                    opt === userAns &&
+                    opt !== correctAnswer;
 
-                const isWrong =
-                  opt === userAns &&
-                  opt !== correct;
+                  return (
+                    <View
+                      key={optionIndex}
+                      style={[
+                        styles.option,
 
-                return (
-                  <View
-                    key={i}
-                    style={[
-                      styles.option,
+                        isCorrect
+                          ? styles.correct
+                          : null,
 
-                      isCorrect
-                        ? styles.correct
-                        : null,
+                        isWrong
+                          ? styles.wrong
+                          : null,
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.optionText,
 
-                      isWrong
-                        ? styles.wrong
-                        : null,
-                    ]}
-                  >
+                          isCorrect
+                            ? styles.correctText
+                            : null,
 
-                    <Text>
-                      {opt}
+                          isWrong
+                            ? styles.wrongText
+                            : null,
+                        ]}
+                      >
+                        {opt}
 
-                      {isCorrect
-                        ? "   ✓ Correct"
-                        : ""}
+                        {isCorrect ? (
+                          <>
+                            {"   "}
+                            <Text
+                              style={styles.correctLabel}
+                            >
+                              ✓ Correct
+                            </Text>
+                          </>
+                        ) : null}
 
-                      {isWrong
-                        ? "   ✕ Your Answer"
-                        : ""}
-                    </Text>
-
-                  </View>
-                );
-              })}
-
+                        {isWrong ? (
+                          <>
+                            {"   "}
+                            <Text
+                              style={styles.wrongLabel}
+                            >
+                              ✕ Your Answer
+                            </Text>
+                          </>
+                        ) : null}
+                      </Text>
+                    </View>
+                  );
+                })}
             </View>
           );
         })}
-
       </Page>
-
     </Document>
   );
 }
