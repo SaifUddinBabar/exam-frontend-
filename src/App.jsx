@@ -1,45 +1,58 @@
+import React, { lazy, Suspense } from "react";
 import {
   Routes,
   Route,
-  Link,
   Navigate,
-  useLocation,
+  useParams,
 } from "react-router-dom";
 
 // =========================
-// MAIN APP COMPONENTS
+// LAZY-LOADED STUDENT PORTAL (APPROVED DESIGN SYSTEM)
 // =========================
-import ExamPage from "./ExamPage";
-import Ranking from "./RankingPage";
-import RankingPage from "./RankingPage";
+const StudentLogin = lazy(() => import("./student/StudentLogin"));
+const StudentRegister = lazy(() => import("./student/StudentRegister"));
+const StudentDashboard = lazy(() => import("./student/StudentDashboard"));
+const StudentExams = lazy(() => import("./student/StudentExams"));
+const ExamDetails = lazy(() => import("./student/ExamDetails"));
+const ExamInstructions = lazy(() => import("./student/ExamInstructions"));
+const LiveExamPage = lazy(() => import("./student/LiveExamPage"));
+const ExamSubmitted = lazy(() => import("./student/ExamSubmitted"));
+const ExamResult = lazy(() => import("./student/ExamResult"));
+const AnswerReview = lazy(() => import("./student/AnswerReview"));
+const StudentPerformance = lazy(() => import("./student/StudentPerformance"));
+const StudentHistory = lazy(() => import("./student/StudentHistory"));
+const StudentProfile = lazy(() => import("./student/StudentProfile"));
+const StudentQuestionBank = lazy(() => import("./student/StudentQuestionBank"));
+const PracticeZone = lazy(() => import("./student/PracticeZone"));
+const CreatePracticeTest = lazy(() => import("./student/CreatePracticeTest"));
+const PracticeSessionPage = lazy(() => import("./student/PracticeSessionPage"));
+const PracticeMistakes = lazy(() => import("./student/PracticeMistakes"));
+const SavedQuestions = lazy(() => import("./student/SavedQuestions"));
 
 // =========================
-// LOGIN
+// LAZY-LOADED SUPER ADMIN & COACHING (PRESERVED)
 // =========================
-import Login from "./Login/Login";
+const AdminApp = lazy(() => import("./admin/AdminApp"));
+const AdminDashboard = lazy(() => import("./admin/AdminDashboard"));
+const AdminSettings = lazy(() => import("./admin/AdminSettings"));
+const Billing = lazy(() => import("./admin/Billing"));
+const Exams = lazy(() => import("./admin/Exams"));
+const OrganizationAdmins = lazy(() => import("./admin/OrganizationAdmins"));
+const Organizations = lazy(() => import("./admin/Organizations"));
+const QuestionBank = lazy(() => import("./admin/QuestionBank"));
+const Students = lazy(() => import("./admin/Students"));
+const Builder = lazy(() => import("./admin/Builder"));
+const OrganizationApp = lazy(() => import("./organization/OrganizationApp"));
 
-// =========================
-// SUPER ADMIN
-// =========================
-import AdminApp from "./admin/AdminApp";
-import AdminDashboard from "./admin/AdminDashboard";
-import AdminSettings from "./admin/AdminSettings";
-import Billing from "./admin/Billing";
-import Exams from "./admin/Exams";
-import OrganizationAdmins from "./admin/OrganizationAdmins";
-import Organizations from "./admin/Organizations";
-import QuestionBank from "./admin/QuestionBank";
-import Students from "./admin/Students";
-
-// =========================
-// BUILDER
-// =========================
-import Builder from "./admin/Builder";
-
-// =========================
-// COACHING OWNER
-// =========================
-import OrganizationApp from "./organization/OrganizationApp";
+// Lightweight Suspense Loader
+function PageLoader() {
+  return (
+    <div className="min-h-screen bg-[#F8FAFC] flex flex-col items-center justify-center font-sans">
+      <div className="w-8 h-8 border-2 border-[#2563EB] border-t-transparent rounded-full animate-spin mb-3" />
+      <span className="text-xs font-semibold text-[#64748B]">Loading Examino...</span>
+    </div>
+  );
+}
 
 // =====================================
 // PROTECTED ROUTE GUARD
@@ -58,79 +71,74 @@ function ProtectedRoute({ children, allowedRoles }) {
       (r) => r.toLowerCase() === userRole || user.globalRole === "super_admin"
     );
     if (!hasRole) {
-      return <Navigate to="/login" replace />;
+      return <Navigate to="/dashboard" replace />;
     }
   }
 
   return children;
 }
 
+// Redirect wrapper for legacy ranking links
+function RankingRedirect() {
+  const { code } = useParams();
+  return <Navigate to={`/exams/${code}/result`} replace />;
+}
 
-function App() {
-  const location = useLocation();
+function RootRedirect() {
+  const token = localStorage.getItem("token");
+  const user = JSON.parse(localStorage.getItem("user") || "null");
 
-  // =====================================
-  // EXAM PAGE
-  // =====================================
-  const isExamPage =
-    location.pathname.startsWith("/exam");
+  if (!token || !user) {
+    return <StudentLogin />;
+  }
 
-  // =====================================
-  // HIDE NORMAL NAVBAR
-  // =====================================
-  const isAdminPage =
-    location.pathname.startsWith("/admin") ||
-    location.pathname.startsWith("/organization") ||
-    location.pathname === "/" ||
-    location.pathname === "/login" ||
-    location.pathname === "/builder";
+  const role = (user.globalRole === "super_admin" ? "super_admin" : (user.role || "")).toLowerCase();
+  if (role === "super_admin") return <Navigate to="/admin" replace />;
+  if (role === "org_admin" || role === "tutor") return <Navigate to="/organization" replace />;
+  return <Navigate to="/dashboard" replace />;
+}
 
+export default function App() {
   return (
-    <div>
-
-      {/* =====================================
-          NORMAL NAVBAR
-      ===================================== */}
-      {!isExamPage && !isAdminPage && (
-        <nav
-          style={{
-            padding: "10px",
-            background: "#111",
-          }}
-        >
-          <Link
-            to="/"
-            style={{
-              color: "white",
-              textDecoration: "none",
-            }}
-          >
-            🏠 Home
-          </Link>
-        </nav>
-      )}
-
-      {/* =====================================
-          ALL ROUTES
-      ===================================== */}
+    <Suspense fallback={<PageLoader />}>
       <Routes>
-
         {/* =====================================
-            LOGIN
+            AUTHENTICATION (PDF Pages 1 & 2)
         ===================================== */}
-        <Route
-          path="/"
-          element={<Login />}
-        />
-
-        <Route
-          path="/login"
-          element={<Login />}
-        />
-
+        <Route path="/" element={<RootRedirect />} />
+        <Route path="/login" element={<StudentLogin />} />
+        <Route path="/register" element={<StudentRegister />} />
 
         {/* =====================================
-            COACHING OWNER
+            STUDENT PORTAL (APPROVED DESIGN SYSTEM)
+        ===================================== */}
+        <Route path="/dashboard" element={<StudentDashboard />} />
+        <Route path="/exams" element={<StudentExams />} />
+        <Route path="/exams/:code/details" element={<ExamDetails />} />
+        <Route path="/exams/:code/instructions" element={<ExamInstructions />} />
+        <Route path="/exam/:code" element={<LiveExamPage />} />
+        <Route path="/exams/:code/submitted" element={<ExamSubmitted />} />
+        <Route path="/exams/:code/result" element={<ExamResult />} />
+        <Route path="/exams/:code/review" element={<AnswerReview />} />
+        <Route path="/results" element={<StudentPerformance />} />
+        <Route path="/performance" element={<StudentPerformance />} />
+        <Route path="/history" element={<StudentHistory />} />
+        <Route path="/profile" element={<StudentProfile />} />
+        <Route path="/question-bank" element={<StudentQuestionBank />} />
+        <Route path="/practice" element={<PracticeZone />} />
+        <Route path="/practice/create" element={<CreatePracticeTest />} />
+        <Route path="/practice/session" element={<PracticeSessionPage />} />
+        <Route path="/practice/mistakes" element={<PracticeMistakes />} />
+        <Route path="/saved-questions" element={<SavedQuestions />} />
+
+        {/* =====================================
+            BACKWARD COMPATIBILITY REDIRECTS
+        ===================================== */}
+        <Route path="/ranking/:code" element={<RankingRedirect />} />
+        <Route path="/ranking-page/:code" element={<RankingRedirect />} />
+
+        {/* =====================================
+            COACHING CENTER PORTAL (PRESERVED)
         ===================================== */}
         <Route
           path="/organization/*"
@@ -141,9 +149,8 @@ function App() {
           }
         />
 
-
         {/* =====================================
-            EXAM BUILDER
+            EXAM BUILDER (PRESERVED)
         ===================================== */}
         <Route
           path="/builder"
@@ -154,39 +161,9 @@ function App() {
           }
         />
 
-
         {/* =====================================
-            EXAM
+            SUPER ADMIN PORTAL (PRESERVED)
         ===================================== */}
-        <Route
-          path="/exam/:code"
-          element={<ExamPage />}
-        />
-
-
-        {/* =====================================
-            RANKING
-        ===================================== */}
-        <Route
-          path="/ranking/:code"
-          element={<Ranking />}
-        />
-
-
-        {/* =====================================
-            RANKING PAGE
-        ===================================== */}
-        <Route
-          path="/ranking-page/:code"
-          element={<RankingPage />}
-        />
-
-
-        {/* =====================================
-            SUPER ADMIN
-        ===================================== */}
-
-        {/* Admin Main */}
         <Route
           path="/admin"
           element={
@@ -195,8 +172,6 @@ function App() {
             </ProtectedRoute>
           }
         />
-
-        {/* Admin Builder */}
         <Route
           path="/admin/builder"
           element={
@@ -205,8 +180,6 @@ function App() {
             </ProtectedRoute>
           }
         />
-
-        {/* Admin Dashboard */}
         <Route
           path="/admin/dashboard"
           element={
@@ -215,8 +188,6 @@ function App() {
             </ProtectedRoute>
           }
         />
-
-        {/* Organizations */}
         <Route
           path="/admin/organizations"
           element={
@@ -225,8 +196,6 @@ function App() {
             </ProtectedRoute>
           }
         />
-
-        {/* Organization Admins */}
         <Route
           path="/admin/organization-admins"
           element={
@@ -235,8 +204,6 @@ function App() {
             </ProtectedRoute>
           }
         />
-
-        {/* Students */}
         <Route
           path="/admin/students"
           element={
@@ -245,8 +212,6 @@ function App() {
             </ProtectedRoute>
           }
         />
-
-        {/* Exams */}
         <Route
           path="/admin/exams"
           element={
@@ -255,8 +220,6 @@ function App() {
             </ProtectedRoute>
           }
         />
-
-        {/* Question Bank */}
         <Route
           path="/admin/question-bank"
           element={
@@ -265,8 +228,6 @@ function App() {
             </ProtectedRoute>
           }
         />
-
-        {/* Billing */}
         <Route
           path="/admin/billing"
           element={
@@ -275,8 +236,6 @@ function App() {
             </ProtectedRoute>
           }
         />
-
-        {/* Settings */}
         <Route
           path="/admin/settings"
           element={
@@ -286,38 +245,9 @@ function App() {
           }
         />
 
-
-        {/* =====================================
-            UNKNOWN ADMIN URL
-        ===================================== */}
-        <Route
-          path="/admin/*"
-          element={
-            <Navigate
-              to="/"
-              replace
-            />
-          }
-        />
-
-
-        {/* =====================================
-            UNKNOWN URL
-        ===================================== */}
-        <Route
-          path="*"
-          element={
-            <Navigate
-              to="/"
-              replace
-            />
-          }
-        />
-
+        {/* Fallback route */}
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
-
-    </div>
+    </Suspense>
   );
 }
-
-export default App;
