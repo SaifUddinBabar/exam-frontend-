@@ -1,25 +1,29 @@
 import {
   Routes,
   Route,
-  Link,
   Navigate,
-  useLocation,
+  useParams,
 } from "react-router-dom";
 
 // =========================
-// MAIN APP COMPONENTS
+// EXAMINO STUDENT PORTAL (APPROVED DESIGN SYSTEM)
 // =========================
-import ExamPage from "./ExamPage";
-import Ranking from "./RankingPage";
-import RankingPage from "./RankingPage";
+import StudentLogin from "./student/StudentLogin";
+import StudentRegister from "./student/StudentRegister";
+import StudentDashboard from "./student/StudentDashboard";
+import StudentExams from "./student/StudentExams";
+import ExamDetails from "./student/ExamDetails";
+import ExamInstructions from "./student/ExamInstructions";
+import LiveExamPage from "./student/LiveExamPage";
+import ExamSubmitted from "./student/ExamSubmitted";
+import ExamResult from "./student/ExamResult";
+import AnswerReview from "./student/AnswerReview";
+import StudentPerformance from "./student/StudentPerformance";
+import StudentHistory from "./student/StudentHistory";
+import StudentProfile from "./student/StudentProfile";
 
 // =========================
-// LOGIN
-// =========================
-import Login from "./Login/Login";
-
-// =========================
-// SUPER ADMIN
+// SUPER ADMIN & COACHING (PRESERVED)
 // =========================
 import AdminApp from "./admin/AdminApp";
 import AdminDashboard from "./admin/AdminDashboard";
@@ -30,15 +34,7 @@ import OrganizationAdmins from "./admin/OrganizationAdmins";
 import Organizations from "./admin/Organizations";
 import QuestionBank from "./admin/QuestionBank";
 import Students from "./admin/Students";
-
-// =========================
-// BUILDER
-// =========================
 import Builder from "./admin/Builder";
-
-// =========================
-// COACHING OWNER
-// =========================
 import OrganizationApp from "./organization/OrganizationApp";
 
 // =====================================
@@ -58,266 +54,174 @@ function ProtectedRoute({ children, allowedRoles }) {
       (r) => r.toLowerCase() === userRole || user.globalRole === "super_admin"
     );
     if (!hasRole) {
-      return <Navigate to="/login" replace />;
+      return <Navigate to="/dashboard" replace />;
     }
   }
 
   return children;
 }
 
-
-function App() {
-  const location = useLocation();
-
-  // =====================================
-  // EXAM PAGE
-  // =====================================
-  const isExamPage =
-    location.pathname.startsWith("/exam");
-
-  // =====================================
-  // HIDE NORMAL NAVBAR
-  // =====================================
-  const isAdminPage =
-    location.pathname.startsWith("/admin") ||
-    location.pathname.startsWith("/organization") ||
-    location.pathname === "/" ||
-    location.pathname === "/login" ||
-    location.pathname === "/builder";
-
-  return (
-    <div>
-
-      {/* =====================================
-          NORMAL NAVBAR
-      ===================================== */}
-      {!isExamPage && !isAdminPage && (
-        <nav
-          style={{
-            padding: "10px",
-            background: "#111",
-          }}
-        >
-          <Link
-            to="/"
-            style={{
-              color: "white",
-              textDecoration: "none",
-            }}
-          >
-            🏠 Home
-          </Link>
-        </nav>
-      )}
-
-      {/* =====================================
-          ALL ROUTES
-      ===================================== */}
-      <Routes>
-
-        {/* =====================================
-            LOGIN
-        ===================================== */}
-        <Route
-          path="/"
-          element={<Login />}
-        />
-
-        <Route
-          path="/login"
-          element={<Login />}
-        />
-
-
-        {/* =====================================
-            COACHING OWNER
-        ===================================== */}
-        <Route
-          path="/organization/*"
-          element={
-            <ProtectedRoute allowedRoles={["org_admin", "tutor", "super_admin"]}>
-              <OrganizationApp />
-            </ProtectedRoute>
-          }
-        />
-
-
-        {/* =====================================
-            EXAM BUILDER
-        ===================================== */}
-        <Route
-          path="/builder"
-          element={
-            <ProtectedRoute allowedRoles={["tutor", "org_admin", "super_admin"]}>
-              <Builder />
-            </ProtectedRoute>
-          }
-        />
-
-
-        {/* =====================================
-            EXAM
-        ===================================== */}
-        <Route
-          path="/exam/:code"
-          element={<ExamPage />}
-        />
-
-
-        {/* =====================================
-            RANKING
-        ===================================== */}
-        <Route
-          path="/ranking/:code"
-          element={<Ranking />}
-        />
-
-
-        {/* =====================================
-            RANKING PAGE
-        ===================================== */}
-        <Route
-          path="/ranking-page/:code"
-          element={<RankingPage />}
-        />
-
-
-        {/* =====================================
-            SUPER ADMIN
-        ===================================== */}
-
-        {/* Admin Main */}
-        <Route
-          path="/admin"
-          element={
-            <ProtectedRoute allowedRoles={["super_admin"]}>
-              <AdminApp />
-            </ProtectedRoute>
-          }
-        />
-
-        {/* Admin Builder */}
-        <Route
-          path="/admin/builder"
-          element={
-            <ProtectedRoute allowedRoles={["super_admin"]}>
-              <Builder />
-            </ProtectedRoute>
-          }
-        />
-
-        {/* Admin Dashboard */}
-        <Route
-          path="/admin/dashboard"
-          element={
-            <ProtectedRoute allowedRoles={["super_admin"]}>
-              <AdminDashboard />
-            </ProtectedRoute>
-          }
-        />
-
-        {/* Organizations */}
-        <Route
-          path="/admin/organizations"
-          element={
-            <ProtectedRoute allowedRoles={["super_admin"]}>
-              <Organizations />
-            </ProtectedRoute>
-          }
-        />
-
-        {/* Organization Admins */}
-        <Route
-          path="/admin/organization-admins"
-          element={
-            <ProtectedRoute allowedRoles={["super_admin"]}>
-              <OrganizationAdmins />
-            </ProtectedRoute>
-          }
-        />
-
-        {/* Students */}
-        <Route
-          path="/admin/students"
-          element={
-            <ProtectedRoute allowedRoles={["super_admin"]}>
-              <Students />
-            </ProtectedRoute>
-          }
-        />
-
-        {/* Exams */}
-        <Route
-          path="/admin/exams"
-          element={
-            <ProtectedRoute allowedRoles={["super_admin"]}>
-              <Exams />
-            </ProtectedRoute>
-          }
-        />
-
-        {/* Question Bank */}
-        <Route
-          path="/admin/question-bank"
-          element={
-            <ProtectedRoute allowedRoles={["super_admin"]}>
-              <QuestionBank />
-            </ProtectedRoute>
-          }
-        />
-
-        {/* Billing */}
-        <Route
-          path="/admin/billing"
-          element={
-            <ProtectedRoute allowedRoles={["super_admin"]}>
-              <Billing />
-            </ProtectedRoute>
-          }
-        />
-
-        {/* Settings */}
-        <Route
-          path="/admin/settings"
-          element={
-            <ProtectedRoute allowedRoles={["super_admin"]}>
-              <AdminSettings />
-            </ProtectedRoute>
-          }
-        />
-
-
-        {/* =====================================
-            UNKNOWN ADMIN URL
-        ===================================== */}
-        <Route
-          path="/admin/*"
-          element={
-            <Navigate
-              to="/"
-              replace
-            />
-          }
-        />
-
-
-        {/* =====================================
-            UNKNOWN URL
-        ===================================== */}
-        <Route
-          path="*"
-          element={
-            <Navigate
-              to="/"
-              replace
-            />
-          }
-        />
-
-      </Routes>
-
-    </div>
-  );
+// Redirect wrapper for legacy ranking links
+function RankingRedirect() {
+  const { code } = useParams();
+  return <Navigate to={`/exams/${code}/result`} replace />;
 }
 
-export default App;
+function RootRedirect() {
+  const token = localStorage.getItem("token");
+  const user = JSON.parse(localStorage.getItem("user") || "null");
+
+  if (!token || !user) {
+    return <StudentLogin />;
+  }
+
+  const role = (user.globalRole === "super_admin" ? "super_admin" : (user.role || "")).toLowerCase();
+  if (role === "super_admin") return <Navigate to="/admin" replace />;
+  if (role === "org_admin" || role === "tutor") return <Navigate to="/organization" replace />;
+  return <Navigate to="/dashboard" replace />;
+}
+
+export default function App() {
+  return (
+    <Routes>
+      {/* =====================================
+          AUTHENTICATION (PDF Pages 1 & 2)
+      ===================================== */}
+      <Route path="/" element={<RootRedirect />} />
+      <Route path="/login" element={<StudentLogin />} />
+      <Route path="/register" element={<StudentRegister />} />
+
+      {/* =====================================
+          STUDENT PORTAL (APPROVED DESIGN SYSTEM)
+      ===================================== */}
+      <Route path="/dashboard" element={<StudentDashboard />} />
+      <Route path="/exams" element={<StudentExams />} />
+      <Route path="/exams/:code/details" element={<ExamDetails />} />
+      <Route path="/exams/:code/instructions" element={<ExamInstructions />} />
+      <Route path="/exam/:code" element={<LiveExamPage />} />
+      <Route path="/exams/:code/submitted" element={<ExamSubmitted />} />
+      <Route path="/exams/:code/result" element={<ExamResult />} />
+      <Route path="/exams/:code/review" element={<AnswerReview />} />
+      <Route path="/results" element={<StudentPerformance />} />
+      <Route path="/history" element={<StudentHistory />} />
+      <Route path="/profile" element={<StudentProfile />} />
+
+      {/* =====================================
+          BACKWARD COMPATIBILITY REDIRECTS
+      ===================================== */}
+      <Route path="/ranking/:code" element={<RankingRedirect />} />
+      <Route path="/ranking-page/:code" element={<RankingRedirect />} />
+
+      {/* =====================================
+          COACHING CENTER PORTAL (PRESERVED)
+      ===================================== */}
+      <Route
+        path="/organization/*"
+        element={
+          <ProtectedRoute allowedRoles={["org_admin", "tutor", "super_admin"]}>
+            <OrganizationApp />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* =====================================
+          EXAM BUILDER (PRESERVED)
+      ===================================== */}
+      <Route
+        path="/builder"
+        element={
+          <ProtectedRoute allowedRoles={["tutor", "org_admin", "super_admin"]}>
+            <Builder />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* =====================================
+          SUPER ADMIN PORTAL (PRESERVED)
+      ===================================== */}
+      <Route
+        path="/admin"
+        element={
+          <ProtectedRoute allowedRoles={["super_admin"]}>
+            <AdminApp />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/builder"
+        element={
+          <ProtectedRoute allowedRoles={["super_admin"]}>
+            <Builder />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/dashboard"
+        element={
+          <ProtectedRoute allowedRoles={["super_admin"]}>
+            <AdminDashboard />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/organizations"
+        element={
+          <ProtectedRoute allowedRoles={["super_admin"]}>
+            <Organizations />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/organization-admins"
+        element={
+          <ProtectedRoute allowedRoles={["super_admin"]}>
+            <OrganizationAdmins />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/students"
+        element={
+          <ProtectedRoute allowedRoles={["super_admin"]}>
+            <Students />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/exams"
+        element={
+          <ProtectedRoute allowedRoles={["super_admin"]}>
+            <Exams />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/question-bank"
+        element={
+          <ProtectedRoute allowedRoles={["super_admin"]}>
+            <QuestionBank />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/billing"
+        element={
+          <ProtectedRoute allowedRoles={["super_admin"]}>
+            <Billing />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/admin/settings"
+        element={
+          <ProtectedRoute allowedRoles={["super_admin"]}>
+            <AdminSettings />
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Fallback route */}
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  );
+}
