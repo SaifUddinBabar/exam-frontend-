@@ -1,6 +1,8 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
+const API = import.meta.env.VITE_API_URL || "http://localhost:5000";
+
 export default function Login() {
   const navigate = useNavigate();
 
@@ -8,51 +10,51 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  // Dummy users
-  const dummyUsers = [
-    {
-      email: "superadmin@example.com",
-      password: "123456",
-      role: "SUPER_ADMIN",
-      name: "Super Admin",
-    },
-    {
-      email: "rahim@alphacoaching.com",
-      password: "123456",
-      role: "ORG_ADMIN",
-      name: "Rahim Ahmed",
-      organization: "Alpha Coaching",
-    },
-  ];
-
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
     setError("");
 
-    const user = dummyUsers.find(
-      (item) =>
-        item.email.toLowerCase() === email.trim().toLowerCase() &&
-        item.password === password
-    );
-
-    if (!user) {
-      setError("Invalid email or password.");
+    if (!email.trim() || !password) {
+      setError("Please enter both email and password.");
       return;
     }
 
-    // Save dummy login information
-    localStorage.setItem("user", JSON.stringify(user));
+    setLoading(true);
+    try {
+      const res = await fetch(`${API}/api/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim(), password }),
+      });
 
-    // Redirect based on role
-    if (user.role === "SUPER_ADMIN") {
-      navigate("/admin");
-      return;
-    }
+      const data = await res.json();
 
-    if (user.role === "ORG_ADMIN") {
-      navigate("/organization");
-      return;
+      if (!res.ok || !data.success) {
+        setError(data.message || "Invalid email or password.");
+        setLoading(false);
+        return;
+      }
+
+      // Save authentic login information
+      localStorage.setItem("token", data.token);
+      localStorage.setItem("user", JSON.stringify(data.user));
+
+      const role = data.user.globalRole === "super_admin" ? "SUPER_ADMIN" : (data.user.role || "").toUpperCase();
+
+      if (role === "SUPER_ADMIN") {
+        navigate("/admin");
+      } else if (role === "ORG_ADMIN" || role === "TUTOR") {
+        navigate("/organization");
+      } else {
+        navigate("/builder");
+      }
+    } catch (err) {
+      console.error("Login Error:", err);
+      setError("Cannot reach authentication server. Please check backend connection.");
+    } finally {
+      setLoading(false);
     }
   };
 

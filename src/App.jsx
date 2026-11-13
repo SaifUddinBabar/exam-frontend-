@@ -41,6 +41,30 @@ import Builder from "./admin/Builder";
 // =========================
 import OrganizationApp from "./organization/OrganizationApp";
 
+// =====================================
+// PROTECTED ROUTE GUARD
+// =====================================
+function ProtectedRoute({ children, allowedRoles }) {
+  const token = localStorage.getItem("token");
+  const user = JSON.parse(localStorage.getItem("user") || "null");
+
+  if (!token || !user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (allowedRoles && allowedRoles.length > 0) {
+    const userRole = (user.globalRole === "super_admin" ? "super_admin" : (user.role || "")).toLowerCase();
+    const hasRole = allowedRoles.some(
+      (r) => r.toLowerCase() === userRole || user.globalRole === "super_admin"
+    );
+    if (!hasRole) {
+      return <Navigate to="/login" replace />;
+    }
+  }
+
+  return children;
+}
+
 
 function App() {
   const location = useLocation();
@@ -110,7 +134,11 @@ function App() {
         ===================================== */}
         <Route
           path="/organization/*"
-          element={<OrganizationApp />}
+          element={
+            <ProtectedRoute allowedRoles={["org_admin", "tutor", "super_admin"]}>
+              <OrganizationApp />
+            </ProtectedRoute>
+          }
         />
 
 
@@ -119,7 +147,11 @@ function App() {
         ===================================== */}
         <Route
           path="/builder"
-          element={<Builder />}
+          element={
+            <ProtectedRoute allowedRoles={["tutor", "org_admin", "super_admin"]}>
+              <Builder />
+            </ProtectedRoute>
+          }
         />
 
 
@@ -157,61 +189,101 @@ function App() {
         {/* Admin Main */}
         <Route
           path="/admin"
-          element={<AdminApp />}
+          element={
+            <ProtectedRoute allowedRoles={["super_admin"]}>
+              <AdminApp />
+            </ProtectedRoute>
+          }
         />
 
         {/* Admin Builder */}
         <Route
           path="/admin/builder"
-          element={<Builder />}
+          element={
+            <ProtectedRoute allowedRoles={["super_admin"]}>
+              <Builder />
+            </ProtectedRoute>
+          }
         />
 
         {/* Admin Dashboard */}
         <Route
           path="/admin/dashboard"
-          element={<AdminDashboard />}
+          element={
+            <ProtectedRoute allowedRoles={["super_admin"]}>
+              <AdminDashboard />
+            </ProtectedRoute>
+          }
         />
 
         {/* Organizations */}
         <Route
           path="/admin/organizations"
-          element={<Organizations />}
+          element={
+            <ProtectedRoute allowedRoles={["super_admin"]}>
+              <Organizations />
+            </ProtectedRoute>
+          }
         />
 
         {/* Organization Admins */}
         <Route
           path="/admin/organization-admins"
-          element={<OrganizationAdmins />}
+          element={
+            <ProtectedRoute allowedRoles={["super_admin"]}>
+              <OrganizationAdmins />
+            </ProtectedRoute>
+          }
         />
 
         {/* Students */}
         <Route
           path="/admin/students"
-          element={<Students />}
+          element={
+            <ProtectedRoute allowedRoles={["super_admin"]}>
+              <Students />
+            </ProtectedRoute>
+          }
         />
 
         {/* Exams */}
         <Route
           path="/admin/exams"
-          element={<Exams />}
+          element={
+            <ProtectedRoute allowedRoles={["super_admin"]}>
+              <Exams />
+            </ProtectedRoute>
+          }
         />
 
         {/* Question Bank */}
         <Route
           path="/admin/question-bank"
-          element={<QuestionBank />}
+          element={
+            <ProtectedRoute allowedRoles={["super_admin"]}>
+              <QuestionBank />
+            </ProtectedRoute>
+          }
         />
 
         {/* Billing */}
         <Route
           path="/admin/billing"
-          element={<Billing />}
+          element={
+            <ProtectedRoute allowedRoles={["super_admin"]}>
+              <Billing />
+            </ProtectedRoute>
+          }
         />
 
         {/* Settings */}
         <Route
           path="/admin/settings"
-          element={<AdminSettings />}
+          element={
+            <ProtectedRoute allowedRoles={["super_admin"]}>
+              <AdminSettings />
+            </ProtectedRoute>
+          }
         />
 
 

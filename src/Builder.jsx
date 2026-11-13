@@ -1,7 +1,12 @@
 import { useState, useEffect } from "react";
 import html2pdf from "html2pdf.js";
 
-const API = import.meta.env.VITE_API_URL;
+const API = import.meta.env.VITE_API_URL || "http://localhost:5000";
+
+const getAuthHeaders = () => {
+  const token = localStorage.getItem("token");
+  return token ? { Authorization: `Bearer ${token}` } : {};
+};
 
 const GlobalStyles = () => (
   <style>{`
@@ -400,9 +405,13 @@ function Builder() {
     setLoadingExams(true);
     try {
       const [r1, r2] = await Promise.all([
-        fetch(`${API}/api/exams/list`),
-        fetch(`${API}/api/exams/stats`)
+        fetch(`${API}/api/exams/list`, { headers: getAuthHeaders() }),
+        fetch(`${API}/api/exams/stats`, { headers: getAuthHeaders() })
       ]);
+      if (r1.status === 401) {
+        window.location.href = "/login";
+        return;
+      }
       setExamList((await r1.json()) || []);
       setStats(await r2.json());
     } catch { setExamList([]); }
@@ -412,7 +421,9 @@ function Builder() {
 
   useEffect(() => {
     if (!chapter || chapter === "Board Questions") { setTopicList([]); setTopic(""); return; }
-    fetch(`${API}/api/questions/topics?subject=${examData.subject}&chapter=${encodeURIComponent(chapter)}`)
+    fetch(`${API}/api/questions/topics?subject=${examData.subject}&chapter=${encodeURIComponent(chapter)}`, {
+      headers: getAuthHeaders()
+    })
       .then(r => r.json())
       .then(setTopicList)
       .catch(() => setTopicList([]));
@@ -421,7 +432,14 @@ function Builder() {
   const deleteExam = async (code) => {
     if (!window.confirm("এই exam এবং সব submissions delete হয়ে যাবে। নিশ্চিত?")) return;
     try {
-      await fetch(`${API}/api/exams/${code}`, { method: "DELETE" });
+      const res = await fetch(`${API}/api/exams/${code}`, {
+        method: "DELETE",
+        headers: getAuthHeaders()
+      });
+      if (res.status === 401 || res.status === 403) {
+        alert("অননুমোদিত: Exam delete করার অনুমতি নেই।");
+        return;
+      }
       setExamList(p => p.filter(e => e.examCode !== code));
       fetchExamList();
     } catch { alert("Delete failed"); }
@@ -524,10 +542,19 @@ function Builder() {
     if (selected.length===0) return alert("প্রশ্ন সিলেক্ট করুন");
     setCreating(true);
     try {
-      const res  = await fetch(`${API}/api/exams/create`, {
-        method:"POST", headers:{"Content-Type":"application/json"},
-        body: JSON.stringify({ title:examData.title, duration:examData.duration, questions:selected })
+      const res = await fetch(`${API}/api/exams/create`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...getAuthHeaders()
+        },
+        body: JSON.stringify({ title: examData.title, duration: examData.duration, questions: selected })
       });
+      if (res.status === 401) {
+        alert("অননুমোদিত: Exam তৈরি করতে অনুগ্রহ করে সাইন ইন করুন।");
+        window.location.href = "/login";
+        return;
+      }
       const data = await res.json();
       setExamCode(data.examCode);
     } catch { alert("Create Failed"); }
