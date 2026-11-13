@@ -2,17 +2,39 @@ import React, { useState } from "react";
 import StudentLayout from "./StudentLayout";
 
 export default function StudentProfile() {
-  const user = JSON.parse(localStorage.getItem("user") || "{}");
+  const [currentUser, setCurrentUser] = useState(() => {
+    return JSON.parse(localStorage.getItem("user") || "{}");
+  });
 
   const [activeTab, setActiveTab] = useState("Profile");
-  const [fullName, setFullName] = useState(user.name || "Nusrat Jahan");
-  const [banglaName, setBanglaName] = useState("নুসরাত জাহান");
-  const [mobile, setMobile] = useState(user.mobile || "+880 1712-345678");
-  const [email, setEmail] = useState(user.email || "nusrat.jahan@gmail.com");
+  const [fullName, setFullName] = useState(currentUser.name || "Student");
+  const [banglaName, setBanglaName] = useState("শিক্ষার্থী");
+  const [mobile, setMobile] = useState(currentUser.mobile || "+880 1810-992332");
+  const [email, setEmail] = useState(currentUser.email || "student@examino.edu.bd");
   const [language, setLanguage] = useState("English");
   const [dataSaver, setDataSaver] = useState(false);
   const [examReminders, setExamReminders] = useState(true);
   const [savedMessage, setSavedMessage] = useState(false);
+
+  // Sync with authenticated backend on mount
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (token) {
+      fetch(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/auth/me`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success && data.user) {
+            setCurrentUser(data.user);
+            setFullName(data.user.name);
+            setEmail(data.user.email);
+            localStorage.setItem("user", JSON.stringify(data.user));
+          }
+        })
+        .catch(() => {});
+    }
+  }, []);
 
   const tabs = [
     "Profile",

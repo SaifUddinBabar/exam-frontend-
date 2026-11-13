@@ -11,8 +11,11 @@ export default function StudentNavbar() {
   const notifRef = useRef(null);
 
   // Retrieve authenticated student
-  const user = JSON.parse(localStorage.getItem("user") || "{}");
-  const studentName = user.name || "Nusrat Jahan";
+  const [currentUser, setCurrentUser] = useState(() => {
+    return JSON.parse(localStorage.getItem("user") || "{}");
+  });
+
+  const studentName = currentUser.name || "Student";
 
   // Derive initials
   const initials = studentName
@@ -20,7 +23,25 @@ export default function StudentNavbar() {
     .filter(Boolean)
     .slice(0, 2)
     .map((n) => n[0].toUpperCase())
-    .join("") || "NJ";
+    .join("") || "ST";
+
+  // Verify and refresh profile from /api/auth/me if token exists
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (token && (!currentUser.name || !currentUser.email)) {
+      fetch(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/auth/me`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success && data.user) {
+            setCurrentUser(data.user);
+            localStorage.setItem("user", JSON.stringify(data.user));
+          }
+        })
+        .catch(() => {});
+    }
+  }, []);
 
   // Close dropdown on outside click
   useEffect(() => {

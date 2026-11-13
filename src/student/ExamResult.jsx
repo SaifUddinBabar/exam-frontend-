@@ -21,8 +21,26 @@ export default function ExamResult() {
     }
 
     // Also fetch leaderboard ranking to get student's real rank in cohort
-    async function fetchRank() {
+    async function fetchRankAndSubmission() {
       try {
+        const token = localStorage.getItem("token");
+        const headers = token ? { Authorization: `Bearer ${token}` } : {};
+
+        // If not cached, try fetching from student history
+        if (!cached && token) {
+          const histRes = await fetch(`${API}/api/exams/student/history`, { headers });
+          if (histRes.ok) {
+            const histData = await histRes.json();
+            const matchingSub = histData.find((s) => s.examCode === code.toUpperCase());
+            if (matchingSub) {
+              setResult({
+                ...matchingSub,
+                examTitle: matchingSub.examId?.title || `ICT Exam (${code.toUpperCase()})`,
+              });
+            }
+          }
+        }
+
         const res = await fetch(`${API}/api/exams/ranking/${code.toUpperCase()}`);
         if (res.ok) {
           const rankData = await res.json();
@@ -43,17 +61,47 @@ export default function ExamResult() {
         setLoading(false);
       }
     }
-    fetchRank();
+    fetchRankAndSubmission();
   }, [code]);
 
-  const score = result?.score !== undefined ? result.score : 22.5;
+  if (loading) {
+    return (
+      <StudentLayout>
+        <div className="py-24 text-center text-xs text-[#64748B]">
+          <div className="w-8 h-8 border-2 border-[#2563EB] border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+          Loading your verified result...
+        </div>
+      </StudentLayout>
+    );
+  }
+
+  if (!result) {
+    return (
+      <StudentLayout>
+        <div className="max-w-md mx-auto py-16 text-center bg-white border border-[#E2E8F0] rounded-card p-8 shadow-card">
+          <p className="text-base font-bold text-[#0F172A]">No Submission Recorded</p>
+          <p className="text-xs text-[#64748B] mt-2">
+            No verified result was found for exam code <strong>{code.toUpperCase()}</strong>.
+          </p>
+          <Link
+            to={`/exams/${code.toUpperCase()}/details`}
+            className="mt-5 inline-block px-5 py-2.5 bg-[#2563EB] text-white text-xs font-semibold rounded-lg shadow-sm"
+          >
+            Take Exam Now
+          </Link>
+        </div>
+      </StudentLayout>
+    );
+  }
+
+  const score = result?.score !== undefined ? result.score : 0;
   const totalQ = result?.totalQuestions || 25;
-  const correct = result?.correctCount !== undefined ? result.correctCount : 23;
-  const wrong = result?.wrongCount !== undefined ? result.wrongCount : 2;
-  const unattempted = result?.unattemptedCount !== undefined ? result.unattemptedCount : (totalQ - correct - wrong);
-  const percentage = Math.round((score / totalQ) * 100) || 90;
-  const rank = result?.cohortRank || 4;
-  const totalStudents = result?.cohortTotal || 126;
+  const correct = result?.correctCount || 0;
+  const wrong = result?.wrongCount || 0;
+  const unattempted = result?.unattemptedCount !== undefined ? result.unattemptedCount : Math.max(0, totalQ - correct - wrong);
+  const percentage = totalQ > 0 ? Math.round((score / totalQ) * 100) : 0;
+  const rank = result?.cohortRank || 1;
+  const totalStudents = result?.cohortTotal || 1;
 
   const handleDownloadPdf = () => {
     window.print();
@@ -138,7 +186,7 @@ export default function ExamResult() {
         <div className="bg-[#101B35] text-white rounded-card p-6 sm:p-8 shadow-elevated flex flex-col justify-between">
           <div>
             <span className="text-xs font-bold tracking-wider text-[#94A3B8] uppercase">
-              Position
+              Cohort Position
             </span>
             <div className="flex items-baseline gap-2 mt-1">
               <span className="text-3xl sm:text-4xl font-extrabold text-white">
@@ -149,7 +197,7 @@ export default function ExamResult() {
           </div>
 
           <p className="text-xs text-[#CBD5E1] mt-4 leading-relaxed">
-            Top 3% of HSC 2027 · Science · Batch A. Highest score {totalQ - 0.75}, batch average {(totalQ * 0.65).toFixed(1)}.
+            Verified performance for {result.name || "Student"} in {code.toUpperCase()}. Attempt #{result.attemptNumber || 1}.
           </p>
         </div>
 
@@ -240,16 +288,18 @@ export default function ExamResult() {
         {/* Questions to Revisit */}
         <div className="bg-white border border-[#E2E8F0] rounded-card p-6 shadow-card">
           <h3 className="text-base font-bold text-[#0F172A] mb-3">Questions to revisit</h3>
-          <div className="space-y-2.5">
-            <div className="flex items-center justify-between p-3 bg-[#FEF2F2] border border-[#FCA5A5] rounded-lg">
-              <span className="text-xs font-semibold text-[#0F172A]">Q7 · অপটিক্যাল ফাইবারের প্রতিসরণাঙ্ক</span>
-              <span className="px-2 py-0.5 bg-[#EF4444] text-white text-[10px] font-bold rounded">Wrong</span>
+          {wrong > 0 ? (
+            <div className="space-y-2.5">
+              <div className="flex items-center justify-between p-3 bg-[#FEF2F2] border border-[#FCA5A5] rounded-lg">
+                <span className="text-xs font-semibold text-[#0F172A]">{wrong} incorrect answer{wrong > 1 ? "s" : ""} in this attempt</span>
+                <span className="px-2 py-0.5 bg-[#EF4444] text-white text-[10px] font-bold rounded">Needs Review</span>
+              </div>
             </div>
-            <div className="flex items-center justify-between p-3 bg-[#FEF2F2] border border-[#FCA5A5] rounded-lg">
-              <span className="text-xs font-semibold text-[#0F172A]">Q18 · হাফ ডুপ্লেক্স ডেটা ট্রান্সমিশন মোড</span>
-              <span className="px-2 py-0.5 bg-[#EF4444] text-white text-[10px] font-bold rounded">Wrong</span>
+          ) : (
+            <div className="p-3 bg-[#ECFDF5] border border-[#A7F3D0] rounded-lg text-xs font-semibold text-[#065F46]">
+              ✓ Excellent work! Zero incorrect answers in this exam attempt.
             </div>
-          </div>
+          )}
           <button
             type="button"
             onClick={() => navigate(`/exams/${code.toUpperCase()}/review`)}
@@ -261,26 +311,26 @@ export default function ExamResult() {
 
         {/* Comparison with Previous Exam */}
         <div className="bg-white border border-[#E2E8F0] rounded-card p-6 shadow-card">
-          <h3 className="text-base font-bold text-[#0F172A] mb-3">Compared with Previous Test</h3>
+          <h3 className="text-base font-bold text-[#0F172A] mb-3">Attempt performance metrics</h3>
           <div className="divide-y divide-[#F1F5F9] text-xs">
             <div className="py-2.5 flex justify-between">
-              <span className="text-[#64748B]">Score</span>
-              <span className="font-bold text-[#0F172A]">20.0 → 22.5 (▲ +2.5)</span>
+              <span className="text-[#64748B]">Score achieved</span>
+              <span className="font-bold text-[#0F172A]">{score} / {totalQ} ({percentage}%)</span>
             </div>
             <div className="py-2.5 flex justify-between">
-              <span className="text-[#64748B]">Rank</span>
-              <span className="font-bold text-[#10B981]">6 → 4 ▲</span>
+              <span className="text-[#64748B]">Cohort rank</span>
+              <span className="font-bold text-[#10B981]">Rank #{rank} of {totalStudents}</span>
             </div>
             <div className="py-2.5 flex justify-between">
-              <span className="text-[#64748B]">Time taken</span>
-              <span className="font-bold text-[#10B981]">24:10 → 21:30 ▲</span>
+              <span className="text-[#64748B]">Attempt record</span>
+              <span className="font-bold text-[#2563EB]">Attempt #{result.attemptNumber || 1}</span>
             </div>
           </div>
           <Link
             to="/results"
             className="block text-center mt-4 text-xs font-semibold text-[#2563EB] hover:underline"
           >
-            See full performance analysis →
+            See full performance analytics →
           </Link>
         </div>
 

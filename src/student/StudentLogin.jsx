@@ -176,7 +176,7 @@ export default function StudentLogin() {
                 </label>
                 <Link
                   to="#"
-                  onClick={(e) => { e.preventDefault(); alert("Please contact your coaching center or teacher to reset your password."); }}
+                  onClick={(e) => { e.preventDefault(); alert("Password Reset: Please contact your coaching center administrator or institutional tutor to reset your account password."); }}
                   className="text-xs font-semibold text-[#2563EB] hover:underline"
                 >
                   Forgot password?
@@ -248,7 +248,7 @@ export default function StudentLogin() {
           {/* Secondary Button: SMS Code */}
           <button
             type="button"
-            onClick={() => alert("One-time SMS login will send a code to your registered Bangladeshi mobile number (+880).")}
+            onClick={() => alert("SMS OTP Login: Gateway integration (e.g. BulkSMSBD/Twilio) is scheduled for Phase 2. Please log in using your registered password.")}
             className="w-full py-2.5 bg-white border border-[#CBD5E1] hover:bg-[#F1F5F9] text-[#0F172A] font-semibold text-xs rounded-lg transition-colors"
           >
             Log in with a one-time SMS code

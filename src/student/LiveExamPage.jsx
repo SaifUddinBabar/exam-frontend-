@@ -206,6 +206,22 @@ export default function LiveExamPage() {
 
       const data = await res.json();
 
+      if (!res.ok) {
+        if (res.status === 409) {
+          alert(data.message || "Duplicate submission rejected: A final submission has already been recorded for this student.");
+          navigate(`/exams/${examCode}/result`);
+          return;
+        }
+        if (res.status === 400) {
+          alert(data.message || "Exam deadline has passed. Submission rejected.");
+          navigate("/exams");
+          return;
+        }
+        alert(data.message || "Submission failed on server. Please try again.");
+        setSubmitting(false);
+        return;
+      }
+
       // Clean local storage keys for this exam
       localStorage.removeItem(storageProgressKey);
       localStorage.removeItem(storageTimerKey);
