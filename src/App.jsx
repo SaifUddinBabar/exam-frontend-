@@ -22,6 +22,12 @@ const AnswerReview = lazy(() => import("./student/AnswerReview"));
 const StudentPerformance = lazy(() => import("./student/StudentPerformance"));
 const StudentHistory = lazy(() => import("./student/StudentHistory"));
 const StudentProfile = lazy(() => import("./student/StudentProfile"));
+const StudentQuestionBank = lazy(() => import("./student/StudentQuestionBank"));
+const PracticeZone = lazy(() => import("./student/PracticeZone"));
+const CreatePracticeTest = lazy(() => import("./student/CreatePracticeTest"));
+const PracticeSessionPage = lazy(() => import("./student/PracticeSessionPage"));
+const PracticeMistakes = lazy(() => import("./student/PracticeMistakes"));
+const SavedQuestions = lazy(() => import("./student/SavedQuestions"));
 
 // =========================
 // LAZY-LOADED SUPER ADMIN & COACHING (PRESERVED)
@@ -115,8 +121,15 @@ export default function App() {
         <Route path="/exams/:code/result" element={<ExamResult />} />
         <Route path="/exams/:code/review" element={<AnswerReview />} />
         <Route path="/results" element={<StudentPerformance />} />
+        <Route path="/performance" element={<StudentPerformance />} />
         <Route path="/history" element={<StudentHistory />} />
         <Route path="/profile" element={<StudentProfile />} />
+        <Route path="/question-bank" element={<StudentQuestionBank />} />
+        <Route path="/practice" element={<PracticeZone />} />
+        <Route path="/practice/create" element={<CreatePracticeTest />} />
+        <Route path="/practice/session" element={<PracticeSessionPage />} />
+        <Route path="/practice/mistakes" element={<PracticeMistakes />} />
+        <Route path="/saved-questions" element={<SavedQuestions />} />
 
         {/* =====================================
             BACKWARD COMPATIBILITY REDIRECTS

@@ -195,6 +195,126 @@ export default function StudentDashboard() {
 
       </div>
 
+      {/* ── PRACTICE ZONE SECTION (NEW EXTENSION) ── */}
+      <div className="mb-8">
+        <div className="flex items-center justify-between pb-2 mb-4">
+          <div>
+            <h3 className="text-base sm:text-lg font-bold text-[#0F172A] flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-[#2563EB]" />
+              Practice Zone & Learning Hub
+            </h3>
+            <p className="text-xs text-[#64748B] mt-0.5">
+              Targeted self-study, 2,134+ question bank, customized topic drills & mistake review
+            </p>
+          </div>
+          <Link
+            to="/practice"
+            className="text-xs font-semibold text-[#2563EB] hover:underline flex items-center gap-1 shrink-0"
+          >
+            <span>Open Practice Hub</span>
+            <span>&rarr;</span>
+          </Link>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Card 1: Browse Question Bank */}
+          <Link
+            to="/question-bank"
+            className="bg-white border border-[#E2E8F0] hover:border-[#2563EB]/50 rounded-card p-5 shadow-card hover:shadow-elevated transition-all group flex flex-col justify-between"
+          >
+            <div>
+              <div className="w-10 h-10 rounded-xl bg-[#EFF6FF] text-[#2563EB] flex items-center justify-center mb-3 group-hover:scale-105 transition-transform">
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                </svg>
+              </div>
+              <h4 className="text-sm font-bold text-[#0F172A] group-hover:text-[#2563EB] transition-colors">
+                Browse Question Bank
+              </h4>
+              <p className="text-xs text-[#64748B] mt-1 line-clamp-2 leading-relaxed">
+                Filter 2,134+ questions by subject, chapter, topic, board & difficulty
+              </p>
+            </div>
+            <div className="mt-4 pt-3 border-t border-[#F1F5F9] flex items-center justify-between text-xs font-semibold text-[#2563EB]">
+              <span>Explore Questions</span>
+              <span>&rarr;</span>
+            </div>
+          </Link>
+
+          {/* Card 2: Create Practice Test */}
+          <Link
+            to="/practice/create"
+            className="bg-white border border-[#E2E8F0] hover:border-[#10B981]/50 rounded-card p-5 shadow-card hover:shadow-elevated transition-all group flex flex-col justify-between"
+          >
+            <div>
+              <div className="w-10 h-10 rounded-xl bg-[#ECFDF5] text-[#10B981] flex items-center justify-center mb-3 group-hover:scale-105 transition-transform">
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                </svg>
+              </div>
+              <h4 className="text-sm font-bold text-[#0F172A] group-hover:text-[#10B981] transition-colors">
+                Create Practice Test
+              </h4>
+              <p className="text-xs text-[#64748B] mt-1 line-clamp-2 leading-relaxed">
+                Customize target chapters, count (5–100), difficulty & optional timer
+              </p>
+            </div>
+            <div className="mt-4 pt-3 border-t border-[#F1F5F9] flex items-center justify-between text-xs font-semibold text-[#10B981]">
+              <span>Configure Drill</span>
+              <span>&rarr;</span>
+            </div>
+          </Link>
+
+          {/* Card 3: Practice Mistakes */}
+          <Link
+            to="/practice/mistakes"
+            className="bg-white border border-[#E2E8F0] hover:border-[#EF4444]/50 rounded-card p-5 shadow-card hover:shadow-elevated transition-all group flex flex-col justify-between"
+          >
+            <div>
+              <div className="w-10 h-10 rounded-xl bg-[#FEF2F2] text-[#EF4444] flex items-center justify-center mb-3 group-hover:scale-105 transition-transform">
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+              <h4 className="text-sm font-bold text-[#0F172A] group-hover:text-[#EF4444] transition-colors">
+                Practice Mistakes
+              </h4>
+              <p className="text-xs text-[#64748B] mt-1 line-clamp-2 leading-relaxed">
+                Target and drill questions you missed in previous tests until mastered
+              </p>
+            </div>
+            <div className="mt-4 pt-3 border-t border-[#F1F5F9] flex items-center justify-between text-xs font-semibold text-[#EF4444]">
+              <span>Fix Weak Spots</span>
+              <span>&rarr;</span>
+            </div>
+          </Link>
+
+          {/* Card 4: Saved Questions */}
+          <Link
+            to="/saved-questions"
+            className="bg-white border border-[#E2E8F0] hover:border-[#F59E0B]/50 rounded-card p-5 shadow-card hover:shadow-elevated transition-all group flex flex-col justify-between"
+          >
+            <div>
+              <div className="w-10 h-10 rounded-xl bg-[#FFFBEB] text-[#F59E0B] flex items-center justify-center mb-3 group-hover:scale-105 transition-transform">
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                  <path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" />
+                </svg>
+              </div>
+              <h4 className="text-sm font-bold text-[#0F172A] group-hover:text-[#F59E0B] transition-colors">
+                Saved Questions
+              </h4>
+              <p className="text-xs text-[#64748B] mt-1 line-clamp-2 leading-relaxed">
+                Quickly review and drill your bookmarked questions and key concepts
+              </p>
+            </div>
+            <div className="mt-4 pt-3 border-t border-[#F1F5F9] flex items-center justify-between text-xs font-semibold text-[#F59E0B]">
+              <span>View Bookmarks</span>
+              <span>&rarr;</span>
+            </div>
+          </Link>
+        </div>
+      </div>
+
       {/* ── TWO-COLUMN SECTION: AVAILABLE EXAMS & RECENT RESULTS ── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
         
