@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import StudentLayout from "./StudentLayout";
 
 export default function StudentProfile() {
@@ -27,8 +27,9 @@ export default function StudentProfile() {
         .then((data) => {
           if (data.success && data.user) {
             setCurrentUser(data.user);
-            setFullName(data.user.name);
-            setEmail(data.user.email);
+            setFullName(data.user.name || "");
+            setEmail(data.user.email || "");
+            if (data.user.mobile) setMobile(data.user.mobile);
             localStorage.setItem("user", JSON.stringify(data.user));
           }
         })
@@ -55,11 +56,12 @@ export default function StudentProfile() {
   const handleSave = (e) => {
     e.preventDefault();
     const updated = {
-      ...user,
+      ...currentUser,
       name: fullName,
       email,
       mobile,
     };
+    setCurrentUser(updated);
     localStorage.setItem("user", JSON.stringify(updated));
     setSavedMessage(true);
     setTimeout(() => setSavedMessage(false), 3000);

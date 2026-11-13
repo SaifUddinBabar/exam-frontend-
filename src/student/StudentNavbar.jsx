@@ -173,7 +173,7 @@ export default function StudentNavbar() {
                 <div className="absolute right-0 mt-2 w-56 bg-white border border-[#E2E8F0] rounded-xl shadow-dropdown py-2 z-50">
                   <div className="px-4 py-2 border-b border-[#F1F5F9]">
                     <p className="text-sm font-semibold text-[#0F172A] truncate">{studentName}</p>
-                    <p className="text-xs text-[#64748B] truncate">{user.email || "student@examino.edu.bd"}</p>
+                    <p className="text-xs text-[#64748B] truncate">{currentUser.email || "student@examino.edu.bd"}</p>
                     <span className="inline-block mt-1 px-1.5 py-0.5 text-[10px] font-medium bg-[#ECFDF5] text-[#059669] rounded">
                       Student Account
                     </span>
