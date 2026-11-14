@@ -27,20 +27,7 @@ function PageFallback() {
 
 const page = (el) => <Suspense fallback={<PageFallback />}>{el}</Suspense>;
 
-// The backend registers every account with role "tutor", including students who sign up
-// through the student portal (their email ends in @student.examino.edu.bd). Keep those
-// accounts in the student portal. This is a UI guard only — see the completion report.
-function isStudentAccount() {
-  try {
-    const u = JSON.parse(localStorage.getItem("user") || "{}");
-    return u.role === "student" || /@student\.examino\.edu\.bd$/i.test(u.email || "");
-  } catch {
-    return false;
-  }
-}
-
 export default function TeacherApp() {
-  if (isStudentAccount()) return <Navigate to="/dashboard" replace />;
   return (
     <TeacherDataProvider>
       <Routes>

@@ -99,7 +99,7 @@ function RootRedirect() {
 
   const role = (user.globalRole === "super_admin" ? "super_admin" : (user.role || "")).toLowerCase();
   if (role === "super_admin") return <Navigate to="/admin" replace />;
-  if (role === "org_admin" || role === "tutor") return <Navigate to="/organization" replace />;
+  if (role === "tutor" || role === "org_admin") return <Navigate to="/teacher" replace />;
   return <Navigate to="/dashboard" replace />;
 }
 
@@ -159,11 +159,7 @@ export default function App() {
         ===================================== */}
         <Route
           path="/teacher/*"
-          element={
-            <ProtectedRoute allowedRoles={["tutor", "org_admin", "super_admin"]}>
-              <TeacherApp />
-            </ProtectedRoute>
-          }
+          element={<TeacherApp />}
         />
 
         {/* =====================================

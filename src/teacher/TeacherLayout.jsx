@@ -355,6 +355,13 @@ function Topbar({ onMenu, onSearch }) {
         <kbd className="rounded border border-examino-border bg-white px-1.5 text-[11px] font-medium text-examino-muted">Ctrl K</kbd>
       </button>
       <IconButton icon="search" label="Search" className="md:hidden" onClick={onSearch} />
+      <Link
+        to="/dashboard"
+        className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg bg-[#EFF6FF] text-[#2563EB] hover:bg-[#DBEAFE] border border-[#BFDBFE] transition-colors"
+        title="Switch to Student Portal"
+      >
+        <span>👨‍🎓 Student Portal</span>
+      </Link>
       <Notifications />
       <IconButton icon="help" label="Help & support" className="hidden sm:inline-flex" onClick={() => navigate("/teacher/help")} />
       <Dropdown

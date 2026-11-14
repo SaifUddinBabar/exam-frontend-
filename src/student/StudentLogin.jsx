@@ -76,7 +76,7 @@ export default function StudentLogin() {
     if (role === "super_admin") {
       navigate("/admin");
     } else if (role === "org_admin" || role === "tutor") {
-      navigate("/organization");
+      navigate("/teacher");
     } else {
       // Students land directly in the new approved Student Dashboard!
       navigate("/dashboard");
