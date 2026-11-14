@@ -192,45 +192,21 @@ export default function CreateExam() {
       ) : null}
 
       {step === 1 ? (
-        <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
-          <Card className="p-5">
-            <QuestionPicker
-              selected={selected}
-              onToggle={toggle}
-              userId={userId}
-              onSelectPage={(qs, add) =>
-                setSelected((prev) => {
-                  const m = new Map(prev);
-                  qs.forEach((q) => (add ? m.set(q._id, q) : m.delete(q._id)));
-                  return m;
-                })
-              }
-            />
-          </Card>
-          <div className="xl:sticky xl:top-24 xl:self-start">
-            <Card>
-              <CardHeader title={`Selected (${ordered.length})`} description={`${ordered.length} marks · 1 per question`} />
-              {ordered.length ? (
-                <ol className="max-h-[60vh] overflow-y-auto px-3 py-3">
-                  {ordered.map((q, i) => (
-                    <li key={q._id} className="flex items-start gap-2 rounded-lg px-2 py-2 hover:bg-slate-50">
-                      <span className="w-6 pt-0.5 text-right text-xs font-semibold text-examino-muted">{i + 1}.</span>
-                      <span className="line-clamp-2 min-w-0 flex-1 text-[13px] leading-snug">
-                        <MathText text={q.question} />
-                      </span>
-                      <span className="flex shrink-0">
-                        <IconButton icon="chevronUp" label="Move up" className="h-7 w-7" size={15} onClick={() => move(i, -1)} disabled={i === 0} />
-                        <IconButton icon="chevronDown" label="Move down" className="h-7 w-7" size={15} onClick={() => move(i, 1)} disabled={i === ordered.length - 1} />
-                        <IconButton icon="x" label="Remove" className="h-7 w-7" size={15} onClick={() => toggle(q)} />
-                      </span>
-                    </li>
-                  ))}
-                </ol>
-              ) : (
-                <p className="px-5 py-8 text-center text-sm text-examino-muted">Tick questions on the left to add them.</p>
-              )}
-            </Card>
-          </div>
+        <div className="flex flex-col gap-6">
+          <QuestionPicker
+            selected={selected}
+            onToggle={toggle}
+            userId={userId}
+            examTitle={details.title}
+            onSave={next}
+            onSelectPage={(qs, add) =>
+              setSelected((prev) => {
+                const m = new Map(prev);
+                qs.forEach((q) => (add ? m.set(q._id, q) : m.delete(q._id)));
+                return m;
+              })
+            }
+          />
         </div>
       ) : null}
 
