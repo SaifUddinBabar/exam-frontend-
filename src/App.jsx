@@ -7,6 +7,14 @@ import {
 } from "react-router-dom";
 
 // =========================
+// LAZY-LOADED AUTHENTICATION & ACCESS CONTROL
+// =========================
+const CommonLogin = lazy(() => import("./auth/CommonLogin"));
+const CommonRegister = lazy(() => import("./auth/CommonRegister"));
+const ForgotPassword = lazy(() => import("./auth/ForgotPassword"));
+const AcceptInvitation = lazy(() => import("./auth/AcceptInvitation"));
+
+// =========================
 // LAZY-LOADED STUDENT PORTAL (APPROVED DESIGN SYSTEM)
 // =========================
 const StudentLogin = lazy(() => import("./student/StudentLogin"));
@@ -76,6 +84,10 @@ function ProtectedRoute({ children, allowedRoles }) {
       (r) => r.toLowerCase() === userRole || user.globalRole === "super_admin"
     );
     if (!hasRole) {
+      // Intelligently redirect to the user's permitted dashboard
+      if (userRole === "super_admin") return <Navigate to="/admin" replace />;
+      if (userRole === "org_admin") return <Navigate to="/organization" replace />;
+      if (userRole === "tutor" || userRole === "teacher") return <Navigate to="/teacher" replace />;
       return <Navigate to="/dashboard" replace />;
     }
   }
@@ -94,12 +106,13 @@ function RootRedirect() {
   const user = JSON.parse(localStorage.getItem("user") || "null");
 
   if (!token || !user) {
-    return <StudentLogin />;
+    return <Navigate to="/login" replace />;
   }
 
   const role = (user.globalRole === "super_admin" ? "super_admin" : (user.role || "")).toLowerCase();
   if (role === "super_admin") return <Navigate to="/admin" replace />;
-  if (role === "tutor" || role === "org_admin") return <Navigate to="/teacher" replace />;
+  if (role === "org_admin") return <Navigate to="/organization" replace />;
+  if (role === "tutor" || role === "teacher") return <Navigate to="/teacher" replace />;
   return <Navigate to="/dashboard" replace />;
 }
 
@@ -108,11 +121,18 @@ export default function App() {
     <Suspense fallback={<PageLoader />}>
       <Routes>
         {/* =====================================
-            AUTHENTICATION (PDF Pages 1 & 2)
+            AUTHENTICATION & ACCESS CONTROL
         ===================================== */}
         <Route path="/" element={<RootRedirect />} />
-        <Route path="/login" element={<StudentLogin />} />
-        <Route path="/register" element={<StudentRegister />} />
+        <Route path="/login" element={<CommonLogin />} />
+        <Route path="/register" element={<CommonRegister />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/invite/:code" element={<AcceptInvitation />} />
+
+        {/* Alias for Student Portal */}
+        <Route path="/student" element={<Navigate to="/dashboard" replace />} />
+        <Route path="/student/login" element={<Navigate to="/login" replace />} />
+        <Route path="/student/register" element={<Navigate to="/register" replace />} />
 
         {/* =====================================
             STUDENT PORTAL (APPROVED DESIGN SYSTEM)
@@ -148,7 +168,7 @@ export default function App() {
         <Route
           path="/organization/*"
           element={
-            <ProtectedRoute allowedRoles={["org_admin", "tutor", "super_admin"]}>
+            <ProtectedRoute allowedRoles={["org_admin", "super_admin"]}>
               <OrganizationApp />
             </ProtectedRoute>
           }
@@ -159,7 +179,11 @@ export default function App() {
         ===================================== */}
         <Route
           path="/teacher/*"
-          element={<TeacherApp />}
+          element={
+            <ProtectedRoute allowedRoles={["tutor", "super_admin", "org_admin"]}>
+              <TeacherApp />
+            </ProtectedRoute>
+          }
         />
 
         {/* =====================================
