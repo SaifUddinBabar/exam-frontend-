@@ -10,6 +10,19 @@ export default function StudentDashboard() {
   const [submissions, setSubmissions] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // Language Mode state
+  const [languageMode, setLanguageMode] = useState(() => {
+    return localStorage.getItem("examino_language_mode") || "bangla";
+  });
+
+  useEffect(() => {
+    const handleModeUpdate = (e) => {
+      setLanguageMode(e.detail?.mode || localStorage.getItem("examino_language_mode") || "bangla");
+    };
+    window.addEventListener("languageModeChanged", handleModeUpdate);
+    return () => window.removeEventListener("languageModeChanged", handleModeUpdate);
+  }, []);
+
   const user = JSON.parse(localStorage.getItem("user") || "{}");
   const studentName = user.name || "Student";
   const studentOrg = user.organizationName || user.batchName || "Nobodoy Academic Care, Mirpur";
@@ -409,46 +422,88 @@ export default function StudentDashboard() {
       {/* ── CHAPTERS TO WORK ON (DYNAMIC REAL DATA) ── */}
       <div className="bg-white border border-[#E2E8F0] rounded-card p-6 shadow-card">
         <div className="flex items-center justify-between mb-5">
-          <h3 className="text-base font-bold text-[#0F172A]">Curriculum focus chapters</h3>
-          <Link to="/results" className="text-xs font-semibold text-[#2563EB] hover:underline">
-            Full analysis
+          <div className="flex items-center gap-2">
+            <h3 className="text-base font-bold text-[#0F172A]">Curriculum focus chapters</h3>
+            <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-[#EFF6FF] text-[#2563EB]">
+              {languageMode === "english" ? "🇬🇧 English Medium" : "🇧🇩 বাংলা মাধ্যম"}
+            </span>
+          </div>
+          <Link to="/question-bank" className="text-xs font-semibold text-[#2563EB] hover:underline">
+            View in Question Bank &rarr;
           </Link>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div>
-            <div className="flex justify-between items-center text-xs mb-1.5">
-              <span className="font-bold text-[#0F172A]">কমিউনিকেশন সিস্টেম ও নেটওয়ার্কিং</span>
-              <span className="font-extrabold text-[#2563EB]">758 Questions</span>
+        {languageMode === "english" ? (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div>
+              <div className="flex justify-between items-center text-xs mb-1.5">
+                <span className="font-bold text-[#0F172A]">Communication Systems</span>
+                <span className="font-extrabold text-[#2563EB]">413 Questions</span>
+              </div>
+              <div className="w-full h-2 bg-[#F1F5F9] rounded-full overflow-hidden">
+                <div className="h-full bg-[#2563EB] rounded-full" style={{ width: "75%" }}></div>
+              </div>
+              <p className="text-[11px] text-[#64748B] mt-1.5">Data Transmission, Networking & Media</p>
             </div>
-            <div className="w-full h-2 bg-[#F1F5F9] rounded-full overflow-hidden">
-              <div className="h-full bg-[#2563EB] rounded-full" style={{ width: "65%" }}></div>
-            </div>
-            <p className="text-[11px] text-[#64748B] mt-1.5">ICT Chapter 2 · Model Tests Available</p>
-          </div>
 
-          <div>
-            <div className="flex justify-between items-center text-xs mb-1.5">
-              <span className="font-bold text-[#0F172A]">বিগত বোর্ড ফাইনাল প্রশ্নমালা</span>
-              <span className="font-extrabold text-[#10B981]">226 Questions</span>
+            <div>
+              <div className="flex justify-between items-center text-xs mb-1.5">
+                <span className="font-bold text-[#0F172A]">Introduction to ICT</span>
+                <span className="font-extrabold text-[#10B981]">117 Questions</span>
+              </div>
+              <div className="w-full h-2 bg-[#F1F5F9] rounded-full overflow-hidden">
+                <div className="h-full bg-[#10B981] rounded-full" style={{ width: "60%" }}></div>
+              </div>
+              <p className="text-[11px] text-[#64748B] mt-1.5">Global Perspective & Information Society</p>
             </div>
-            <div className="w-full h-2 bg-[#F1F5F9] rounded-full overflow-hidden">
-              <div className="h-full bg-[#10B981] rounded-full" style={{ width: "80%" }}></div>
-            </div>
-            <p className="text-[11px] text-[#64748B] mt-1.5">All Boards · Comprehensive Drill</p>
-          </div>
 
-          <div>
-            <div className="flex justify-between items-center text-xs mb-1.5">
-              <span className="font-bold text-[#0F172A]">সংখ্যা পদ্ধতি ও ডিজিটাল ডিভাইস</span>
-              <span className="font-extrabold text-[#F59E0B]">Chapter 3</span>
+            <div>
+              <div className="flex justify-between items-center text-xs mb-1.5">
+                <span className="font-bold text-[#0F172A]">Programming & Language</span>
+                <span className="font-extrabold text-[#F59E0B]">20 Questions</span>
+              </div>
+              <div className="w-full h-2 bg-[#F1F5F9] rounded-full overflow-hidden">
+                <div className="h-full bg-[#F59E0B] rounded-full" style={{ width: "45%" }}></div>
+              </div>
+              <p className="text-[11px] text-[#64748B] mt-1.5">C Syntax, Logic & Flowcharts</p>
             </div>
-            <div className="w-full h-2 bg-[#F1F5F9] rounded-full overflow-hidden">
-              <div className="h-full bg-[#F59E0B] rounded-full" style={{ width: "50%" }}></div>
-            </div>
-            <p className="text-[11px] text-[#64748B] mt-1.5">Practice Drill Available</p>
           </div>
-        </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div>
+              <div className="flex justify-between items-center text-xs mb-1.5">
+                <span className="font-bold text-[#0F172A]">কমিউনিকেশন সিস্টেম ও নেটওয়ার্কিং</span>
+                <span className="font-extrabold text-[#2563EB]">554 Questions</span>
+              </div>
+              <div className="w-full h-2 bg-[#F1F5F9] rounded-full overflow-hidden">
+                <div className="h-full bg-[#2563EB] rounded-full" style={{ width: "65%" }}></div>
+              </div>
+              <p className="text-[11px] text-[#64748B] mt-1.5">ICT অধ্যায় ২ · মডেল ও বোর্ড প্রস্তুতি</p>
+            </div>
+
+            <div>
+              <div className="flex justify-between items-center text-xs mb-1.5">
+                <span className="font-bold text-[#0F172A]">বিগত বোর্ড ফাইনাল প্রশ্নমালা</span>
+                <span className="font-extrabold text-[#10B981]">226 Questions</span>
+              </div>
+              <div className="w-full h-2 bg-[#F1F5F9] rounded-full overflow-hidden">
+                <div className="h-full bg-[#10B981] rounded-full" style={{ width: "80%" }}></div>
+              </div>
+              <p className="text-[11px] text-[#64748B] mt-1.5">সকল শিক্ষা বোর্ড · পূর্ণাঙ্গ ড্রিল</p>
+            </div>
+
+            <div>
+              <div className="flex justify-between items-center text-xs mb-1.5">
+                <span className="font-bold text-[#0F172A]">সংখ্যা পদ্ধতি ও ডিজিটাল ডিভাইস</span>
+                <span className="font-extrabold text-[#F59E0B]">995 Questions</span>
+              </div>
+              <div className="w-full h-2 bg-[#F1F5F9] rounded-full overflow-hidden">
+                <div className="h-full bg-[#F59E0B] rounded-full" style={{ width: "85%" }}></div>
+              </div>
+              <p className="text-[11px] text-[#64748B] mt-1.5">ICT অধ্যায় ৩ · বাইনারি, গেট ও লজিক সার্কিট</p>
+            </div>
+          </div>
+        )}
       </div>
 
     </StudentLayout>

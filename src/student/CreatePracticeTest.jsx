@@ -13,6 +13,9 @@ export default function CreatePracticeTest() {
   const [errorMessage, setErrorMessage] = useState("");
 
   // Configuration State
+  const [languageMode, setLanguageMode] = useState(() => {
+    return localStorage.getItem("examino_language_mode") || "bangla";
+  });
   const [selectedSubject, setSelectedSubject] = useState("ICT");
   const [selectedChapter, setSelectedChapter] = useState("All");
   const [selectedTopic, setSelectedTopic] = useState("All");
@@ -29,11 +32,33 @@ export default function CreatePracticeTest() {
   const [availableCount, setAvailableCount] = useState(null);
   const [countingQuestions, setCountingQuestions] = useState(false);
 
-  // Load filter metadata on mount
+  // Listen for global languageModeChanged events
+  useEffect(() => {
+    const handleModeUpdate = (e) => {
+      const newMode = e.detail?.mode || localStorage.getItem("examino_language_mode") || "bangla";
+      setLanguageMode(newMode);
+      setSelectedChapter("All");
+      setSelectedTopic("All");
+    };
+    window.addEventListener("languageModeChanged", handleModeUpdate);
+    return () => window.removeEventListener("languageModeChanged", handleModeUpdate);
+  }, []);
+
+  const switchLanguageMode = (mode) => {
+    if (mode === languageMode) return;
+    setLanguageMode(mode);
+    localStorage.setItem("examino_language_mode", mode);
+    setSelectedChapter("All");
+    setSelectedTopic("All");
+    window.dispatchEvent(new CustomEvent("languageModeChanged", { detail: { mode } }));
+  };
+
+  // Load filter metadata when languageMode changes
   useEffect(() => {
     async function fetchMeta() {
+      setLoadingMeta(true);
       try {
-        const res = await fetch(`${API}/api/practice/metadata`);
+        const res = await fetch(`${API}/api/practice/metadata?version=${languageMode}`);
         if (res.ok) {
           const data = await res.json();
           setMetadata(data);
@@ -48,7 +73,7 @@ export default function CreatePracticeTest() {
       }
     }
     fetchMeta();
-  }, []);
+  }, [languageMode]);
 
   const currentSubjectObj = metadata.subjects.find((s) => s.name === selectedSubject);
   const availableChapters = currentSubjectObj ? currentSubjectObj.chapters : [];
@@ -88,6 +113,7 @@ export default function CreatePracticeTest() {
           chapter: selectedChapter,
           topic: selectedTopic,
           difficulty: selectedDifficulty,
+          version: languageMode,
         });
         const res = await fetch(`${API}/api/practice/available-count?${params.toString()}`);
         if (res.ok && !isCancelled) {
@@ -104,7 +130,7 @@ export default function CreatePracticeTest() {
     return () => {
       isCancelled = true;
     };
-  }, [selectedSubject, selectedChapter, selectedTopic, selectedDifficulty]);
+  }, [selectedSubject, selectedChapter, selectedTopic, selectedDifficulty, languageMode]);
 
   // Handle Form Submission / Generation
   const handleStartPractice = async (e) => {
@@ -134,7 +160,8 @@ export default function CreatePracticeTest() {
         difficulty: selectedDifficulty,
         mode: selectedMode,
         durationMinutes: effectiveTimer,
-        title: `${selectedSubject} - ${selectedChapter === "All" ? "Full Syllabus" : selectedChapter} (${selectedMode === "practice" ? "Practice Drill" : "Timed Test"})`,
+        version: languageMode,
+        title: `${selectedSubject} (${languageMode === "english" ? "English" : "বাংলা"}) - ${selectedChapter === "All" ? "Full Syllabus" : selectedChapter} (${selectedMode === "practice" ? "Practice Drill" : "Timed Test"})`,
       };
 
       const res = await fetch(`${API}/api/practice/generate`, {
@@ -201,6 +228,39 @@ export default function CreatePracticeTest() {
                 1
               </span>
               <h3 className="text-sm font-bold text-[#0F172A]">Syllabus Scope & Chapter Selection</h3>
+            </div>
+
+            {/* Medium / Language Selector */}
+            <div>
+              <label className="block text-xs font-semibold text-[#0F172A] mb-1.5">
+                Curriculum Medium / ভাষা মাধ্যম
+              </label>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => switchLanguageMode("bangla")}
+                  className={`flex items-center justify-center gap-2 py-2 px-3 rounded-lg border text-xs font-bold transition-all ${
+                    languageMode === "bangla"
+                      ? "bg-[#F0FDF4] border-[#16A34A] text-[#15803D] ring-2 ring-[#16A34A]/20"
+                      : "bg-[#F8FAFC] border-[#E2E8F0] text-[#64748B] hover:bg-white"
+                  }`}
+                >
+                  <span className="text-base">🇧🇩</span>
+                  <span>বাংলা মাধ্যম</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => switchLanguageMode("english")}
+                  className={`flex items-center justify-center gap-2 py-2 px-3 rounded-lg border text-xs font-bold transition-all ${
+                    languageMode === "english"
+                      ? "bg-[#EFF6FF] border-[#2563EB] text-[#2563EB] ring-2 ring-[#2563EB]/20"
+                      : "bg-[#F8FAFC] border-[#E2E8F0] text-[#64748B] hover:bg-white"
+                  }`}
+                >
+                  <span className="text-base">🇬🇧</span>
+                  <span>English Medium</span>
+                </button>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

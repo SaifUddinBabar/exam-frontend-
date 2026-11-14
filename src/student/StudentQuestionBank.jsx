@@ -25,11 +25,39 @@ export default function StudentQuestionBank() {
   const [revealedAnswers, setRevealedAnswers] = useState({});
   const [bookmarkingId, setBookmarkingId] = useState(null);
 
-  // Load filter metadata once on mount
+  // Language / Medium Mode State ("bangla" | "english")
+  const [languageMode, setLanguageMode] = useState(() => {
+    return localStorage.getItem("examino_language_mode") || "bangla";
+  });
+
+  // Listen for global languageModeChanged events
+  useEffect(() => {
+    const handleModeUpdate = (e) => {
+      const newMode = e.detail?.mode || localStorage.getItem("examino_language_mode") || "bangla";
+      setLanguageMode(newMode);
+      setSelectedChapter("All");
+      setSelectedTopic("All");
+      setCurrentPage(1);
+    };
+    window.addEventListener("languageModeChanged", handleModeUpdate);
+    return () => window.removeEventListener("languageModeChanged", handleModeUpdate);
+  }, []);
+
+  const switchLanguageMode = (mode) => {
+    if (mode === languageMode) return;
+    setLanguageMode(mode);
+    localStorage.setItem("examino_language_mode", mode);
+    setSelectedChapter("All");
+    setSelectedTopic("All");
+    setCurrentPage(1);
+    window.dispatchEvent(new CustomEvent("languageModeChanged", { detail: { mode } }));
+  };
+
+  // Load filter metadata when languageMode changes
   useEffect(() => {
     async function loadMeta() {
       try {
-        const res = await fetch(`${API}/api/practice/metadata`);
+        const res = await fetch(`${API}/api/practice/metadata?version=${languageMode}`);
         if (res.ok) {
           const data = await res.json();
           setMetadata(data);
@@ -39,7 +67,7 @@ export default function StudentQuestionBank() {
       }
     }
     loadMeta();
-  }, []);
+  }, [languageMode]);
 
   // Compute available chapters based on selected subject
   const currentSubjectObj = metadata.subjects.find((s) => s.name === selectedSubject) || metadata.subjects[0];
@@ -80,6 +108,7 @@ export default function StudentQuestionBank() {
         const params = new URLSearchParams({
           page: currentPage,
           limit: 15,
+          version: languageMode,
         });
 
         if (selectedSubject !== "All") params.append("subject", selectedSubject);
@@ -120,6 +149,7 @@ export default function StudentQuestionBank() {
     selectedYear,
     selectedClass,
     searchQuery,
+    languageMode,
   ]);
 
   // Toggle answer revelation per question card
@@ -206,6 +236,49 @@ export default function StudentQuestionBank() {
             </svg>
             Create Practice Test
           </Link>
+        </div>
+      </div>
+
+      {/* ── MEDIUM / LANGUAGE MODE NOTICE & QUICK SELECTOR ── */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white border border-[#E2E8F0] rounded-xl px-4 py-3 mb-5 shadow-xs">
+        <div className="flex items-center gap-2">
+          <span className="w-2.5 h-2.5 rounded-full bg-[#10B981] animate-pulse" />
+          <span className="text-xs font-semibold text-[#0F172A]">
+            Current Curriculum:{" "}
+            <span className="font-bold text-[#2563EB]">
+              {languageMode === "english" ? "🇬🇧 English Medium (Chorcha & Model Practice)" : "🇧🇩 বাংলা মাধ্যম (NCTB ও বোর্ড প্রশ্নসমূহ)"}
+            </span>
+          </span>
+          <span className="text-xs font-medium text-[#64748B]">
+            ({totalQuestions.toLocaleString()} questions)
+          </span>
+        </div>
+
+        {/* Quick Toggle */}
+        <div className="flex items-center gap-1.5 self-start sm:self-auto">
+          <span className="text-xs text-[#64748B] font-medium mr-1">Switch:</span>
+          <button
+            type="button"
+            onClick={() => switchLanguageMode("bangla")}
+            className={`px-2.5 py-1 text-xs font-bold rounded-lg border transition-all ${
+              languageMode === "bangla"
+                ? "bg-[#15803D] text-white border-[#15803D] shadow-xs"
+                : "bg-[#F8FAFC] text-[#475569] border-[#E2E8F0] hover:bg-white"
+            }`}
+          >
+            🇧🇩 বাংলা
+          </button>
+          <button
+            type="button"
+            onClick={() => switchLanguageMode("english")}
+            className={`px-2.5 py-1 text-xs font-bold rounded-lg border transition-all ${
+              languageMode === "english"
+                ? "bg-[#2563EB] text-white border-[#2563EB] shadow-xs"
+                : "bg-[#F8FAFC] text-[#475569] border-[#E2E8F0] hover:bg-white"
+            }`}
+          >
+            🇬🇧 English
+          </button>
         </div>
       </div>
 

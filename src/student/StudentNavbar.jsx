@@ -15,6 +15,28 @@ export default function StudentNavbar() {
     return JSON.parse(localStorage.getItem("user") || "{}");
   });
 
+  // Language / Medium Mode State ("bangla" | "english")
+  const [languageMode, setLanguageMode] = useState(() => {
+    return localStorage.getItem("examino_language_mode") || "bangla";
+  });
+
+  const handleLanguageChange = (mode) => {
+    if (mode === languageMode) return;
+    setLanguageMode(mode);
+    localStorage.setItem("examino_language_mode", mode);
+    window.dispatchEvent(new CustomEvent("languageModeChanged", { detail: { mode } }));
+  };
+
+  useEffect(() => {
+    const handleModeUpdate = (e) => {
+      if (e.detail?.mode && e.detail.mode !== languageMode) {
+        setLanguageMode(e.detail.mode);
+      }
+    };
+    window.addEventListener("languageModeChanged", handleModeUpdate);
+    return () => window.removeEventListener("languageModeChanged", handleModeUpdate);
+  }, [languageMode]);
+
   const studentName = currentUser.name || "Student";
 
   // Derive initials
@@ -114,8 +136,38 @@ export default function StudentNavbar() {
           </div>
 
           {/* Right: Notifications & Profile Avatar */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             
+            {/* Language / Medium Mode Switcher Toggle */}
+            <div className="flex items-center bg-[#F1F5F9] p-0.5 sm:p-1 rounded-xl border border-[#E2E8F0]">
+              <button
+                type="button"
+                onClick={() => handleLanguageChange("bangla")}
+                className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1 text-xs font-semibold rounded-lg transition-all ${
+                  languageMode === "bangla"
+                    ? "bg-white text-[#15803D] shadow-xs"
+                    : "text-[#64748B] hover:text-[#0F172A]"
+                }`}
+                title="বাংলা মাধ্যম (NCTB ও বোর্ড প্রশ্নসমূহ)"
+              >
+                <span className="text-xs sm:text-sm">🇧🇩</span>
+                <span className="font-bold">বাংলা</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleLanguageChange("english")}
+                className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1 text-xs font-semibold rounded-lg transition-all ${
+                  languageMode === "english"
+                    ? "bg-white text-[#2563EB] shadow-xs"
+                    : "text-[#64748B] hover:text-[#0F172A]"
+                }`}
+                title="English Medium (ICT & Model Questions)"
+              >
+                <span className="text-xs sm:text-sm">🇬🇧</span>
+                <span className="font-bold">English</span>
+              </button>
+            </div>
+
             {/* Notification Bell */}
             <div className="relative" ref={notifRef}>
               <button
