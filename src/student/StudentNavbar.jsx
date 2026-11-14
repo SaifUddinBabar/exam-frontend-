@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import ExaminoLogo from "../components/ExaminoLogo";
 import { signOutUser } from "../firebase/firebase";
+import { triggerHaptic } from "../utils/haptics";
 
 export default function StudentNavbar() {
   const location = useLocation();
@@ -85,13 +86,12 @@ export default function StudentNavbar() {
   };
 
   const navLinks = [
-    { label: "Home", path: "/dashboard" },
-    { label: "Exams", path: "/exams" },
-    { label: "Practice Zone", path: "/practice" },
-    { label: "Question Bank", path: "/question-bank" },
-    { label: "Saved Questions", path: "/saved-questions" },
-    { label: "Performance", path: "/performance" },
-    { label: "History", path: "/history" },
+    { label: "Home", path: "/dashboard", bn: "হোম" },
+    { label: "Exams", path: "/exams", bn: "পরীক্ষা" },
+    { label: "Leaderboard", path: "/leaderboard", bn: "মেধা তালিকা" },
+    { label: "Weak Topics", path: "/weak-topics", bn: "রিভিশন দরকার" },
+    { label: "Performance", path: "/performance", bn: "ফলাফল" },
+    { label: "History", path: "/history", bn: "হিস্ট্রি" },
   ];
 
   const isActive = (path) => {
@@ -118,15 +118,16 @@ export default function StudentNavbar() {
                   <Link
                     key={link.path}
                     to={link.path}
-                    className={`relative px-4 py-2 text-sm font-medium transition-colors ${
+                    onClick={() => triggerHaptic("light")}
+                    className={`relative px-3.5 py-2 text-sm font-semibold transition-all btn-smooth ${
                       active
-                        ? "text-[#2563EB] font-semibold"
+                        ? "text-[#2563EB] font-bold"
                         : "text-[#64748B] hover:text-[#0F172A]"
                     }`}
                   >
-                    {link.label}
+                    {languageMode === "bangla" && link.bn ? link.bn : link.label}
                     {active && (
-                      <span className="absolute bottom-0 left-4 right-4 h-0.5 bg-[#2563EB] rounded-full" />
+                      <span className="absolute bottom-0 left-3.5 right-3.5 h-0.5 bg-[#2563EB] rounded-full" />
                     )}
                   </Link>
                 );
@@ -351,50 +352,50 @@ export default function StudentNavbar() {
 
           <Link
             to="/exams"
-            className={`flex flex-col items-center justify-center text-xs font-medium transition-colors ${
-              isActive("/exams") ? "text-[#2563EB]" : "text-[#64748B]"
+            onClick={() => triggerHaptic("light")}
+            className={`flex flex-col items-center justify-center text-xs font-medium transition-colors btn-smooth ${
+              isActive("/exams") ? "text-[#2563EB] font-bold" : "text-[#64748B]"
             }`}
           >
             <svg className="w-5 h-5 mb-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
-            <span>Exams</span>
+            <span>{languageMode === "bangla" ? "পরীক্ষা" : "Exams"}</span>
           </Link>
 
           <Link
-            to="/practice"
-            className={`flex flex-col items-center justify-center text-xs font-medium transition-colors ${
-              isActive("/practice") ? "text-[#2563EB]" : "text-[#64748B]"
+            to="/leaderboard"
+            onClick={() => triggerHaptic("light")}
+            className={`flex flex-col items-center justify-center text-xs font-medium transition-colors btn-smooth ${
+              isActive("/leaderboard") ? "text-[#2563EB] font-bold" : "text-[#64748B]"
             }`}
           >
-            <svg className="w-5 h-5 mb-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-            </svg>
-            <span>Practice</span>
+            <span className="text-lg leading-none mb-0.5">🏆</span>
+            <span>{languageMode === "bangla" ? "র‍্যাঙ্কিং" : "Ranks"}</span>
           </Link>
 
           <Link
-            to="/question-bank"
-            className={`flex flex-col items-center justify-center text-xs font-medium transition-colors ${
-              isActive("/question-bank") ? "text-[#2563EB]" : "text-[#64748B]"
+            to="/weak-topics"
+            onClick={() => triggerHaptic("light")}
+            className={`flex flex-col items-center justify-center text-xs font-medium transition-colors btn-smooth ${
+              isActive("/weak-topics") ? "text-[#2563EB] font-bold" : "text-[#64748B]"
             }`}
           >
-            <svg className="w-5 h-5 mb-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-            </svg>
-            <span>Q-Bank</span>
+            <span className="text-lg leading-none mb-0.5">📖</span>
+            <span>{languageMode === "bangla" ? "রিভিশন" : "Revise"}</span>
           </Link>
 
           <Link
             to="/profile"
-            className={`flex flex-col items-center justify-center text-xs font-medium transition-colors ${
-              isActive("/profile") ? "text-[#2563EB]" : "text-[#64748B]"
+            onClick={() => triggerHaptic("light")}
+            className={`flex flex-col items-center justify-center text-xs font-medium transition-colors btn-smooth ${
+              isActive("/profile") ? "text-[#2563EB] font-bold" : "text-[#64748B]"
             }`}
           >
             <div className="w-5 h-5 mb-0.5 rounded-full bg-[#DBEAFE] text-[#1D4ED8] font-bold text-[10px] flex items-center justify-center">
               {initials}
             </div>
-            <span>Profile</span>
+            <span>{languageMode === "bangla" ? "প্রোফাইল" : "Profile"}</span>
           </Link>
 
         </div>

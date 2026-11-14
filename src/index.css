@@ -36,3 +36,31 @@
   user-select: none;
   -webkit-user-select: none;
 }
+
+/* Buttery Smooth ("মাখনের মতো") Tactile Button Micro-interactions */
+.btn-smooth {
+  transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  transform: translateZ(0);
+}
+
+.btn-smooth:hover {
+  transform: translateY(-1.5px);
+  filter: brightness(1.03);
+}
+
+.btn-smooth:active {
+  transform: scale(0.97) translateY(0.5px);
+  filter: brightness(0.96);
+  transition-duration: 0.08s;
+}
+
+.card-smooth {
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.card-smooth:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.08), 0 8px 10px -6px rgba(15, 23, 42, 0.04);
+}

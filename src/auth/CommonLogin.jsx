@@ -2,12 +2,19 @@ import React, { useState, useEffect } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import ExaminoLogo from "../components/ExaminoLogo";
 import { sendFirebaseOtp, clearRecaptcha, signInWithGoogle } from "../firebase/firebase";
+import { triggerHaptic } from "../utils/haptics";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
 export default function CommonLogin() {
   const navigate = useNavigate();
   const location = useLocation();
+
+  // Teacher Access Mode Toggle
+  const [isTeacherMode, setIsTeacherMode] = useState(() => {
+    return new URLSearchParams(location.search).get("teacher") === "true";
+  });
+  const [teacherPasscode, setTeacherPasscode] = useState("006985");
 
   // Language Mode: 'bangla' | 'english'
   const [lang, setLang] = useState(() => localStorage.getItem("examino_language_mode") || "bangla");
@@ -21,6 +28,7 @@ export default function CommonLogin() {
   }, []);
 
   const toggleLang = () => {
+    triggerHaptic("light");
     const next = lang === "bangla" ? "english" : "bangla";
     setLang(next);
     localStorage.setItem("examino_language_mode", next);
@@ -53,6 +61,7 @@ export default function CommonLogin() {
   const [error, setError] = useState(location.state?.message || "");
 
   const handleSuccessfulAuth = (data) => {
+    triggerHaptic("success");
     localStorage.setItem("token", data.token);
     localStorage.setItem("user", JSON.stringify(data.user));
     if (data.memberships) {
@@ -76,12 +85,36 @@ export default function CommonLogin() {
 
   // 1. Google Sign-In (Firebase GoogleAuthProvider popup)
   const handleGoogleSignIn = async () => {
+    triggerHaptic("medium");
     setError("");
     setGoogleLoading(true);
 
     try {
       const { idToken } = await signInWithGoogle();
 
+      // If in Teacher mode, verify using Teacher verification endpoint
+      if (isTeacherMode) {
+        const res = await fetch(`${API}/api/auth/teacher-verify`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            idToken,
+            teacherPasscode: teacherPasscode.trim(),
+          }),
+        });
+
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+          setError(data.message || (lang === "bangla" ? "শিক্ষক আইডি যাচাইকরণ ব্যর্থ হয়েছে।" : "Teacher verification failed."));
+          setGoogleLoading(false);
+          return;
+        }
+
+        handleSuccessfulAuth(data);
+        return;
+      }
+
+      // Default Student Google Login
       const res = await fetch(`${API}/api/auth/google`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -113,6 +146,7 @@ export default function CommonLogin() {
   // 2. Email & Password Login
   const handleEmailPasswordLogin = async (e) => {
     e.preventDefault();
+    triggerHaptic("medium");
     setError("");
     setIdentifierTouched(true);
     setPasswordTouched(true);
@@ -129,6 +163,29 @@ export default function CommonLogin() {
 
     setLoading(true);
     try {
+      // If Teacher mode -> use teacher-verify endpoint
+      if (isTeacherMode) {
+        const res = await fetch(`${API}/api/auth/teacher-verify`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: identifier.trim(),
+            password,
+            teacherPasscode: teacherPasscode.trim(),
+          }),
+        });
+
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+          setError(data.message || (lang === "bangla" ? "ভুল শিক্ষক তথ্য অথবা পাসওয়ার্ড।" : "Invalid teacher credentials or passcode."));
+          setLoading(false);
+          return;
+        }
+
+        handleSuccessfulAuth(data);
+        return;
+      }
+
       const res = await fetch(`${API}/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -292,28 +349,69 @@ export default function CommonLogin() {
           {/* Form Header with Language Toggle */}
           <div className="mb-6 flex items-start justify-between">
             <div>
-              <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-[#EFF6FF] text-[#2563EB] text-xs font-semibold mb-3">
-                <span className="w-2 h-2 rounded-full bg-[#2563EB] animate-pulse" />
-                <span>{lang === "bangla" ? "নিরাপদ লগইন ব্যবস্থা" : "Multi-Method Authentication"}</span>
-              </div>
+              {isTeacherMode ? (
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-100 text-amber-900 text-xs font-bold mb-3 border border-amber-200">
+                  <span className="w-2 h-2 rounded-full bg-amber-600 animate-pulse" />
+                  <span>👨‍🏫 {lang === "bangla" ? "শিক্ষক ও এডমিন কন্ট্রোল" : "Teacher & Admin Control"}</span>
+                </div>
+              ) : (
+                <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-[#EFF6FF] text-[#2563EB] text-xs font-semibold mb-3">
+                  <span className="w-2 h-2 rounded-full bg-[#2563EB] animate-pulse" />
+                  <span>👨‍🎓 {lang === "bangla" ? "শিক্ষার্থী পোর্টাল লগইন" : "Student Portal Sign In"}</span>
+                </div>
+              )}
               <h1 className="text-2xl sm:text-3xl font-extrabold text-[#0F172A] tracking-tight">
-                {lang === "bangla" ? "এক্সামিনোতে সাইন ইন" : "Sign in to Examino"}
+                {isTeacherMode
+                  ? (lang === "bangla" ? "শিক্ষক প্যানেলে প্রবেশ" : "Teacher Portal Login")
+                  : (lang === "bangla" ? "এক্সামিনোতে সাইন ইন" : "Sign in to Examino")}
               </h1>
               <p className="text-xs sm:text-sm text-[#64748B] mt-1.5">
-                {lang === "bangla"
-                  ? "আপনার সুবিধাজনক মাধ্যমে ড্যাশবোর্ডে প্রবেশ করুন।"
-                  : "Choose your preferred sign-in method to access your dashboard."}
+                {isTeacherMode
+                  ? (lang === "bangla"
+                      ? "শিক্ষক আইডি (006985) দিয়ে গুগল বা ইমেইল মারফত সম্পূর্ণ কন্ট্রোল নিন।"
+                      : "Access complete exam & question controls with Teacher ID (006985).")
+                  : (lang === "bangla"
+                      ? "আপনার সুবিধাজনক মাধ্যমে ড্যাশবোর্ডে প্রবেশ করুন।"
+                      : "Choose your preferred sign-in method to access your dashboard.")}
               </p>
             </div>
             {/* Secondary Language Switcher button for mobile */}
             <button
               type="button"
               onClick={toggleLang}
-              className="md:hidden px-2 py-1 rounded border border-slate-200 bg-white text-xs font-bold text-slate-700 shadow-xs"
+              className="px-2.5 py-1 rounded-lg border border-slate-200 bg-white text-xs font-bold text-slate-700 shadow-2xs hover:bg-slate-50"
             >
               {lang === "bangla" ? "English" : "বাংলা"}
             </button>
           </div>
+
+          {/* Teacher Passcode Input Box (When Teacher Mode is Active) */}
+          {isTeacherMode && (
+            <div className="mb-5 p-3.5 bg-amber-50/90 border border-amber-200 rounded-xl">
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-xs font-extrabold text-amber-900 tracking-wide flex items-center gap-1.5">
+                  <span>🔑</span>
+                  <span>{lang === "bangla" ? "শিক্ষক আইডি / পাসকোড *" : "Teacher ID / Passcode *"}</span>
+                </label>
+                <span className="text-[10px] font-bold text-amber-800 bg-amber-200/70 px-2 py-0.5 rounded-md">
+                  {lang === "bangla" ? "আইডি: 006985" : "ID: 006985"}
+                </span>
+              </div>
+              <input
+                type="text"
+                required
+                value={teacherPasscode}
+                onChange={(e) => setTeacherPasscode(e.target.value)}
+                placeholder="006985"
+                className="w-full px-3 py-2 bg-white border border-amber-300 rounded-lg text-sm font-mono font-bold tracking-widest text-amber-950 focus:outline-none focus:ring-2 focus:ring-amber-500/20"
+              />
+              <p className="text-[11px] text-amber-800 mt-1.5">
+                {lang === "bangla"
+                  ? "এই আইডিটি দিয়ে সাইন ইন করলে আপনার একাউন্টে শিক্ষক সুবিধা সক্রিয় হবে।"
+                  : "Using this ID permanently associates your account with teacher privileges."}
+              </p>
+            </div>
+          )}
 
           {/* Error Notification */}
           {error && (
@@ -364,7 +462,11 @@ export default function CommonLogin() {
                       d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
                     />
                   </svg>
-                  <span>{lang === "bangla" ? "গুগল দিয়ে প্রবেশ করুন" : "Continue with Google"}</span>
+                  <span>
+                    {isTeacherMode
+                      ? (lang === "bangla" ? "গুগল দিয়ে শিক্ষক প্রবেশ" : "Continue with Google (Teacher)")
+                      : (lang === "bangla" ? "গুগল দিয়ে প্রবেশ করুন" : "Continue with Google")}
+                  </span>
                 </>
               )}
             </button>
@@ -641,6 +743,39 @@ export default function CommonLogin() {
                 {lang === "bangla" ? "নতুন অ্যাকাউন্ট খুলুন" : "Create an account"}
               </Link>
             </p>
+          </div>
+
+          {/* Teacher Dedicated Access Switcher */}
+          <div className="mt-4 pt-4 border-t border-dashed border-[#CBD5E1] text-center">
+            {!isTeacherMode ? (
+              <button
+                type="button"
+                onClick={() => {
+                  triggerHaptic("medium");
+                  setIsTeacherMode(true);
+                  setError("");
+                }}
+                className="btn-smooth inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold text-slate-800 bg-white hover:bg-slate-50 border border-slate-300 shadow-2xs hover:border-[#94A3B8]"
+              >
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
+                <span className="text-base">👨‍🏫</span>
+                <span>{lang === "bangla" ? "শিক্ষক ও এডমিন প্রবেশ (আইডি: 006985)" : "Teacher / Admin Access (Passcode)"}</span>
+                <span className="text-slate-400 font-mono">➔</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  triggerHaptic("medium");
+                  setIsTeacherMode(false);
+                  setError("");
+                }}
+                className="btn-smooth inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 shadow-2xs"
+              >
+                <span className="text-base">👨‍🎓</span>
+                <span>{lang === "bangla" ? "সাধারণ শিক্ষার্থী লগইনে ফিরে যান" : "Back to Student Login"}</span>
+              </button>
+            )}
           </div>
         </div>
       </div>

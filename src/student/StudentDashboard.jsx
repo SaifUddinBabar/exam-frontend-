@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import StudentLayout from "./StudentLayout";
+import { triggerHaptic } from "../utils/haptics";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
@@ -230,98 +231,104 @@ export default function StudentDashboard() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {/* Card 1: Browse Question Bank */}
+          {/* Card 1: Live & Available Exams */}
           <Link
-            to="/question-bank"
-            className="bg-white border border-[#E2E8F0] hover:border-[#2563EB]/50 rounded-card p-5 shadow-card hover:shadow-elevated transition-all group flex flex-col justify-between"
+            to="/exams"
+            onClick={() => triggerHaptic("light")}
+            className="card-smooth bg-white border border-[#E2E8F0] hover:border-[#2563EB] rounded-2xl p-5 shadow-xs hover:shadow-md transition-all group flex flex-col justify-between"
           >
             <div>
               <div className="w-10 h-10 rounded-xl bg-[#EFF6FF] text-[#2563EB] flex items-center justify-center mb-3 group-hover:scale-105 transition-transform">
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
               </div>
               <h4 className="text-sm font-bold text-[#0F172A] group-hover:text-[#2563EB] transition-colors">
-                Browse Question Bank
+                {languageMode === "bangla" ? "চলমান পরীক্ষা" : "Available Exams"}
               </h4>
               <p className="text-xs text-[#64748B] mt-1 line-clamp-2 leading-relaxed">
-                Filter 2,134+ questions by subject, chapter, topic, board & difficulty
+                {languageMode === "bangla"
+                  ? "শিক্ষকের তৈরি করা সকল লাইভ মডেল টেস্ট ও পরীক্ষায় সরাসরি অংশ নিন"
+                  : "Join all live tests created by your teacher in real time"}
               </p>
             </div>
-            <div className="mt-4 pt-3 border-t border-[#F1F5F9] flex items-center justify-between text-xs font-semibold text-[#2563EB]">
-              <span>Explore Questions</span>
+            <div className="mt-4 pt-3 border-t border-[#F1F5F9] flex items-center justify-between text-xs font-bold text-[#2563EB]">
+              <span>{languageMode === "bangla" ? "পরীক্ষা দিন" : "Take Exam"}</span>
               <span>&rarr;</span>
             </div>
           </Link>
 
-          {/* Card 2: Create Practice Test */}
+          {/* Card 2: Leaderboard & Rankings */}
           <Link
-            to="/practice/create"
-            className="bg-white border border-[#E2E8F0] hover:border-[#10B981]/50 rounded-card p-5 shadow-card hover:shadow-elevated transition-all group flex flex-col justify-between"
+            to="/leaderboard"
+            onClick={() => triggerHaptic("light")}
+            className="card-smooth bg-white border border-[#E2E8F0] hover:border-amber-400 rounded-2xl p-5 shadow-xs hover:shadow-md transition-all group flex flex-col justify-between"
           >
             <div>
-              <div className="w-10 h-10 rounded-xl bg-[#ECFDF5] text-[#10B981] flex items-center justify-center mb-3 group-hover:scale-105 transition-transform">
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-                </svg>
+              <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center mb-3 group-hover:scale-105 transition-transform text-lg">
+                🏆
               </div>
-              <h4 className="text-sm font-bold text-[#0F172A] group-hover:text-[#10B981] transition-colors">
-                Create Practice Test
+              <h4 className="text-sm font-bold text-[#0F172A] group-hover:text-amber-700 transition-colors">
+                {languageMode === "bangla" ? "মেধা তালিকা (Leaderboard)" : "Live Leaderboard"}
               </h4>
               <p className="text-xs text-[#64748B] mt-1 line-clamp-2 leading-relaxed">
-                Customize target chapters, count (5–100), difficulty & optional timer
+                {languageMode === "bangla"
+                  ? "শীর্ষস্থান অধিকারী পরীক্ষার্থী ও পরীক্ষায় আপনার অবস্থান দেখুন"
+                  : "View top scorers and your exact rank across all exams"}
               </p>
             </div>
-            <div className="mt-4 pt-3 border-t border-[#F1F5F9] flex items-center justify-between text-xs font-semibold text-[#10B981]">
-              <span>Configure Drill</span>
+            <div className="mt-4 pt-3 border-t border-[#F1F5F9] flex items-center justify-between text-xs font-bold text-amber-700">
+              <span>{languageMode === "bangla" ? "র‍্যাঙ্কিং দেখুন" : "View Ranks"}</span>
               <span>&rarr;</span>
             </div>
           </Link>
 
-          {/* Card 3: Practice Mistakes */}
+          {/* Card 3: Weak Topics & Revision */}
           <Link
-            to="/practice/mistakes"
-            className="bg-white border border-[#E2E8F0] hover:border-[#EF4444]/50 rounded-card p-5 shadow-card hover:shadow-elevated transition-all group flex flex-col justify-between"
+            to="/weak-topics"
+            onClick={() => triggerHaptic("light")}
+            className="card-smooth bg-white border border-[#E2E8F0] hover:border-rose-400 rounded-2xl p-5 shadow-xs hover:shadow-md transition-all group flex flex-col justify-between"
           >
             <div>
-              <div className="w-10 h-10 rounded-xl bg-[#FEF2F2] text-[#EF4444] flex items-center justify-center mb-3 group-hover:scale-105 transition-transform">
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
+              <div className="w-10 h-10 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center mb-3 group-hover:scale-105 transition-transform text-lg">
+                ⚠️
               </div>
-              <h4 className="text-sm font-bold text-[#0F172A] group-hover:text-[#EF4444] transition-colors">
-                Practice Mistakes
+              <h4 className="text-sm font-bold text-[#0F172A] group-hover:text-rose-700 transition-colors">
+                {languageMode === "bangla" ? "দুর্বল বিষয়সমূহ (রিভিশন)" : "Weak Topics & Revision"}
               </h4>
               <p className="text-xs text-[#64748B] mt-1 line-clamp-2 leading-relaxed">
-                Target and drill questions you missed in previous tests until mastered
+                {languageMode === "bangla"
+                  ? "পরীক্ষায় যেসব টপিকে ভুল হয়েছে সেগুলো চিহ্নিত করে আবার পড়ুন"
+                  : "Track chapters where mistakes occurred and revise them"}
               </p>
             </div>
-            <div className="mt-4 pt-3 border-t border-[#F1F5F9] flex items-center justify-between text-xs font-semibold text-[#EF4444]">
-              <span>Fix Weak Spots</span>
+            <div className="mt-4 pt-3 border-t border-[#F1F5F9] flex items-center justify-between text-xs font-bold text-rose-700">
+              <span>{languageMode === "bangla" ? "রিভিশন শুরু করুন" : "Start Revision"}</span>
               <span>&rarr;</span>
             </div>
           </Link>
 
-          {/* Card 4: Saved Questions */}
+          {/* Card 4: Performance & Analytics */}
           <Link
-            to="/saved-questions"
-            className="bg-white border border-[#E2E8F0] hover:border-[#F59E0B]/50 rounded-card p-5 shadow-card hover:shadow-elevated transition-all group flex flex-col justify-between"
+            to="/performance"
+            onClick={() => triggerHaptic("light")}
+            className="card-smooth bg-white border border-[#E2E8F0] hover:border-emerald-400 rounded-2xl p-5 shadow-xs hover:shadow-md transition-all group flex flex-col justify-between"
           >
             <div>
-              <div className="w-10 h-10 rounded-xl bg-[#FFFBEB] text-[#F59E0B] flex items-center justify-center mb-3 group-hover:scale-105 transition-transform">
-                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                  <path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" />
-                </svg>
+              <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center mb-3 group-hover:scale-105 transition-transform text-lg">
+                📊
               </div>
-              <h4 className="text-sm font-bold text-[#0F172A] group-hover:text-[#F59E0B] transition-colors">
-                Saved Questions
+              <h4 className="text-sm font-bold text-[#0F172A] group-hover:text-emerald-700 transition-colors">
+                {languageMode === "bangla" ? "আমার ফলাফল ও প্রগ্রেস" : "Performance & Progress"}
               </h4>
               <p className="text-xs text-[#64748B] mt-1 line-clamp-2 leading-relaxed">
-                Quickly review and drill your bookmarked questions and key concepts
+                {languageMode === "bangla"
+                  ? "গড় স্কোর, নির্ভুলতার হার এবং অতীতের সকল পরীক্ষার ফলাফল বিশ্লেষণ"
+                  : "Analyze your average scores, accuracy rate and test timeline"}
               </p>
             </div>
-            <div className="mt-4 pt-3 border-t border-[#F1F5F9] flex items-center justify-between text-xs font-semibold text-[#F59E0B]">
-              <span>View Bookmarks</span>
+            <div className="mt-4 pt-3 border-t border-[#F1F5F9] flex items-center justify-between text-xs font-bold text-emerald-700">
+              <span>{languageMode === "bangla" ? "ফলাফল দেখুন" : "View Analytics"}</span>
               <span>&rarr;</span>
             </div>
           </Link>

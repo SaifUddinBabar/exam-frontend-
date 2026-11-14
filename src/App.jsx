@@ -36,6 +36,8 @@ const CreatePracticeTest = lazy(() => import("./student/CreatePracticeTest"));
 const PracticeSessionPage = lazy(() => import("./student/PracticeSessionPage"));
 const PracticeMistakes = lazy(() => import("./student/PracticeMistakes"));
 const SavedQuestions = lazy(() => import("./student/SavedQuestions"));
+const Leaderboard = lazy(() => import("./student/Leaderboard"));
+const WeakTopics = lazy(() => import("./student/WeakTopics"));
 
 // =========================
 // LAZY-LOADED SUPER ADMIN & COACHING (PRESERVED)
@@ -226,6 +228,22 @@ export default function App() {
           }
         />
         <Route
+          path="/leaderboard"
+          element={
+            <ProtectedRoute allowedRoles={["student", "tutor", "teacher", "org_admin", "super_admin"]}>
+              <Leaderboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/weak-topics"
+          element={
+            <ProtectedRoute allowedRoles={["student", "tutor", "teacher", "org_admin", "super_admin"]}>
+              <WeakTopics />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/profile"
           element={
             <ProtectedRoute allowedRoles={["student", "tutor", "teacher", "org_admin", "super_admin"]}>
@@ -236,7 +254,7 @@ export default function App() {
         <Route
           path="/question-bank"
           element={
-            <ProtectedRoute allowedRoles={["student", "tutor", "teacher", "org_admin", "super_admin"]}>
+            <ProtectedRoute allowedRoles={["tutor", "teacher", "org_admin", "super_admin"]}>
               <StudentQuestionBank />
             </ProtectedRoute>
           }

@@ -602,55 +602,25 @@ export default function CommonRegister() {
             </button>
           </div>
 
-          {/* Account Role Selector Tabs */}
-          <div className="grid grid-cols-3 gap-2 p-1 bg-[#F1F5F9] rounded-xl mb-5 border border-[#E2E8F0]">
-            <button
-              type="button"
-              onClick={() => {
-                setActiveTab("student");
-                setError("");
-              }}
-              className={`flex flex-col sm:flex-row items-center justify-center gap-1.5 py-2.5 px-3 rounded-lg text-xs font-bold transition-all ${
-                activeTab === "student"
-                  ? "bg-white text-[#2563EB] shadow-xs ring-1 ring-[#2563EB]/20"
-                  : "text-[#64748B] hover:text-[#0F172A]"
-              }`}
+          {/* Student Dedicated Registration Badge */}
+          <div className="flex items-center justify-between p-3.5 bg-[#EFF6FF] rounded-xl mb-5 border border-[#BFDBFE]">
+            <div className="flex items-center gap-2.5">
+              <span className="text-xl">👨‍🎓</span>
+              <div>
+                <p className="text-xs font-bold text-[#1E40AF]">
+                  {lang === "bangla" ? "শিক্ষার্থী একাউন্ট নিবন্ধন" : "Student Account Registration"}
+                </p>
+                <p className="text-[11px] text-[#3B82F6]">
+                  {lang === "bangla" ? "সকল পরীক্ষা, প্র্যাকটিস ও মেধা তালিকায় অংশ নিন" : "Participate in exams, leaderboards & analytics"}
+                </p>
+              </div>
+            </div>
+            <Link
+              to="/login?teacher=true"
+              className="text-[11px] font-bold text-[#1E40AF] hover:underline whitespace-nowrap bg-white px-2.5 py-1.5 rounded-lg border border-[#DBEAFE] shadow-2xs"
             >
-              <span className="text-sm">👨‍🎓</span>
-              <span>{lang === "bangla" ? "শিক্ষার্থী" : "Student"}</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                setActiveTab("teacher");
-                setError("");
-              }}
-              className={`flex flex-col sm:flex-row items-center justify-center gap-1.5 py-2.5 px-3 rounded-lg text-xs font-bold transition-all ${
-                activeTab === "teacher"
-                  ? "bg-white text-[#101B35] shadow-xs ring-1 ring-[#101B35]/20"
-                  : "text-[#64748B] hover:text-[#0F172A]"
-              }`}
-            >
-              <span className="text-sm">👨‍🏫</span>
-              <span>{lang === "bangla" ? "শিক্ষক" : "Teacher"}</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                setActiveTab("organization");
-                setError("");
-              }}
-              className={`flex flex-col sm:flex-row items-center justify-center gap-1.5 py-2.5 px-3 rounded-lg text-xs font-bold transition-all ${
-                activeTab === "organization"
-                  ? "bg-white text-[#7C3AED] shadow-xs ring-1 ring-[#7C3AED]/20"
-                  : "text-[#64748B] hover:text-[#0F172A]"
-              }`}
-            >
-              <span className="text-sm">🏫</span>
-              <span>{lang === "bangla" ? "কোচিং সেন্টার" : "Coaching"}</span>
-            </button>
+              {lang === "bangla" ? "শিক্ষক প্রবেশ ➔" : "Teacher Access ➔"}
+            </Link>
           </div>
 
           {/* ════════ PROMINENT GOOGLE SIGN-UP BUTTON ════════ */}

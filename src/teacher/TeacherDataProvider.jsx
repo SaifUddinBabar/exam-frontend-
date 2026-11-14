@@ -100,8 +100,59 @@ export default function TeacherDataProvider({ children }) {
     });
   }, []);
 
+  const [dbStudents, setDbStudents] = useState([]);
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+    const API = import.meta.env.VITE_API_URL || "http://localhost:5000";
+    fetch(`${API}/api/auth/teacher/students`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.success && Array.isArray(data.students)) {
+          setDbStudents(data.students);
+        }
+      })
+      .catch(() => {});
+  }, [tick]);
+
   const attempts = useMemo(() => buildAttempts(exams.items, rankings), [exams.items, rankings]);
-  const students = useMemo(() => aggregateStudents(attempts), [attempts]);
+  const submissionStudents = useMemo(() => aggregateStudents(attempts), [attempts]);
+
+  // Combine DB registered students directory with live submission analytics
+  const students = useMemo(() => {
+    if (!dbStudents || dbStudents.length === 0) {
+      return submissionStudents;
+    }
+    const map = new Map();
+    // 1. Put all registered students from database
+    dbStudents.forEach((st) => {
+      map.set(st.name.trim().toLowerCase(), {
+        ...st,
+        attempts: st.attempts || [],
+      });
+    });
+    // 2. Augment with any live submission details
+    submissionStudents.forEach((st) => {
+      const key = st.name.trim().toLowerCase();
+      if (map.has(key)) {
+        const existing = map.get(key);
+        map.set(key, {
+          ...existing,
+          ...st,
+          examsTaken: Math.max(existing.examsTaken || 0, st.examsTaken || 0),
+          avgPct: st.avgPct !== null ? st.avgPct : existing.avgPct,
+          bestPct: st.bestPct !== null ? st.bestPct : existing.bestPct,
+          attempts: st.attempts && st.attempts.length > 0 ? st.attempts : existing.attempts,
+        });
+      } else {
+        map.set(key, st);
+      }
+    });
+    return [...map.values()];
+  }, [dbStudents, submissionStudents]);
 
   const value = useMemo(
     () => ({
