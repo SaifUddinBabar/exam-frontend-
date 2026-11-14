@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import MathText from "../../components/MathText";
 import { imageUrl } from "../api";
 import { EMPTY_FILTERS, useQuestionMetadata, useQuestionSearch } from "../hooks";

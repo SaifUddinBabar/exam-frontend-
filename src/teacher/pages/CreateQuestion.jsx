@@ -7,6 +7,7 @@ import { useToast } from "../toast";
 import { Badge, Button, Card, CardHeader, Field, Input, Notice, PageHeader, Segmented, Select, Textarea } from "../components/ui";
 import Icon from "../components/Icon";
 import { BN_OPTION_LETTERS } from "../utils";
+import { HSC_STANDARD_CHAPTER_TOPICS } from "../components/questions";
 
 // Board names accepted by models/Question.js
 const BOARDS = ["Dhaka", "Chittagong", "Rajshahi", "Cumilla", "Jessore", "Barishal", "Sylhet", "Dinajpur", "Mymensingh"];
@@ -68,7 +69,32 @@ export default function CreateQuestion() {
 
   const subjectMeta = meta.subjects.find((s) => s.name === form.subject);
   const chapterMeta = subjectMeta?.chapters.find((c) => c.name === form.chapter);
-  const chapters = subjectMeta?.chapters.map((c) => c.name) || [];
+
+  const allChapters = useMemo(() => {
+    const set = new Set();
+    (meta.subjects || []).forEach((s) => {
+      (s.chapters || []).forEach((c) => set.add(c.name));
+    });
+    Object.keys(HSC_STANDARD_CHAPTER_TOPICS).forEach((k) => set.add(k));
+    return Array.from(set);
+  }, [meta.subjects]);
+
+  const chapters = (subjectMeta?.chapters && subjectMeta.chapters.length > 0)
+    ? subjectMeta.chapters.map((c) => c.name)
+    : allChapters;
+
+  const standardTopics = useMemo(() => {
+    if (!form.chapter) return [];
+    if (HSC_STANDARD_CHAPTER_TOPICS[form.chapter]) return HSC_STANDARD_CHAPTER_TOPICS[form.chapter];
+    const matchKey = Object.keys(HSC_STANDARD_CHAPTER_TOPICS).find((k) =>
+      k.toLowerCase().includes(form.chapter.toLowerCase()) || form.chapter.toLowerCase().includes(k.toLowerCase())
+    );
+    return matchKey ? HSC_STANDARD_CHAPTER_TOPICS[matchKey] : [];
+  }, [form.chapter]);
+
+  const availableTopics = useMemo(() => {
+    return Array.from(new Set([...(chapterMeta?.topics || []), ...standardTopics]));
+  }, [chapterMeta, standardTopics]);
 
   const onFile = (file) => {
     if (!file) return;
@@ -176,9 +202,9 @@ export default function CreateQuestion() {
                 </datalist>
               </Field>
               <Field label="Topic" htmlFor="cq-topic" hint="Optional">
-                <Input id="cq-topic" list="cq-topics" value={form.topic} onChange={(e) => set({ topic: e.target.value })} />
+                <Input id="cq-topic" list="cq-topics" value={form.topic} onChange={(e) => set({ topic: e.target.value })} placeholder="e.g. বিশ্বগ্রাম বা সিলেক্ট করুন" />
                 <datalist id="cq-topics">
-                  {(chapterMeta?.topics || []).map((t) => (
+                  {availableTopics.map((t) => (
                     <option key={t} value={t} />
                   ))}
                 </datalist>
