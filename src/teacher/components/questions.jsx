@@ -9,16 +9,146 @@ import { BN_OPTION_LETTERS } from "../utils";
 const cx = (...c) => c.filter(Boolean).join(" ");
 const DIFF_TONE = { easy: "green", medium: "amber", hard: "red" };
 
+// HSC Standard Textbook Topics Mapping (NCTB)
+export const HSC_STANDARD_CHAPTER_TOPICS = {
+  "অধ্যায় ১: তথ্য ও যোগাযোগ প্রযুক্তি: বিশ্ব ও বাংলাদেশ প্রেক্ষিত": [
+    "বিশ্বগ্রাম ধারণা (Global Village)",
+    "ভার্চুয়াল রিয়েলিটি (Virtual Reality)",
+    "কৃত্রিম বুদ্ধিমত্তা ও রোবোটিক্স (AI & Robotics)",
+    "ক্রায়োসার্জারি (Cryosurgery)",
+    "বায়োমেট্রিক্স ও বায়োইনফরমেটিক্স",
+    "জেনেটিক ইঞ্জিনিয়ারিং (Genetic Engineering)",
+    "ন্যানোটেকনোলজি (Nanotechnology)",
+    "ই-কমার্স ও সমাজজীবনে প্রভাব",
+  ],
+  "Introduction to ICT": [
+    "বিশ্বগ্রাম (Global Village)",
+    "ভার্চুয়াল রিয়েলিটি (Virtual Reality)",
+    "কৃত্রিম বুদ্ধিমত্তা ও রোবোটিক্স (AI & Robotics)",
+    "ক্রায়োসার্জারি (Cryosurgery)",
+    "বায়োমেট্রিক্স (Biometrics)",
+    "বায়োইনফরমেটিক্স (Bioinformatics)",
+    "জেনেটিক ইঞ্জিনিয়ারিং (Genetic Engineering)",
+    "ন্যানোটেকনোলজি (Nanotechnology)",
+  ],
+  "অধ্যায় ২: কমিউনিকেশন সিস্টেমস ও নেটওয়ার্কিং": [
+    "ডেটা কমিউনিকেশন ও ব্যান্ডউইথ (Bandwidth)",
+    "ডেটা ট্রান্সমিশন মেথড (Asynchronous, Synchronous)",
+    "ডেটা ট্রান্সমিশন মোড (Simplex, Half/Full Duplex)",
+    "তারযুক্ত মাধ্যম (Twisted Pair, Coaxial, Fiber Optic)",
+    "তারবিহীন মাধ্যম (Wi-Fi, WiMAX, Bluetooth, Satellite)",
+    "মোবাইল প্রজন্ম (1G, 2G, 3G, 4G, 5G)",
+    "কম্পিউটার নেটওয়ার্ক (PAN, LAN, MAN, WAN)",
+    "নেটওয়ার্ক টপোলজি (Star, Bus, Ring, Tree, Mesh, Hybrid)",
+    "ক্লাউড কম্পিউটিং (Cloud Computing)",
+  ],
+  "Communication Systems": [
+    "ব্যান্ডউইথ (Bandwidth)",
+    "ডেটা ট্রান্সমিশন মোড",
+    "তারযুক্ত মাধ্যম (Twisted Pair, Coaxial, Fiber Optic)",
+    "তারবিহীন মাধ্যম (Wi-Fi, WiMAX, Bluetooth, Satellite)",
+    "মোবাইল ফোনের বিভিন্ন প্রজন্ম (1G–5G)",
+    "কম্পিউটার নেটওয়ার্ক (PAN, LAN, MAN, WAN)",
+    "নেটওয়ার্ক টপোলজি (Bus, Ring, Star, Tree, Mesh)",
+    "নেটওয়ার্কিং ডিভাইস (Modem, Router, Switch, Gateway)",
+    "ক্লাউড কম্পিউটিং (Cloud Computing)",
+  ],
+  "অধ্যায় ৩: সংখ্যা পদ্ধতি ও ডিজিটাল ডিভাইস": [
+    "সংখ্যা পদ্ধতি পরিচিতি ও ভিত্তি (Base)",
+    "সংখ্যা পদ্ধতির রূপান্তর (Conversion)",
+    "চিহ্নযুক্ত সংখ্যা ও ২-এর পরিপূরক (2's Complement)",
+    "বাইনারি যোগ ও বিয়োগ",
+    "কোড (BCD, EBCDIC, ASCII, Unicode)",
+    "বুলিয়ান অ্যালজেবরা ও ডি-মরগানের উপপাদ্য",
+    "মৌলিক ও সার্বজনীন লজিক গেইট (AND, OR, NOT, NAND, NOR)",
+    "বিশেষ লজিক গেইট (XOR, XNOR)",
+    "এনকোডার ও ডিকোডার (Encoder, Decoder)",
+    "অ্যাডার (Half Adder, Full Adder)",
+    "ফ্লিপ-ফ্লপ ও রেজিস্টার",
+  ],
+  "Number System & Digital Device": [
+    "সংখ্যা পদ্ধতি পরিচিতি",
+    "বাইনারি সংখ্যা পদ্ধতি",
+    "বুলিয়ান বীজগণিত",
+    "লজিক গেট (Logic Gates)",
+    "কোডিং সিস্টেম",
+  ],
+  "অধ্যায় ৪: ওয়েব ডিজাইন পরিচিতি ও HTML": [
+    "ওয়েবসাইটের কাঠামো (Tree, Network, Linear)",
+    "ডোমেইন নেইম ও আইপি অ্যাড্রেস (DNS & IP)",
+    "HTML বেসিক ট্যাগ ও সিনট্যাক্স",
+    "টেক্সট ফরম্যাটিং ও কালার কোড",
+    "হাইপারলিঙ্ক (Anchor Tag)",
+    "ইমেজ যুক্তকরণ (img tag)",
+    "টেবিল তৈরি (table, tr, th, td)",
+    "ফর্ম তৈরি (Form, Input, Button)",
+    "ওয়েবসাইট পাবলিশিং",
+  ],
+  "Web & HTML": [
+    "URL ও ডোমেইন",
+    "ওয়েবসাইট কাঠামো",
+    "HTML ট্যাগ ও ফরম্যাটিং",
+  ],
+  "অধ্যায় ৫: প্রোগ্রামিং ভাষা (সি প্রোগ্রামিং)": [
+    "প্রোগ্রামিং ভাষার স্তর ও প্রজন্ম",
+    "অনুবাদক প্রোগ্রাম (Compiler, Interpreter)",
+    "অ্যালগরিদম ও ফ্লোচার্ট",
+    "সি প্রোগ্রামের গঠন (Structure)",
+    "চলক, ধ্রুবক ও ডেটা টাইপ (int, float, char)",
+    "অপারেটর ও এক্সপ্রেশন",
+    "ইনপুট ও আউটপুট ফাংশন (printf, scanf)",
+    "কন্ডিশনাল স্টেটমেন্ট (if, if-else, switch)",
+    "লুপ কন্ট্রোল স্টেটমেন্ট (for, while, do-while)",
+    "অ্যারে ও স্ট্রিং (Array & String)",
+    "ফাংশন (Function)",
+  ],
+  "Programming & Language": [
+    "প্রোগ্রামিং ভাষার প্রজন্ম",
+    "অনুবাদক প্রোগ্রাম",
+    "প্রোগ্রাম উন্নয়ন ধাপ",
+    "সি প্রোগ্রামিং (C Language)",
+  ],
+  "অধ্যায় ৬: ডাটাবেজ ম্যানেজমেন্ট সিস্টেম": [
+    "ডাটাবেজ ও ডিবিএমএস (DBMS) ধারণা",
+    "রিলেশনাল ডাটাবেজ (RDBMS) ও টেবিল",
+    "ফিল্ড, রেকর্ড ও ডেটা টাইপ",
+    "প্রাইমারি কি ও ফরেন কি",
+    "টেবিল রিলেশনশিপ (1:1, 1:N, N:M)",
+    "এসকিউএল (SQL) কুয়েরি (SELECT, INSERT)",
+    "ডাটা সিকিউরিটি ও ব্যাকআপ",
+  ],
+};
+
 export function QuestionFilters({ filters, onChange, meta, compact }) {
   const set = (patch) => onChange({ ...filters, ...patch });
+  const allChapters = useMemo(() => {
+    const map = new Map();
+    (meta.subjects || []).forEach((s) => {
+      (s.chapters || []).forEach((c) => {
+        if (!map.has(c.name)) map.set(c.name, { ...c, subjectName: s.name });
+      });
+    });
+    return Array.from(map.values());
+  }, [meta.subjects]);
+
   const subject = meta.subjects.find((s) => s.name === filters.subject);
-  const chapter = subject?.chapters.find((c) => c.name === filters.chapter);
+  const availableChapters = subject ? subject.chapters : allChapters;
+  const currentChapterObj = availableChapters.find((c) => c.name === filters.chapter);
+
+  // Merge database topics with standard HSC syllabus topics
+  const availableTopics = useMemo(() => {
+    if (!filters.chapter) return [];
+    const dbTopics = currentChapterObj?.topics || [];
+    const stdTopics = HSC_STANDARD_CHAPTER_TOPICS[filters.chapter] || [];
+    return Array.from(new Set([...dbTopics, ...stdTopics]));
+  }, [filters.chapter, currentChapterObj]);
+
   const active = Object.entries(filters).some(([k, v]) => k !== "search" && v);
 
   return (
     <div className="flex flex-col gap-3">
       <SearchInput value={filters.search} onChange={(v) => set({ search: v })} placeholder="Search question text" label="Search questions" />
-      <div className={cx("grid gap-2", compact ? "grid-cols-2" : "grid-cols-2 md:grid-cols-3 xl:grid-cols-6")}>
+      <div className={cx("grid gap-2", compact ? "grid-cols-1 sm:grid-cols-3" : "grid-cols-2 md:grid-cols-3 xl:grid-cols-6")}>
         <Select aria-label="Subject" value={filters.subject} onChange={(e) => set({ subject: e.target.value, chapter: "", topic: "" })}>
           <option value="">All subjects</option>
           {meta.subjects.map((s) => (
@@ -27,19 +157,39 @@ export function QuestionFilters({ filters, onChange, meta, compact }) {
             </option>
           ))}
         </Select>
-        <Select aria-label="Chapter" value={filters.chapter} onChange={(e) => set({ chapter: e.target.value, topic: "" })} disabled={!subject}>
-          <option value="">{subject ? "All chapters" : "Chapter (pick subject)"}</option>
-          {subject?.chapters.map((c) => (
+        <Select
+          aria-label="Chapter"
+          value={filters.chapter}
+          onChange={(e) => {
+            const chName = e.target.value;
+            const foundCh = allChapters.find((c) => c.name === chName);
+            set({
+              chapter: chName,
+              subject: foundCh?.subjectName || filters.subject,
+              topic: "",
+            });
+          }}
+        >
+          <option value="">All chapters (অধ্যায় নির্বাচন)</option>
+          {availableChapters.map((c) => (
             <option key={c.name} value={c.name}>
-              {c.name} ({c.questionCount})
+              {c.name} {c.questionCount ? `(${c.questionCount})` : ""}
             </option>
           ))}
         </Select>
-        <Select aria-label="Topic" value={filters.topic} onChange={(e) => set({ topic: e.target.value })} disabled={!chapter || !chapter.topics.length}>
-          <option value="">{chapter ? "All topics" : "Topic (pick chapter)"}</option>
-          {chapter?.topics.map((t) => (
+        <Select
+          aria-label="Topic"
+          value={filters.topic}
+          onChange={(e) => set({ topic: e.target.value })}
+          disabled={!filters.chapter}
+          className={!filters.chapter ? "opacity-60" : "font-semibold text-examino-blue"}
+        >
+          <option value="">
+            {!filters.chapter ? "টপিক (আগে অধ্যায় নির্বাচন করুন)" : "সব টপিক (All Topics)"}
+          </option>
+          {availableTopics.map((t) => (
             <option key={t} value={t}>
-              {t}
+              📌 {t}
             </option>
           ))}
         </Select>

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import ExaminoLogo from "../components/ExaminoLogo";
 import MathText from "../components/MathText";
+import { triggerHaptic } from "../utils/haptics";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
@@ -11,8 +12,8 @@ export default function LiveExamPage() {
 
   // Authentication & Student Profile
   const user = JSON.parse(localStorage.getItem("user") || "{}");
-  const studentName = user.name || "Nusrat Jahan";
-  const studentRoll = user.roll || user.mobile || "1017";
+  const studentName = user.name || "Student";
+  const studentRoll = user.roll || user.rollNumber || user.metadata?.rollNumber || user.phone || "—";
 
   // Exam state
   const [exam, setExam] = useState(null);
@@ -122,8 +123,9 @@ export default function LiveExamPage() {
     return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
   };
 
-  // 3. Answer Selection with instant auto-save
+  // 3. Answer Selection with instant auto-save & tactile haptics
   const handleSelectOption = (qId, optionText) => {
+    triggerHaptic("medium");
     const updated = { ...answers, [qId]: optionText };
     setAnswers(updated);
     setSavingStatus("Saving...");
@@ -411,9 +413,9 @@ export default function LiveExamPage() {
                     key={optIdx}
                     type="button"
                     onClick={() => handleSelectOption(currentQId, opt)}
-                    className={`w-full text-left p-3.5 sm:p-4 rounded-xl border text-sm font-medium transition-all flex items-start gap-3.5 ${
+                    className={`btn-smooth w-full text-left p-3.5 sm:p-4 rounded-xl border text-sm font-medium transition-all flex items-start gap-3.5 active:scale-[0.99] select-none ${
                       isSelected
-                        ? "bg-[#EFF6FF] border-[#2563EB] text-[#1E3A8A] ring-1 ring-[#2563EB] shadow-sm"
+                        ? "bg-[#EFF6FF] border-[#2563EB] text-[#1E3A8A] ring-2 ring-[#2563EB]/40 shadow-sm"
                         : "bg-white border-[#E2E8F0] text-[#0F172A] hover:bg-[#F8FAFC] hover:border-[#CBD5E1]"
                     }`}
                   >

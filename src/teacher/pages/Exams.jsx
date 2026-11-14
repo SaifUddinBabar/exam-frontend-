@@ -219,7 +219,27 @@ export default function Exams() {
                         </td>
                         <td className="px-3 py-3 text-examino-muted">{fmtDate(e.createdAt)}</td>
                         <td className="px-5 py-3 text-right">
-                          <ExamActions exam={e} onCopy={copyLink} onDuplicate={duplicate} onDelete={setToDelete} />
+                          <div className="flex items-center justify-end gap-1.5">
+                            <button
+                              type="button"
+                              title="Delete Exam"
+                              onClick={() => setToDelete(e)}
+                              className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+                            >
+                              <Icon name="trash" size={16} />
+                            </button>
+                            <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        type="button"
+                        title="Delete Exam"
+                        onClick={() => setToDelete(e)}
+                        className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+                      >
+                        <Icon name="trash" size={17} />
+                      </button>
+                      <ExamActions exam={e} onCopy={copyLink} onDuplicate={duplicate} onDelete={setToDelete} />
+                    </div>
+                          </div>
                         </td>
                       </tr>
                     );
@@ -242,7 +262,17 @@ export default function Exams() {
                         </span>
                       </span>
                     </Link>
-                    <ExamActions exam={e} onCopy={copyLink} onDuplicate={duplicate} onDelete={setToDelete} />
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        type="button"
+                        title="Delete Exam"
+                        onClick={() => setToDelete(e)}
+                        className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+                      >
+                        <Icon name="trash" size={17} />
+                      </button>
+                      <ExamActions exam={e} onCopy={copyLink} onDuplicate={duplicate} onDelete={setToDelete} />
+                    </div>
                   </li>
                 );
               })}

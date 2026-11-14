@@ -48,6 +48,7 @@ export default function CommonRegister() {
   // Student Specific Fields
   const [level, setLevel] = useState("HSC 2027");
   const [group, setGroup] = useState("Science");
+  const [studentRoll, setStudentRoll] = useState("");
 
   // Teacher Specific Fields
   const [teacherEmail, setTeacherEmail] = useState("");
@@ -264,6 +265,7 @@ export default function CommonRegister() {
           role,
           level,
           group,
+          roll: studentRoll.trim(),
           institution: institution.trim(),
           designation: designation.trim(),
           orgName: orgName.trim(),
@@ -810,37 +812,57 @@ export default function CommonRegister() {
               </div>
             )}
 
-            {/* Student Specific: Level & Group */}
+            {/* Student Specific: Level, Group & Roll */}
             {activeTab === "student" && (
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-[#0F172A] uppercase tracking-wider mb-1">
-                    {lang === "bangla" ? "শ্রেণি / সেশন" : "Academic Level"}
-                  </label>
-                  <select
-                    value={level}
-                    onChange={(e) => setLevel(e.target.value)}
-                    className="w-full px-3 py-2.5 bg-white border border-[#CBD5E1] rounded-lg text-xs font-semibold text-[#0F172A] focus:outline-none focus:border-[#2563EB]"
-                  >
-                    <option value="HSC 2027">HSC 2027 (11th)</option>
-                    <option value="HSC 2026">HSC 2026 (12th)</option>
-                    <option value="SSC 2026">SSC 2026 (10th)</option>
-                    <option value="SSC 2027">SSC 2027 (9th)</option>
-                  </select>
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-[#0F172A] uppercase tracking-wider mb-1">
+                      {lang === "bangla" ? "শ্রেণি / সেশন" : "Academic Level"}
+                    </label>
+                    <select
+                      value={level}
+                      onChange={(e) => setLevel(e.target.value)}
+                      className="w-full px-3 py-2.5 bg-white border border-[#CBD5E1] rounded-lg text-xs font-semibold text-[#0F172A] focus:outline-none focus:border-[#2563EB]"
+                    >
+                      <option value="HSC 2027">HSC 2027 (11th)</option>
+                      <option value="HSC 2026">HSC 2026 (12th)</option>
+                      <option value="SSC 2026">SSC 2026 (10th)</option>
+                      <option value="SSC 2027">SSC 2027 (9th)</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-[#0F172A] uppercase tracking-wider mb-1">
+                      {lang === "bangla" ? "বিভাগ / গ্রুপ" : "Discipline Group"}
+                    </label>
+                    <select
+                      value={group}
+                      onChange={(e) => setGroup(e.target.value)}
+                      className="w-full px-3 py-2.5 bg-white border border-[#CBD5E1] rounded-lg text-xs font-semibold text-[#0F172A] focus:outline-none focus:border-[#2563EB]"
+                    >
+                      <option value="Science">{lang === "bangla" ? "বিজ্ঞান বিভাগ" : "Science"}</option>
+                      <option value="Commerce">{lang === "bangla" ? "ব্যবসায় শিক্ষা" : "Business"}</option>
+                      <option value="Humanities">{lang === "bangla" ? "মানবিক বিভাগ" : "Humanities"}</option>
+                    </select>
+                  </div>
                 </div>
+
                 <div>
                   <label className="block text-xs font-bold text-[#0F172A] uppercase tracking-wider mb-1">
-                    {lang === "bangla" ? "বিভাগ / গ্রুপ" : "Discipline Group"}
+                    {lang === "bangla" ? "ক্লাস / এইচএসসি রোল (Student Roll Number)" : "Class / HSC Roll Number"}
                   </label>
-                  <select
-                    value={group}
-                    onChange={(e) => setGroup(e.target.value)}
-                    className="w-full px-3 py-2.5 bg-white border border-[#CBD5E1] rounded-lg text-xs font-semibold text-[#0F172A] focus:outline-none focus:border-[#2563EB]"
-                  >
-                    <option value="Science">{lang === "bangla" ? "বিজ্ঞান বিভাগ" : "Science"}</option>
-                    <option value="Commerce">{lang === "bangla" ? "ব্যবসায় শিক্ষা" : "Business"}</option>
-                    <option value="Humanities">{lang === "bangla" ? "মানবিক বিভাগ" : "Humanities"}</option>
-                  </select>
+                  <input
+                    type="text"
+                    placeholder={lang === "bangla" ? "যেমন: 1017 বা 4402" : "e.g. 1017 or 4402"}
+                    value={studentRoll}
+                    onChange={(e) => setStudentRoll(e.target.value)}
+                    className="w-full px-3.5 py-2.5 bg-white border border-[#CBD5E1] rounded-lg text-sm text-[#0F172A] placeholder-[#94A3B8] font-mono font-bold focus:outline-none focus:border-[#2563EB] transition-all"
+                  />
+                  <p className="text-[11px] text-[#64748B] mt-1">
+                    {lang === "bangla"
+                      ? "শিক্ষক পরীক্ষার মেধা তালিকা ও ফলাফলে এই রোলটি দেখতে পাবেন।"
+                      : "Your teacher and leaderboard will identify your submissions by this Roll."}
+                  </p>
                 </div>
               </div>
             )}

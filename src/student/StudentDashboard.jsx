@@ -105,18 +105,41 @@ export default function StudentDashboard() {
 
   return (
     <StudentLayout>
-      {/* ── HEADER GREETING ── */}
-      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-2 mb-6">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-[#0F172A] tracking-tight">
-            {getGreeting()}, {studentName.split(" ")[0]}
-          </h1>
-          <p className="text-xs sm:text-sm text-[#64748B] mt-1">
-            {studentLevel} — {studentOrg}
-          </p>
+      {/* ── HEADER GREETING WITH STUDENT ROLL & PROFILE ── */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 bg-white p-4 sm:p-5 rounded-2xl border border-[#E2E8F0] shadow-xs">
+        <div className="flex items-center gap-3.5">
+          {user.avatar ? (
+            <img
+              src={user.avatar}
+              alt={studentName}
+              className="w-12 h-12 rounded-full object-cover ring-2 ring-[#2563EB]/20 border border-slate-200 shrink-0"
+            />
+          ) : (
+            <div className="w-12 h-12 rounded-full bg-[#EFF6FF] text-[#2563EB] font-extrabold text-base flex items-center justify-center border border-[#BFDBFE] shrink-0">
+              {studentName[0] || "S"}
+            </div>
+          )}
+          <div>
+            <h1 className="text-xl sm:text-2xl font-extrabold text-[#0F172A] tracking-tight">
+              {getGreeting()}, {studentName.split(" ")[0]}!
+            </h1>
+            <div className="flex flex-wrap items-center gap-2 mt-0.5 text-xs text-[#64748B]">
+              <span className="font-mono font-bold bg-slate-100 px-2 py-0.5 rounded text-slate-800">
+                রোল: {user.roll || user.rollNumber || user.metadata?.rollNumber || "নির্ধারিত নেই"}
+              </span>
+              <span>· {studentLevel}</span>
+            </div>
+          </div>
         </div>
-        <div className="text-xs font-medium text-[#64748B] sm:text-right">
-          {todayFormatted}
+
+        <div className="flex items-center gap-2 sm:self-center">
+          <Link
+            to="/profile"
+            onClick={() => triggerHaptic("light")}
+            className="btn-smooth inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#F1F5F9] hover:bg-[#E2E8F0] text-slate-700 text-xs font-bold rounded-xl transition-all"
+          >
+            <span>⚙️ প্রোফাইল সেটিংস</span>
+          </Link>
         </div>
       </div>
 

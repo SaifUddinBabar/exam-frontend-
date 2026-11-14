@@ -10,7 +10,9 @@ export default function StudentProfile() {
   const [activeTab, setActiveTab] = useState("Profile");
   const [fullName, setFullName] = useState(currentUser.name || "Student");
   const [banglaName, setBanglaName] = useState("শিক্ষার্থী");
-  const [mobile, setMobile] = useState(currentUser.mobile || "+880 1810-992332");
+  const [roll, setRoll] = useState(currentUser.roll || currentUser.rollNumber || currentUser.metadata?.rollNumber || "");
+  const [mobile, setMobile] = useState(currentUser.phone || currentUser.mobile || "");
+  const [avatarUrl, setAvatarUrl] = useState(currentUser.avatar || "");
   const [email, setEmail] = useState(currentUser.email || "student@examino.edu.bd");
   const [language, setLanguage] = useState("English");
   const [dataSaver, setDataSaver] = useState(false);
@@ -33,6 +35,10 @@ export default function StudentProfile() {
             setFullName(data.user.name || "");
             setEmail(data.user.email || "");
             if (data.user.phone) setMobile(data.user.phone);
+            if (data.user.rollNumber || data.user.roll || data.user.metadata?.rollNumber) {
+              setRoll(data.user.rollNumber || data.user.roll || data.user.metadata?.rollNumber || "");
+            }
+            if (data.user.avatar) setAvatarUrl(data.user.avatar);
             localStorage.setItem("user", JSON.stringify(data.user));
           }
         })
@@ -63,31 +69,32 @@ export default function StudentProfile() {
     const token = localStorage.getItem("token");
 
     try {
-      if (mobile && mobile !== currentUser.phone && token) {
-        const res = await fetch(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/auth/profile/phone`, {
+      if (token) {
+        const res = await fetch(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/auth/profile`, {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify({ phone: mobile }),
+          body: JSON.stringify({
+            name: fullName,
+            phone: mobile,
+            roll,
+            avatar: avatarUrl,
+          }),
         });
         const data = await res.json();
         if (!res.ok || !data.success) {
-          setSaveError(data.message || "Failed to update mobile number.");
+          setSaveError(data.message || "Failed to update profile.");
           setSaveLoading(false);
           return;
         }
+        if (data.user) {
+          setCurrentUser(data.user);
+          localStorage.setItem("user", JSON.stringify(data.user));
+        }
       }
 
-      const updated = {
-        ...currentUser,
-        name: fullName,
-        email,
-        phone: mobile,
-      };
-      setCurrentUser(updated);
-      localStorage.setItem("user", JSON.stringify(updated));
       setSavedMessage(true);
       setTimeout(() => setSavedMessage(false), 3000);
     } catch (err) {
@@ -171,32 +178,72 @@ export default function StudentProfile() {
               {/* Avatar Row */}
               <div className="flex items-center justify-between pb-5 border-b border-[#F1F5F9]">
                 <div className="flex items-center gap-4">
-                  <div className="w-14 h-14 rounded-full bg-[#DBEAFE] text-[#1D4ED8] font-bold text-lg flex items-center justify-center ring-4 ring-[#EFF6FF]">
-                    {initials}
-                  </div>
+                  {avatarUrl ? (
+                    <img
+                      src={avatarUrl}
+                      alt={fullName}
+                      className="w-14 h-14 rounded-full object-cover ring-4 ring-[#EFF6FF] border border-[#CBD5E1]"
+                    />
+                  ) : (
+                    <div className="w-14 h-14 rounded-full bg-[#DBEAFE] text-[#1D4ED8] font-bold text-lg flex items-center justify-center ring-4 ring-[#EFF6FF]">
+                      {initials}
+                    </div>
+                  )}
                   <div>
                     <h2 className="text-base font-bold text-[#0F172A]">{fullName}</h2>
-                    <p className="text-xs text-[#64748B]">Student · Roll 1017</p>
+                    <p className="text-xs text-[#64748B]">
+                      Student · রোল: <span className="font-mono font-bold text-slate-800">{roll || "নির্ধারণ করা হয়নি"}</span>
+                    </p>
                   </div>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => alert("Photo upload feature will be available in Phase 2.")}
-                  className="px-3.5 py-1.5 bg-white border border-[#CBD5E1] hover:bg-[#F8FAFC] text-[#0F172A] font-semibold text-xs rounded-lg transition-colors"
-                >
-                  Change photo
-                </button>
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] text-slate-500 hidden sm:inline">প্রোফাইল ছবি লিংক নিচে দিন</span>
+                </div>
               </div>
 
               {/* Form Fields Grid */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-semibold text-[#0F172A] mb-1.5">
-                    Full name
+                    রোল নম্বর / স্টুডেন্ট আইডি (Roll Number) *
                   </label>
                   <input
                     type="text"
+                    required
+                    placeholder="যেমন: 1017 বা HSC-4402"
+                    value={roll}
+                    onChange={(e) => setRoll(e.target.value)}
+                    className="w-full px-3.5 py-2 bg-white border border-[#CBD5E1] rounded-lg text-xs font-mono font-bold text-[#0F172A] focus:outline-none focus:border-[#2563EB]"
+                  />
+                  <span className="text-[10px] text-[#64748B] mt-1 block">
+                    শিক্ষকের কাছে এই রোল নম্বরটিই আপনার পরিচয় হিসেবে দেখা যাবে।
+                  </span>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-[#0F172A] mb-1.5">
+                    প্রোফাইল ছবি লিংক (Avatar Image URL)
+                  </label>
+                  <input
+                    type="url"
+                    placeholder="https://example.com/photo.jpg"
+                    value={avatarUrl}
+                    onChange={(e) => setAvatarUrl(e.target.value)}
+                    className="w-full px-3.5 py-2 bg-white border border-[#CBD5E1] rounded-lg text-xs text-[#0F172A] focus:outline-none focus:border-[#2563EB]"
+                  />
+                  <span className="text-[10px] text-[#64748B] mt-1 block">
+                    গুগল ড্রাইভ বা অনলাইন ছবির ডিরেক্ট লিংক দিন।
+                  </span>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-[#0F172A] mb-1.5">
+                    পূর্ণ নাম (Full Name) *
+                  </label>
+                  <input
+                    type="text"
+                    required
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
                     className="w-full px-3.5 py-2 bg-white border border-[#CBD5E1] rounded-lg text-xs text-[#0F172A] focus:outline-none focus:border-[#2563EB]"
@@ -205,40 +252,29 @@ export default function StudentProfile() {
 
                 <div>
                   <label className="block text-xs font-semibold text-[#0F172A] mb-1.5">
-                    নাম (বাংলায়)
+                    মোবাইল নম্বর (Mobile Number)
                   </label>
                   <input
                     type="text"
-                    value={banglaName}
-                    onChange={(e) => setBanglaName(e.target.value)}
-                    className="w-full px-3.5 py-2 bg-white border border-[#CBD5E1] rounded-lg text-xs text-[#0F172A] focus:outline-none focus:border-[#2563EB] font-bengali"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-[#0F172A] mb-1.5">
-                    Mobile number
-                  </label>
-                  <input
-                    type="text"
+                    placeholder="017XXXXXXXX"
                     value={mobile}
                     onChange={(e) => setMobile(e.target.value)}
                     className="w-full px-3.5 py-2 bg-white border border-[#CBD5E1] rounded-lg text-xs text-[#0F172A] focus:outline-none focus:border-[#2563EB]"
                   />
-                  <span className="text-[11px] text-[#10B981] font-semibold mt-1 block">
-                    ✓ Verified · used to log in
+                  <span className="text-[10px] text-[#10B981] font-semibold mt-1 block">
+                    শিক্ষক প্রয়োজনীয় তথ্য পাঠাতে এই নম্বরটি দেখতে পাবেন।
                   </span>
                 </div>
 
-                <div>
+                <div className="sm:col-span-2">
                   <label className="block text-xs font-semibold text-[#0F172A] mb-1.5">
-                    Email <span className="text-[#94A3B8] font-normal">(optional)</span>
+                    ইমেইল (Email Address)
                   </label>
                   <input
                     type="email"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full px-3.5 py-2 bg-white border border-[#CBD5E1] rounded-lg text-xs text-[#0F172A] focus:outline-none focus:border-[#2563EB]"
+                    disabled
+                    className="w-full px-3.5 py-2 bg-slate-50 border border-[#E2E8F0] rounded-lg text-xs text-[#64748B] cursor-not-allowed"
                   />
                 </div>
               </div>

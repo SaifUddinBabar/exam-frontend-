@@ -35,66 +35,263 @@ function ScoreBar({ pct }) {
   );
 }
 
-function StudentDrawer({ student, onClose }) {
-  const ordered = useMemo(() => (student ? [...student.attempts].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt)) : []), [student]);
+function StudentDrawer({ student, onClose, onRemove }) {
+  const [details, setDetails] = useState(null);
+  const [loadingDetails, setLoadingDetails] = useState(false);
+  const [confirmRemove, setConfirmRemove] = useState(false);
+  const [removing, setRemoving] = useState(false);
+
+  // Fetch detailed student analytics and weak topics from API
+  useEffect(() => {
+    if (!student) {
+      setDetails(null);
+      return;
+    }
+    const sId = student.id || student._id;
+    if (!sId) {
+      setDetails(student);
+      return;
+    }
+    setLoadingDetails(true);
+    const token = localStorage.getItem("token");
+    const API = import.meta.env.VITE_API_URL || "http://localhost:5000";
+
+    fetch(`${API}/api/auth/teacher/students/${sId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && data.student) {
+          setDetails(data.student);
+        } else {
+          setDetails(student);
+        }
+      })
+      .catch(() => setDetails(student))
+      .finally(() => setLoadingDetails(false));
+  }, [student]);
+
+  const activeStudent = details || student;
+  const ordered = useMemo(() => {
+    const list = activeStudent?.attempts || [];
+    return [...list].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+  }, [activeStudent]);
+
+  const handleRemove = async () => {
+    if (!activeStudent) return;
+    setRemoving(true);
+    try {
+      const sId = activeStudent.id || activeStudent._id;
+      const token = localStorage.getItem("token");
+      const API = import.meta.env.VITE_API_URL || "http://localhost:5000";
+
+      const res = await fetch(`${API}/api/auth/teacher/students/${sId}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (data.success) {
+        if (onRemove) onRemove(activeStudent);
+        onClose();
+      } else {
+        alert(data.message || "Failed to remove student");
+      }
+    } catch (err) {
+      alert("Error removing student.");
+    } finally {
+      setRemoving(false);
+      setConfirmRemove(false);
+    }
+  };
+
   if (!student) return null;
+
   return (
-    <Drawer open onClose={onClose} title="Student details">
-      <div className="flex items-center gap-3">
-        <Avatar name={student.name} size={48} />
-        <div>
-          <p className="text-base font-semibold">{student.name}</p>
-          <p className="text-sm text-examino-muted">
-            Student ID <span className="font-mono">{student.roll || "—"}</span>
+    <Drawer open onClose={onClose} title="শিক্ষার্থীর বিস্তারিত তথ্য (Student Details)">
+      {/* Student Profile Header */}
+      <div className="flex items-start gap-4 pb-4 border-b border-examino-border">
+        {activeStudent.avatar ? (
+          <img
+            src={activeStudent.avatar}
+            alt={activeStudent.name}
+            className="w-14 h-14 rounded-full object-cover ring-2 ring-examino-border shrink-0"
+          />
+        ) : (
+          <Avatar name={activeStudent.name} size={56} />
+        )}
+        <div className="min-w-0 flex-1">
+          <p className="text-base font-bold text-examino-text truncate">{activeStudent.name}</p>
+          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-examino-muted">
+            <span className="font-mono bg-slate-100 px-2 py-0.5 rounded text-slate-700 font-bold">
+              রোল / ID: {activeStudent.roll || "—"}
+            </span>
+            <span>📱 {activeStudent.phone || "ফোন নেই"}</span>
+          </div>
+          <p className="text-xs text-examino-muted mt-1 truncate">
+            ✉️ {activeStudent.email}
           </p>
         </div>
       </div>
-      <dl className="mt-5 grid grid-cols-3 gap-3">
-        {[
-          ["Exams", fmtNum(student.examsTaken)],
-          ["Average", fmtPct(student.avgPct)],
-          ["Best", fmtPct(student.bestPct)],
-        ].map(([k, v]) => (
-          <div key={k} className="rounded-lg border border-examino-border p-3">
-            <dt className="text-xs text-examino-muted">{k}</dt>
-            <dd className="text-lg font-semibold tabular-nums">{v}</dd>
-          </div>
-        ))}
-      </dl>
-      {ordered.length > 1 ? (
-        <div className="mt-5">
-          <p className="mb-1 text-sm font-semibold">Academic progress</p>
-          <AreaChart
-            height={180}
-            maxValue={100}
-            data={ordered.map((a) => ({ label: fmtShortDay(a.createdAt), value: a.pct === null ? null : Math.round(a.pct) }))}
-            valueSuffix="%"
-            ariaLabel={`Score percentage across ${ordered.length} attempts`}
-          />
+
+      {loadingDetails ? (
+        <div className="py-8 text-center text-xs text-examino-muted">
+          <div className="w-5 h-5 border-2 border-examino-blue border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+          শিক্ষার্থীর অ্যানালিটিক্স লোড হচ্ছে...
         </div>
-      ) : null}
-      <p className="mb-2 mt-5 text-sm font-semibold">Attempts</p>
-      <ul className="divide-y divide-examino-border rounded-lg border border-examino-border">
-        {[...ordered].reverse().map((a) => (
-          <li key={a.id}>
-            <Link to={`/teacher/results/${a.examCode}`} className="flex items-center gap-3 px-3 py-2.5 hover:bg-slate-50">
-              <span className="min-w-0 flex-1">
-                <span className="block truncate text-sm font-medium">{a.examTitle}</span>
-                <span className="text-xs text-examino-muted">{fmtDateTime(a.createdAt)}</span>
+      ) : (
+        <>
+          {/* Summary Stats */}
+          <dl className="mt-4 grid grid-cols-3 gap-2.5">
+            {[
+              ["অংশগ্রহণ", fmtNum(activeStudent.examsTaken || 0)],
+              ["গড় স্কোর", fmtPct(activeStudent.avgPct || 0)],
+              ["সর্বোচ্চ স্কোর", fmtPct(activeStudent.bestPct || 0)],
+            ].map(([k, v]) => (
+              <div key={k} className="rounded-xl border border-examino-border bg-slate-50/60 p-3 text-center">
+                <dt className="text-[11px] font-medium text-examino-muted">{k}</dt>
+                <dd className="text-base font-bold tabular-nums text-examino-text mt-0.5">{v}</dd>
+              </div>
+            ))}
+          </dl>
+
+          {/* Weak Topics Analysis (যেসব টপিকে ভুল করেছে) */}
+          <div className="mt-6">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-xs font-bold text-rose-700 uppercase tracking-wider flex items-center gap-1.5">
+                <span>⚠️</span>
+                <span>দুর্বল বিষয়সমূহ (Weak Topics & Mistakes)</span>
+              </p>
+              <span className="text-[11px] text-examino-muted">
+                {activeStudent.weakTopics?.length || 0}টি টপিক
               </span>
-              <span className="text-right">
-                <span className="block text-sm font-semibold tabular-nums">
-                  {a.score}/{a.total}
-                </span>
-                <span className="text-xs text-examino-muted">{fmtPct(a.pct)}</span>
-              </span>
-            </Link>
-          </li>
-        ))}
-      </ul>
-      <p className="mt-4 text-xs text-examino-muted">
-        Students are identified by the name and roll they enter when submitting. Two students using the same roll and name would appear as one.
-      </p>
+            </div>
+
+            {activeStudent.weakTopics && activeStudent.weakTopics.length > 0 ? (
+              <div className="space-y-2">
+                {activeStudent.weakTopics.map((t, idx) => (
+                  <div
+                    key={idx}
+                    className="p-3 rounded-xl border border-rose-200 bg-rose-50/70 flex items-center justify-between gap-2"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-bold text-slate-800 truncate">{t.topic}</p>
+                      {t.chapter && (
+                        <p className="text-[10px] text-slate-500 truncate">{t.chapter}</p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="text-[11px] font-semibold text-rose-600 bg-rose-100 px-2 py-0.5 rounded">
+                        {t.wrongCount}টি ভুল
+                      </span>
+                      <span
+                        className={`text-[11px] font-bold px-2 py-0.5 rounded ${
+                          t.accuracy < 50
+                            ? "bg-rose-200 text-rose-800"
+                            : "bg-amber-100 text-amber-800"
+                        }`}
+                      >
+                        {t.accuracy}% সঠিক
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="p-4 rounded-xl border border-emerald-200 bg-emerald-50 text-center text-xs font-semibold text-emerald-800">
+                🎉 এই শিক্ষার্থীর কোনো উল্লেখযোগ্য দুর্বল টপিক নেই বা যথেষ্ট পরীক্ষা সম্পন্ন হয়নি!
+              </div>
+            )}
+          </div>
+
+          {/* Academic Progress Chart */}
+          {ordered.length > 1 && (
+            <div className="mt-6">
+              <p className="mb-2 text-xs font-bold text-examino-text">স্কোর অগ্রগতি (Progress Chart)</p>
+              <AreaChart
+                height={160}
+                maxValue={100}
+                data={ordered.map((a) => ({
+                  label: fmtShortDay(a.createdAt),
+                  value: a.pct === null ? null : Math.round(a.pct),
+                }))}
+                valueSuffix="%"
+                ariaLabel={`Score percentage across ${ordered.length} attempts`}
+              />
+            </div>
+          )}
+
+          {/* Exam Attempts List */}
+          <div className="mt-6">
+            <p className="mb-2 text-xs font-bold text-examino-text">পরীক্ষার ইতিহাস (Attempts)</p>
+            {ordered.length > 0 ? (
+              <ul className="divide-y divide-examino-border rounded-xl border border-examino-border overflow-hidden">
+                {[...ordered].reverse().map((a, i) => (
+                  <li key={a.id || i}>
+                    <Link
+                      to={`/teacher/results/${a.examCode}`}
+                      className="flex items-center justify-between gap-3 px-3.5 py-2.5 hover:bg-slate-50 transition-colors"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <span className="block truncate text-xs font-bold text-slate-900">
+                          {a.examTitle || a.examCode}
+                        </span>
+                        <span className="text-[11px] text-examino-muted">{fmtDateTime(a.createdAt)}</span>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <span className="block text-xs font-bold tabular-nums text-slate-900">
+                          {a.score} / {a.totalQuestions || a.total || 25}
+                        </span>
+                        <span className="text-[11px] font-semibold text-examino-blue">{fmtPct(a.pct)}</span>
+                      </div>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-xs text-examino-muted py-2">এখনো কোনো পরীক্ষা সম্পন্ন করেনি।</p>
+            )}
+          </div>
+
+          {/* Remove / Delete Student Action (Admin Control) */}
+          <div className="mt-8 pt-4 border-t border-examino-border">
+            {!confirmRemove ? (
+              <Button
+                variant="secondary"
+                tone="danger"
+                className="w-full text-xs font-bold text-rose-600 hover:text-white hover:bg-rose-600 border border-rose-300"
+                onClick={() => setConfirmRemove(true)}
+              >
+                🗑️ শিক্ষার্থীকে রিমুভ করুন (Remove Student)
+              </Button>
+            ) : (
+              <div className="p-3.5 bg-rose-50 border border-rose-300 rounded-xl space-y-2">
+                <p className="text-xs font-bold text-rose-800">
+                  আপনি কি নিশ্চিত যে {activeStudent.name}-কে রিমুভ করতে চান? এর ফলে তার পরীক্ষার রেকর্ডও মুছে যাবে।
+                </p>
+                <div className="flex gap-2">
+                  <Button
+                    tone="danger"
+                    size="sm"
+                    busy={removing}
+                    className="flex-1 bg-rose-600 text-white font-bold text-xs"
+                    onClick={handleRemove}
+                  >
+                    হ্যাঁ, রিমুভ করুন
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="flex-1 text-xs"
+                    onClick={() => setConfirmRemove(false)}
+                  >
+                    বাতিল
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        </>
+      )}
     </Drawer>
   );
 }
@@ -259,7 +456,14 @@ export default function Students() {
           </>
         )}
       </Card>
-      <StudentDrawer student={selected} onClose={() => setSelected(null)} />
+      <StudentDrawer
+        student={selected}
+        onClose={() => setSelected(null)}
+        onRemove={(removed) => {
+          if (reload) reload();
+          setSelected(null);
+        }}
+      />
     </>
   );
 }
