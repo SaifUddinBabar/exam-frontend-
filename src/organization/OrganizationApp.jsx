@@ -812,6 +812,26 @@ export default function OrganizationApp() {
           </div>
 
           <div style={styles.topRight}>
+            <button
+              onClick={() => navigate("/teacher")}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "6px",
+                padding: "7px 12px",
+                borderRadius: "8px",
+                backgroundColor: "#2563eb",
+                color: "#ffffff",
+                border: "none",
+                fontSize: "12px",
+                fontWeight: "700",
+                cursor: "pointer",
+              }}
+            >
+              <span>👨‍🏫 New Teacher Workspace</span>
+              <span>&rarr;</span>
+            </button>
+
             <div style={styles.organizationBadge}>
               🏫 Alpha Coaching
             </div>

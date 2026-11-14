@@ -44,6 +44,11 @@ const Students = lazy(() => import("./admin/Students"));
 const Builder = lazy(() => import("./admin/Builder"));
 const OrganizationApp = lazy(() => import("./organization/OrganizationApp"));
 
+// =========================
+// LAZY-LOADED TEACHER DASHBOARD
+// =========================
+const TeacherApp = lazy(() => import("./teacher/TeacherApp"));
+
 // Lightweight Suspense Loader
 function PageLoader() {
   return (
@@ -145,6 +150,18 @@ export default function App() {
           element={
             <ProtectedRoute allowedRoles={["org_admin", "tutor", "super_admin"]}>
               <OrganizationApp />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* =====================================
+            TEACHER DASHBOARD
+        ===================================== */}
+        <Route
+          path="/teacher/*"
+          element={
+            <ProtectedRoute allowedRoles={["tutor", "org_admin", "super_admin"]}>
+              <TeacherApp />
             </ProtectedRoute>
           }
         />
