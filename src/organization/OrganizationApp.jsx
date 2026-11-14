@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { signOutUser } from "../firebase/firebase";
 
 export default function OrganizationApp() {
   const navigate = useNavigate();
@@ -768,7 +769,8 @@ export default function OrganizationApp() {
         <div style={styles.sidebarBottom}>
           <button
             style={styles.logoutButton}
-            onClick={() => console.log("Logout")}
+            onClick={signOutUser}
+            title="Sign out of Organization Workspace"
           >
             <span>↪</span>
 

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { signOutUser } from "../firebase/firebase";
 
 import AdminDashboard from "./AdminDashboard";
 import Organizations from "./Organizations";
@@ -900,6 +901,27 @@ function AdminApp() {
                 </div>
               </div>
             </div>
+
+            <button
+              onClick={signOutUser}
+              title="Sign out of Admin Panel"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "6px",
+                padding: "6px 12px",
+                borderRadius: "8px",
+                border: "1px solid #fee2e2",
+                background: "#fef2f2",
+                color: "#dc2626",
+                fontSize: "12px",
+                fontWeight: 700,
+                cursor: "pointer",
+              }}
+            >
+              <span>↪</span>
+              <span>Logout</span>
+            </button>
           </div>
         </div>
 

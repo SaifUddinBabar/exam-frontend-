@@ -4,6 +4,7 @@ import { useTeacherData } from "../teacherData";
 import { useToast } from "../toast";
 import { Avatar, Button, Card, CardHeader, ConfirmDialog, Field, Input, Notice, PageHeader, Toggle } from "../components/ui";
 import { fmtDate, readPref, writePref } from "../utils";
+import { signOutUser } from "../../firebase/firebase";
 
 export default function Settings() {
   const { user } = useTeacherData();
@@ -23,10 +24,8 @@ export default function Settings() {
     notify({ title: "Preferences saved", description: "Stored in this browser. Sidebar changes apply on next load." });
   };
 
-  const signOut = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    navigate("/login", { replace: true });
+  const signOut = async () => {
+    await signOutUser();
   };
 
   return (

@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import html2pdf from "html2pdf.js";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
@@ -569,6 +568,7 @@ function Builder() {
 const downloadPDF = async () => {
     setPdfCompact(selected.length > 20);
     await new Promise(r => setTimeout(r, 300));
+    const { default: html2pdf } = await import("html2pdf.js");
     await html2pdf().set({
       margin: 0, filename: `${examData.title || "question-paper"}.pdf`,
       image: { type: "jpeg", quality: 1 },

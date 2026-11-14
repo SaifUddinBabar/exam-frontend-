@@ -137,24 +137,150 @@ export default function App() {
         {/* =====================================
             STUDENT PORTAL (APPROVED DESIGN SYSTEM)
         ===================================== */}
-        <Route path="/dashboard" element={<StudentDashboard />} />
-        <Route path="/exams" element={<StudentExams />} />
-        <Route path="/exams/:code/details" element={<ExamDetails />} />
-        <Route path="/exams/:code/instructions" element={<ExamInstructions />} />
-        <Route path="/exam/:code" element={<LiveExamPage />} />
-        <Route path="/exams/:code/submitted" element={<ExamSubmitted />} />
-        <Route path="/exams/:code/result" element={<ExamResult />} />
-        <Route path="/exams/:code/review" element={<AnswerReview />} />
-        <Route path="/results" element={<StudentPerformance />} />
-        <Route path="/performance" element={<StudentPerformance />} />
-        <Route path="/history" element={<StudentHistory />} />
-        <Route path="/profile" element={<StudentProfile />} />
-        <Route path="/question-bank" element={<StudentQuestionBank />} />
-        <Route path="/practice" element={<PracticeZone />} />
-        <Route path="/practice/create" element={<CreatePracticeTest />} />
-        <Route path="/practice/session" element={<PracticeSessionPage />} />
-        <Route path="/practice/mistakes" element={<PracticeMistakes />} />
-        <Route path="/saved-questions" element={<SavedQuestions />} />
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute allowedRoles={["student", "tutor", "teacher", "org_admin", "super_admin"]}>
+              <StudentDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/exams"
+          element={
+            <ProtectedRoute allowedRoles={["student", "tutor", "teacher", "org_admin", "super_admin"]}>
+              <StudentExams />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/exams/:code/details"
+          element={
+            <ProtectedRoute allowedRoles={["student", "tutor", "teacher", "org_admin", "super_admin"]}>
+              <ExamDetails />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/exams/:code/instructions"
+          element={
+            <ProtectedRoute allowedRoles={["student", "tutor", "teacher", "org_admin", "super_admin"]}>
+              <ExamInstructions />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/exam/:code"
+          element={
+            <ProtectedRoute allowedRoles={["student", "tutor", "teacher", "org_admin", "super_admin"]}>
+              <LiveExamPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/exams/:code/submitted"
+          element={
+            <ProtectedRoute allowedRoles={["student", "tutor", "teacher", "org_admin", "super_admin"]}>
+              <ExamSubmitted />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/exams/:code/result"
+          element={
+            <ProtectedRoute allowedRoles={["student", "tutor", "teacher", "org_admin", "super_admin"]}>
+              <ExamResult />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/exams/:code/review"
+          element={
+            <ProtectedRoute allowedRoles={["student", "tutor", "teacher", "org_admin", "super_admin"]}>
+              <AnswerReview />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/results"
+          element={
+            <ProtectedRoute allowedRoles={["student", "tutor", "teacher", "org_admin", "super_admin"]}>
+              <StudentPerformance />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/performance"
+          element={
+            <ProtectedRoute allowedRoles={["student", "tutor", "teacher", "org_admin", "super_admin"]}>
+              <StudentPerformance />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/history"
+          element={
+            <ProtectedRoute allowedRoles={["student", "tutor", "teacher", "org_admin", "super_admin"]}>
+              <StudentHistory />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute allowedRoles={["student", "tutor", "teacher", "org_admin", "super_admin"]}>
+              <StudentProfile />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/question-bank"
+          element={
+            <ProtectedRoute allowedRoles={["student", "tutor", "teacher", "org_admin", "super_admin"]}>
+              <StudentQuestionBank />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/practice"
+          element={
+            <ProtectedRoute allowedRoles={["student", "tutor", "teacher", "org_admin", "super_admin"]}>
+              <PracticeZone />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/practice/create"
+          element={
+            <ProtectedRoute allowedRoles={["student", "tutor", "teacher", "org_admin", "super_admin"]}>
+              <CreatePracticeTest />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/practice/session"
+          element={
+            <ProtectedRoute allowedRoles={["student", "tutor", "teacher", "org_admin", "super_admin"]}>
+              <PracticeSessionPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/practice/mistakes"
+          element={
+            <ProtectedRoute allowedRoles={["student", "tutor", "teacher", "org_admin", "super_admin"]}>
+              <PracticeMistakes />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/saved-questions"
+          element={
+            <ProtectedRoute allowedRoles={["student", "tutor", "teacher", "org_admin", "super_admin"]}>
+              <SavedQuestions />
+            </ProtectedRoute>
+          }
+        />
 
         {/* =====================================
             BACKWARD COMPATIBILITY REDIRECTS

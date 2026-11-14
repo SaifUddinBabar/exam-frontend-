@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import StudentLayout from "./StudentLayout";
+import { signOutUser } from "../firebase/firebase";
 
 export default function StudentProfile() {
   const [currentUser, setCurrentUser] = useState(() => {
@@ -15,6 +16,8 @@ export default function StudentProfile() {
   const [dataSaver, setDataSaver] = useState(false);
   const [examReminders, setExamReminders] = useState(true);
   const [savedMessage, setSavedMessage] = useState(false);
+  const [saveError, setSaveError] = useState("");
+  const [saveLoading, setSaveLoading] = useState(false);
 
   // Sync with authenticated backend on mount
   useEffect(() => {
@@ -29,7 +32,7 @@ export default function StudentProfile() {
             setCurrentUser(data.user);
             setFullName(data.user.name || "");
             setEmail(data.user.email || "");
-            if (data.user.mobile) setMobile(data.user.mobile);
+            if (data.user.phone) setMobile(data.user.phone);
             localStorage.setItem("user", JSON.stringify(data.user));
           }
         })
@@ -51,20 +54,47 @@ export default function StudentProfile() {
     .filter(Boolean)
     .slice(0, 2)
     .map((n) => n[0].toUpperCase())
-    .join("") || "NJ";
+    .join("") || "ST";
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault();
-    const updated = {
-      ...currentUser,
-      name: fullName,
-      email,
-      mobile,
-    };
-    setCurrentUser(updated);
-    localStorage.setItem("user", JSON.stringify(updated));
-    setSavedMessage(true);
-    setTimeout(() => setSavedMessage(false), 3000);
+    setSaveError("");
+    setSaveLoading(true);
+    const token = localStorage.getItem("token");
+
+    try {
+      if (mobile && mobile !== currentUser.phone && token) {
+        const res = await fetch(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/auth/profile/phone`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ phone: mobile }),
+        });
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+          setSaveError(data.message || "Failed to update mobile number.");
+          setSaveLoading(false);
+          return;
+        }
+      }
+
+      const updated = {
+        ...currentUser,
+        name: fullName,
+        email,
+        phone: mobile,
+      };
+      setCurrentUser(updated);
+      localStorage.setItem("user", JSON.stringify(updated));
+      setSavedMessage(true);
+      setTimeout(() => setSavedMessage(false), 3000);
+    } catch (err) {
+      setSaveError("Failed to save changes. Please check network connection.");
+    } finally {
+      setSaveLoading(false);
+    }
   };
 
   return (
@@ -88,6 +118,15 @@ export default function StudentProfile() {
         </div>
       )}
 
+      {saveError && (
+        <div className="mb-6 p-4 bg-[#FEF2F2] border border-[#FCA5A5] text-[#DC2626] text-xs font-semibold rounded-xl flex items-center gap-2">
+          <svg className="w-4 h-4 shrink-0" fill="currentColor" viewBox="0 0 20 20">
+            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+          </svg>
+          <span>{saveError}</span>
+        </div>
+      )}
+
       {/* ── TWO-COLUMN SETTINGS LAYOUT (matches PDF Page 13) ── */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
         
@@ -108,6 +147,16 @@ export default function StudentProfile() {
                 {tab}
               </button>
             ))}
+            <div className="pt-2 border-t border-[#F1F5F9] mt-2">
+              <button
+                type="button"
+                onClick={signOutUser}
+                className="w-full text-left px-3.5 py-2 text-xs font-semibold rounded-lg text-[#EF4444] hover:bg-[#FEF2F2] transition-colors flex items-center gap-2"
+              >
+                <span>↪</span>
+                <span>Log out (লগআউট)</span>
+              </button>
+            </div>
           </nav>
         </div>
 
@@ -312,31 +361,43 @@ export default function StudentProfile() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => alert("Signed out of all other device sessions.")}
-                    className="px-3 py-1.5 bg-white border border-[#FCA5A5] hover:bg-[#FEF2F2] text-[#DC2626] font-semibold text-xs rounded-lg transition-colors"
+                    onClick={signOutUser}
+                    className="px-3.5 py-1.5 bg-[#FEF2F2] border border-[#FCA5A5] hover:bg-[#FEE2E2] text-[#DC2626] font-bold text-xs rounded-lg transition-colors flex items-center gap-1.5"
                   >
-                    Sign out other devices
+                    <span>Log out (লগআউট)</span>
                   </button>
                 </div>
               </div>
             </div>
 
-            {/* Save Buttons */}
-            <div className="flex items-center justify-end gap-3 pt-2">
+            {/* Save Buttons & Mobile Logout Button */}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-[#E2E8F0]">
               <button
                 type="button"
-                onClick={() => window.location.reload()}
-                className="px-5 py-2.5 bg-white border border-[#CBD5E1] hover:bg-[#F8FAFC] text-[#0F172A] font-semibold text-xs rounded-lg transition-colors"
+                onClick={signOutUser}
+                className="w-full sm:w-auto px-4 py-2 bg-[#FEF2F2] border border-[#FCA5A5] hover:bg-[#FEE2E2] text-[#DC2626] font-bold text-xs rounded-lg transition-colors flex items-center justify-center gap-1.5"
               >
-                Cancel
+                <span>↪</span>
+                <span>Log out of Examino (লগআউট)</span>
               </button>
 
-              <button
-                type="submit"
-                className="px-6 py-2.5 bg-[#2563EB] hover:bg-[#1D4ED8] text-white font-bold text-xs rounded-lg shadow transition-colors"
-              >
-                Save changes
-              </button>
+              <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
+                <button
+                  type="button"
+                  onClick={() => window.location.reload()}
+                  className="px-4 py-2 bg-white border border-[#CBD5E1] hover:bg-[#F8FAFC] text-[#0F172A] font-semibold text-xs rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={saveLoading}
+                  className="px-6 py-2 bg-[#2563EB] hover:bg-[#1D4ED8] text-white font-bold text-xs rounded-lg shadow transition-colors"
+                >
+                  {saveLoading ? "Saving..." : "Save changes"}
+                </button>
+              </div>
             </div>
 
           </form>

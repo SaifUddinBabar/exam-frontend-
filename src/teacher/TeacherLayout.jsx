@@ -5,6 +5,7 @@ import { Avatar, Dropdown, IconButton, MenuItem, SoonBadge, ToastProvider } from
 import { useTeacherData } from "./teacherData";
 import { ALL_NAV, NAV_FOOTER, NAV_SECTIONS, matchNav } from "./nav";
 import { DAY, readPref, timeAgo, writePref } from "./utils";
+import { signOutUser } from "../firebase/firebase";
 
 const cx = (...c) => c.filter(Boolean).join(" ");
 
@@ -334,10 +335,8 @@ function Topbar({ onMenu, onSearch }) {
   const { user } = useTeacherData();
   const location = useLocation();
   const navigate = useNavigate();
-  const signOut = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    navigate("/login", { replace: true });
+  const signOut = async () => {
+    await signOutUser();
   };
   return (
     <header className="sticky top-0 z-40 flex h-16 items-center gap-3 border-b border-examino-border bg-white/95 px-4 backdrop-blur sm:px-6">

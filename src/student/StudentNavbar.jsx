@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import ExaminoLogo from "../components/ExaminoLogo";
+import { signOutUser } from "../firebase/firebase";
 
 export default function StudentNavbar() {
   const location = useLocation();
@@ -79,10 +80,8 @@ export default function StudentNavbar() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    navigate("/login");
+  const handleLogout = async () => {
+    await signOutUser();
   };
 
   const navLinks = [
