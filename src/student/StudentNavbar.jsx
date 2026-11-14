@@ -168,17 +168,19 @@ export default function StudentNavbar() {
               </button>
             </div>
 
-            {/* Direct Switch to Teacher Workspace */}
-            <Link
-              to="/teacher"
-              className="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs font-bold rounded-xl bg-[#101B35] text-white hover:bg-[#1E293B] shadow-sm transition-all"
-              title="Open Examino Teacher Workspace"
-            >
-              <span className="text-sm">👨‍🏫</span>
-              <span className="hidden xs:inline sm:inline">Teacher</span>
-              <span className="hidden md:inline">Workspace</span>
-              <span className="text-[10px] text-[#F59E0B] font-extrabold hidden lg:inline">&rarr;</span>
-            </Link>
+            {/* Direct Switch to Teacher Workspace (ONLY for verified Teacher / Admin) */}
+            {currentUser && (currentUser.role === "tutor" || currentUser.role === "teacher" || currentUser.globalRole === "super_admin") && (
+              <Link
+                to="/teacher"
+                className="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs font-bold rounded-xl bg-[#101B35] text-white hover:bg-[#1E293B] shadow-sm transition-all"
+                title="Open Examino Teacher Workspace"
+              >
+                <span className="text-sm">👨‍🏫</span>
+                <span className="hidden xs:inline sm:inline">Teacher</span>
+                <span className="hidden md:inline">Workspace</span>
+                <span className="text-[10px] text-[#F59E0B] font-extrabold hidden lg:inline">&rarr;</span>
+              </Link>
+            )}
 
             {/* Notification Bell */}
             <div className="relative" ref={notifRef}>

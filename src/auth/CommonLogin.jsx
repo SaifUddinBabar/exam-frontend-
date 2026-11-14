@@ -14,7 +14,8 @@ export default function CommonLogin() {
   const [isTeacherMode, setIsTeacherMode] = useState(() => {
     return new URLSearchParams(location.search).get("teacher") === "true";
   });
-  const [teacherPasscode, setTeacherPasscode] = useState("006985");
+  const [teacherPasscode, setTeacherPasscode] = useState("");
+  const [showTeacherPasscode, setShowTeacherPasscode] = useState(false);
 
   // Language Mode: 'bangla' | 'english'
   const [lang, setLang] = useState(() => localStorage.getItem("examino_language_mode") || "bangla");
@@ -87,6 +88,12 @@ export default function CommonLogin() {
   const handleGoogleSignIn = async () => {
     triggerHaptic("medium");
     setError("");
+
+    if (isTeacherMode && !teacherPasscode.trim()) {
+      setError(lang === "bangla" ? "দয়া করে প্রথমে আপনার গোপন শিক্ষক পাসকোড লিখুন।" : "Please enter your secret Teacher Passcode first.");
+      return;
+    }
+
     setGoogleLoading(true);
 
     try {
@@ -140,6 +147,41 @@ export default function CommonLogin() {
       }
     } finally {
       setGoogleLoading(false);
+    }
+  };
+
+  // Direct Teacher Login with Passcode alone
+  const handleTeacherPasscodeDirectLogin = async (e) => {
+    if (e) e.preventDefault();
+    if (!teacherPasscode.trim()) {
+      setError(lang === "bangla" ? "দয়া করে গোপন শিক্ষক পাসকোড লিখুন।" : "Please enter your secret Teacher Passcode.");
+      return;
+    }
+    triggerHaptic("heavy");
+    setLoading(true);
+    setError("");
+
+    try {
+      const res = await fetch(`${API}/api/auth/teacher-verify`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          teacherPasscode: teacherPasscode.trim(),
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        setError(data.message || (lang === "bangla" ? "ভুল শিক্ষক পাসকোড।" : "Invalid Teacher Passcode."));
+        setLoading(false);
+        return;
+      }
+
+      handleSuccessfulAuth(data);
+    } catch (err) {
+      console.error("Teacher Passcode Login Error:", err);
+      setError(lang === "bangla" ? "সার্ভারের সাথে সংযোগ স্থাপন করা যায়নি।" : "Could not connect to server.");
+      setLoading(false);
     }
   };
 
@@ -368,8 +410,8 @@ export default function CommonLogin() {
               <p className="text-xs sm:text-sm text-[#64748B] mt-1.5">
                 {isTeacherMode
                   ? (lang === "bangla"
-                      ? "শিক্ষক আইডি (006985) দিয়ে গুগল বা ইমেইল মারফত সম্পূর্ণ কন্ট্রোল নিন।"
-                      : "Access complete exam & question controls with Teacher ID (006985).")
+                      ? "গোপন শিক্ষক পাসকোড দিয়ে গুগল বা ইমেইল মারফত সম্পূর্ণ এডমিন কন্ট্রোল নিন।"
+                      : "Access complete exam & question controls with your secret Teacher Passcode.")
                   : (lang === "bangla"
                       ? "আপনার সুবিধাজনক মাধ্যমে ড্যাশবোর্ডে প্রবেশ করুন।"
                       : "Choose your preferred sign-in method to access your dashboard.")}
@@ -387,28 +429,66 @@ export default function CommonLogin() {
 
           {/* Teacher Passcode Input Box (When Teacher Mode is Active) */}
           {isTeacherMode && (
-            <div className="mb-5 p-3.5 bg-amber-50/90 border border-amber-200 rounded-xl">
+            <div className="mb-5 p-4 bg-amber-50/90 border border-amber-300 rounded-xl shadow-xs">
               <div className="flex items-center justify-between mb-1.5">
                 <label className="text-xs font-extrabold text-amber-900 tracking-wide flex items-center gap-1.5">
-                  <span>🔑</span>
-                  <span>{lang === "bangla" ? "শিক্ষক আইডি / পাসকোড *" : "Teacher ID / Passcode *"}</span>
+                  <span>🔒</span>
+                  <span>{lang === "bangla" ? "গোপন শিক্ষক পাসকোড *" : "Secret Teacher Passcode *"}</span>
                 </label>
                 <span className="text-[10px] font-bold text-amber-800 bg-amber-200/70 px-2 py-0.5 rounded-md">
-                  {lang === "bangla" ? "আইডি: 006985" : "ID: 006985"}
+                  {lang === "bangla" ? "সিক্রেট কি" : "Secret Key"}
                 </span>
               </div>
-              <input
-                type="text"
-                required
-                value={teacherPasscode}
-                onChange={(e) => setTeacherPasscode(e.target.value)}
-                placeholder="006985"
-                className="w-full px-3 py-2 bg-white border border-amber-300 rounded-lg text-sm font-mono font-bold tracking-widest text-amber-950 focus:outline-none focus:ring-2 focus:ring-amber-500/20"
-              />
-              <p className="text-[11px] text-amber-800 mt-1.5">
+              <div className="relative mb-2.5">
+                <input
+                  type={showTeacherPasscode ? "text" : "password"}
+                  required
+                  value={teacherPasscode}
+                  onChange={(e) => setTeacherPasscode(e.target.value)}
+                  placeholder={lang === "bangla" ? "গোপন পাসকোড টাইপ করুন..." : "Enter secret passcode..."}
+                  className="w-full px-3.5 py-2.5 pr-10 bg-white border border-amber-300 rounded-lg text-sm font-mono font-bold tracking-widest text-amber-950 focus:outline-none focus:ring-2 focus:ring-amber-500/20"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowTeacherPasscode(!showTeacherPasscode)}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-amber-700 hover:text-amber-900 focus:outline-none p-1"
+                  tabIndex="-1"
+                  title={showTeacherPasscode ? "Hide Passcode" : "Show Passcode"}
+                >
+                  {showTeacherPasscode ? (
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                    </svg>
+                  ) : (
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    </svg>
+                  )}
+                </button>
+              </div>
+
+              {/* Direct Fast Unlock Button with Passcode */}
+              <button
+                type="button"
+                onClick={handleTeacherPasscodeDirectLogin}
+                disabled={loading || !teacherPasscode.trim()}
+                className="w-full py-2 px-3 bg-amber-600 hover:bg-amber-700 disabled:bg-amber-300 text-white rounded-lg text-xs font-bold transition-all shadow-xs flex items-center justify-center gap-1.5"
+              >
+                {loading ? (
+                  <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <>
+                    <span>🔑</span>
+                    <span>{lang === "bangla" ? "পাসকোড দিয়ে সরাসরি প্রবেশ" : "Direct Unlock with Passcode"}</span>
+                    <span>➔</span>
+                  </>
+                )}
+              </button>
+              <p className="text-[11px] text-amber-800 mt-2 text-center">
                 {lang === "bangla"
-                  ? "এই আইডিটি দিয়ে সাইন ইন করলে আপনার একাউন্টে শিক্ষক সুবিধা সক্রিয় হবে।"
-                  : "Using this ID permanently associates your account with teacher privileges."}
+                  ? "শুধুমাত্র পাসকোড টাইপ করে সরাসরি ঢুকতে পারেন অথবা নিচে গুগল/ইমেইল সিলেক্ট করুন।"
+                  : "Enter passcode directly above or combine with Google / Email login below."}
               </p>
             </div>
           )}
@@ -759,7 +839,7 @@ export default function CommonLogin() {
               >
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
                 <span className="text-base">👨‍🏫</span>
-                <span>{lang === "bangla" ? "শিক্ষক ও এডমিন প্রবেশ (আইডি: 006985)" : "Teacher / Admin Access (Passcode)"}</span>
+                <span>{lang === "bangla" ? "শিক্ষক ও এডমিন প্রবেশ (গোপন পাসকোড)" : "Teacher / Admin Access (Passcode)"}</span>
                 <span className="text-slate-400 font-mono">➔</span>
               </button>
             ) : (

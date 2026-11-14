@@ -324,7 +324,7 @@ export default function App() {
         <Route
           path="/teacher/*"
           element={
-            <ProtectedRoute allowedRoles={["tutor", "super_admin", "org_admin"]}>
+            <ProtectedRoute allowedRoles={["tutor", "super_admin"]}>
               <TeacherApp />
             </ProtectedRoute>
           }
