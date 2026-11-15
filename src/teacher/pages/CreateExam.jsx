@@ -117,6 +117,7 @@ export default function CreateExam() {
         allowRetake: details.allowRetake,
         maxAttempts: details.allowRetake ? Number(details.maxAttempts) || 1 : 1,
         assignment: { mode: audience.mode, batchIds: audience.batchIds, studentIds: audience.students.map((x) => x._id) },
+        isPublished: true,
       });
       addExam({ ...exam, submissionCount: 0 });
       setCreated(exam);

@@ -1,13 +1,14 @@
 import { useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import StudentLayout, { StudentPageHeader } from "./StudentLayout";
 import { api } from "../teacher/api";
 import useAsync from "../lib/useAsync";
-import { Badge, Card, EmptyState, ErrorState, LinkButton, SearchInput, Skeleton, Tabs } from "../teacher/components/ui";
+import { Badge, Button, Card, EmptyState, ErrorState, LinkButton, SearchInput, Skeleton, Tabs } from "../teacher/components/ui";
 import Icon from "../teacher/components/Icon";
 import { STATUS_META, fmtWhen, relative } from "./examFormat";
 
 const TABS = [
+  { value: "all", label: "All", statuses: ["in_progress", "active", "upcoming", "completed", "missed", "closed"] },
   { value: "open", label: "Open", statuses: ["in_progress", "active"] },
   { value: "upcoming", label: "Upcoming", statuses: ["upcoming"] },
   { value: "completed", label: "Completed", statuses: ["completed"] },
@@ -68,22 +69,53 @@ function ExamCard({ exam }) {
 }
 
 export default function StudentExams() {
+  const navigate = useNavigate();
   const { status, data, error, reload } = useAsync((signal) => api.studentExams({ signal }), []);
-  const [tab, setTab] = useState("open");
+  const [tab, setTab] = useState("all");
   const [search, setSearch] = useState("");
+  const [codeQuery, setCodeQuery] = useState("");
   const exams = useMemo(() => (Array.isArray(data) ? data : []), [data]);
 
   const counts = Object.fromEntries(TABS.map((t) => [t.value, exams.filter((e) => t.statuses.includes(e.status)).length]));
   const shown = exams.filter((e) => {
-    const t = TABS.find((x) => x.value === tab);
-    if (!t.statuses.includes(e.status)) return false;
     const q = search.trim().toLowerCase();
-    return !q || `${e.title} ${e.description} ${e.examCode} ${e.subject}`.toLowerCase().includes(q);
+    if (q) {
+      // Search across all exams when searching so exam codes / titles are never hidden
+      return `${e.title} ${e.description} ${e.examCode} ${e.subject}`.toLowerCase().includes(q);
+    }
+    const t = TABS.find((x) => x.value === tab);
+    if (!t || t.value === "all") return true;
+    return t.statuses.includes(e.status);
   });
+
+  const handleJoinByCode = (e) => {
+    e.preventDefault();
+    const clean = codeQuery.trim().toUpperCase();
+    if (!clean) return;
+    navigate(`/exams/${clean}/details`);
+  };
 
   return (
     <StudentLayout>
-      <StudentPageHeader title="Exams" subtitle="Exams assigned to you, your batches, or all students." actions={<SearchInput value={search} onChange={setSearch} placeholder="Search exams" className="w-full sm:w-72" />} />
+      <StudentPageHeader
+        title="Exams"
+        subtitle="Exams assigned to you, your batches, or all students."
+        actions={
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <form onSubmit={handleJoinByCode} className="flex items-center gap-1.5">
+              <input
+                type="text"
+                placeholder="Enter exam code"
+                value={codeQuery}
+                onChange={(e) => setCodeQuery(e.target.value.toUpperCase())}
+                className="h-9 w-36 rounded-lg border border-examino-border bg-white px-3 font-mono text-xs font-semibold uppercase placeholder:normal-case placeholder:font-sans focus:border-examino-blue focus:outline-none"
+              />
+              <Button size="sm" type="submit">Join</Button>
+            </form>
+            <SearchInput value={search} onChange={setSearch} placeholder="Search exams" className="w-full sm:w-56" />
+          </div>
+        }
+      />
       <div className="mb-5 overflow-x-auto">
         <Tabs label="Exam status" value={tab} onChange={setTab} tabs={TABS.map((t) => ({ value: t.value, label: t.label, count: counts[t.value] || 0 }))} />
       </div>

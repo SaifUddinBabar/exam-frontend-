@@ -1,8 +1,9 @@
-import { Link } from "react-router-dom";
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import StudentLayout from "./StudentLayout";
 import { api } from "../teacher/api";
 import useAsync from "../lib/useAsync";
-import { Badge, Card, CardHeader, EmptyState, ErrorState, LinkButton, Skeleton } from "../teacher/components/ui";
+import { Badge, Button, Card, CardHeader, EmptyState, ErrorState, LinkButton, Skeleton } from "../teacher/components/ui";
 import Icon from "../teacher/components/Icon";
 import { STATUS_META, fmtWhen, relative } from "./examFormat";
 import { LeagueBadge } from "./league/LeagueBadge";
@@ -48,7 +49,16 @@ function Sparkline({ values }) {
 }
 
 export default function StudentDashboard() {
+  const navigate = useNavigate();
+  const [joinCode, setJoinCode] = useState("");
   const { status, data, error, reload } = useAsync((signal) => api.studentDashboard({ signal }), []);
+
+  const handleJoinByCode = (e) => {
+    e.preventDefault();
+    const clean = joinCode.trim().toUpperCase();
+    if (!clean) return;
+    navigate(`/exams/${clean}/details`);
+  };
 
   if (status === "loading") {
     return (
@@ -117,7 +127,25 @@ export default function StudentDashboard() {
         <div className="space-y-6 lg:col-span-2">
           {/* Upcoming / open exams */}
           <Card>
-            <CardHeader title="Your exams" description="Open, in-progress and upcoming exams assigned to you." actions={<Link to="/exams" className="text-sm font-semibold text-examino-blue hover:underline">All exams</Link>} />
+            <CardHeader
+              title="Your exams"
+              description="Open, in-progress and upcoming exams assigned to you."
+              actions={
+                <div className="flex items-center gap-3">
+                  <form onSubmit={handleJoinByCode} className="hidden sm:flex items-center gap-1.5">
+                    <input
+                      type="text"
+                      placeholder="Exam code"
+                      value={joinCode}
+                      onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
+                      className="h-8 w-28 rounded border border-examino-border bg-white px-2 font-mono text-xs font-semibold uppercase placeholder:normal-case placeholder:font-sans focus:border-examino-blue focus:outline-none"
+                    />
+                    <Button size="xs" type="submit">Join</Button>
+                  </form>
+                  <Link to="/exams" className="text-sm font-semibold text-examino-blue hover:underline">All exams</Link>
+                </div>
+              }
+            />
             {d.exams.length ? (
               <ul className="divide-y divide-examino-border">
                 {d.exams.map((e) => {
