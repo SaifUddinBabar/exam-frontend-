@@ -6,7 +6,8 @@ import { useTeacherData } from "../teacherData";
 import { useToast } from "../toast";
 import { QuestionPicker } from "../components/questions";
 import Icon from "../components/Icon";
-import { Button, Card, CardHeader, Field, IconButton, Input, LinkButton, Notice, PageHeader, Select, Textarea } from "../components/ui";
+import { Button, Card, CardHeader, Field, IconButton, Input, LinkButton, PageHeader, Select, Textarea, Toggle } from "../components/ui";
+import AudiencePicker, { EMPTY_AUDIENCE, audienceError, audienceSummary, useBatchesList } from "../components/AudiencePicker";
 
 const STEPS = ["Details", "Questions", "Review & publish"];
 const cx = (...c) => c.filter(Boolean).join(" ");
@@ -49,7 +50,9 @@ export default function CreateExam() {
   const { userId, addExam } = useTeacherData();
   const { notify } = useToast();
   const [step, setStep] = useState(0);
-  const [details, setDetails] = useState({ title: "", description: "", duration: 30, negative: "0.25" });
+  const [details, setDetails] = useState({ title: "", description: "", duration: 30, negative: "0.25", startTime: "", endTime: "", solutionReleaseTime: "", allowRetake: false, maxAttempts: 1 });
+  const [audience, setAudience] = useState(EMPTY_AUDIENCE);
+  const batches = useBatchesList();
   const [errors, setErrors] = useState({});
   const [selected, setSelected] = useState(() => new Map((location.state?.questions || []).map((q) => [q._id, q])));
   const [publishing, setPublishing] = useState(false);
@@ -62,6 +65,9 @@ export default function CreateExam() {
     if (!details.title.trim()) e.title = "Give the exam a title.";
     const d = Number(details.duration);
     if (!Number.isFinite(d) || d < 1 || d > 600) e.duration = "Duration must be between 1 and 600 minutes.";
+    if (details.startTime && details.endTime && new Date(details.endTime) <= new Date(details.startTime)) e.endTime = "End must be after start.";
+    const a = audienceError(audience);
+    if (a) e.audience = a;
     return e;
   };
   const canGo = (i) => i <= step || (i === 1 && !Object.keys(detailErrors()).length) || (i === 2 && !Object.keys(detailErrors()).length && ordered.length > 0);
@@ -104,6 +110,13 @@ export default function CreateExam() {
         questions: ordered.map((q) => q._id),
         duration: Number(details.duration),
         negativeMarkPerWrong: Number(details.negative),
+        startTime: details.startTime ? new Date(details.startTime).toISOString() : null,
+        endTime: details.endTime ? new Date(details.endTime).toISOString() : null,
+        solutionReleaseTime: details.solutionReleaseTime ? new Date(details.solutionReleaseTime).toISOString() : null,
+        examType: details.startTime || details.endTime ? "scheduled" : "practice",
+        allowRetake: details.allowRetake,
+        maxAttempts: details.allowRetake ? Number(details.maxAttempts) || 1 : 1,
+        assignment: { mode: audience.mode, batchIds: audience.batchIds, studentIds: audience.students.map((x) => x._id) },
       });
       addExam({ ...exam, submissionCount: 0 });
       setCreated(exam);
@@ -185,8 +198,30 @@ export default function CreateExam() {
               </Select>
             </Field>
           </div>
-          <div className="px-5 pb-5">
-            <Notice tone="neutral">Scheduling (start/end time), attempt limits and draft saving aren't accepted by the current create-exam API, so exams are published immediately and stay open.</Notice>
+          <div className="grid gap-4 border-t border-examino-border p-5 sm:grid-cols-3">
+            <Field label="Opens" htmlFor="ce-start" hint="Leave empty to open now">
+              <Input id="ce-start" type="datetime-local" value={details.startTime} onChange={(e) => setDetails({ ...details, startTime: e.target.value })} />
+            </Field>
+            <Field label="Closes" htmlFor="ce-end" hint="Leave empty for no deadline" error={errors.endTime}>
+              <Input id="ce-end" type="datetime-local" value={details.endTime} invalid={!!errors.endTime} onChange={(e) => setDetails({ ...details, endTime: e.target.value })} />
+            </Field>
+            <Field label="Solutions published" htmlFor="ce-sol" hint="Default: when it closes (or right after submit)">
+              <Input id="ce-sol" type="datetime-local" value={details.solutionReleaseTime} onChange={(e) => setDetails({ ...details, solutionReleaseTime: e.target.value })} />
+            </Field>
+            <div className="sm:col-span-2">
+              <Toggle checked={details.allowRetake} onChange={(v) => setDetails({ ...details, allowRetake: v })} label="Allow retakes" description="Scheduled exams always allow one attempt." />
+            </div>
+            {details.allowRetake ? (
+              <Field label="Max attempts" htmlFor="ce-att">
+                <Input id="ce-att" type="number" min={1} max={20} value={details.maxAttempts} onChange={(e) => setDetails({ ...details, maxAttempts: e.target.value })} />
+              </Field>
+            ) : null}
+          </div>
+          <div className="border-t border-examino-border p-5">
+            <p className="mb-1 text-[13px] font-medium text-examino-text">Who can take this exam</p>
+            <p className="mb-3 text-xs text-examino-muted">Students outside this audience can't see or open the exam — the server checks it.</p>
+            <AudiencePicker value={audience} onChange={setAudience} />
+            {errors.audience ? <p className="mt-2 text-xs font-medium text-examino-rose-dark">{errors.audience}</p> : null}
           </div>
         </Card>
       ) : null}
@@ -212,7 +247,7 @@ export default function CreateExam() {
 
       {step === 2 ? (
         <Card className="max-w-3xl">
-          <CardHeader title="Review" description="Check everything before publishing — exams can't be edited afterwards." />
+          <CardHeader title="Review" description="Check everything before publishing. Schedule and audience can be changed later from Online Exams." />
           <dl className="grid gap-px overflow-hidden bg-examino-border sm:grid-cols-2">
             {[
               ["Title", details.title],
@@ -220,7 +255,10 @@ export default function CreateExam() {
               ["Total marks", ordered.length],
               ["Duration", `${details.duration} minutes`],
               ["Negative marking", Number(details.negative) ? `−${details.negative} per wrong answer` : "None"],
-              ["Availability", "Published immediately · always open"],
+              ["Opens", details.startTime ? new Date(details.startTime).toLocaleString() : "Immediately"],
+              ["Closes", details.endTime ? new Date(details.endTime).toLocaleString() : "No deadline"],
+              ["Attempts", details.allowRetake && !(details.startTime || details.endTime) ? `Up to ${details.maxAttempts}` : "1"],
+              ["Assigned to", audienceSummary(audience, batches)],
             ].map(([k, v]) => (
               <div key={k} className="bg-white px-5 py-3">
                 <dt className="text-xs text-examino-muted">{k}</dt>

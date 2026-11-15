@@ -1,653 +1,484 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import ExaminoLogo from "../components/ExaminoLogo";
 import MathText from "../components/MathText";
+import QuestionImage from "../components/QuestionImage";
+import { api } from "../teacher/api";
+import { Button, Card, ErrorState, Modal, Segmented, Spinner } from "../teacher/components/ui";
+import Icon from "../teacher/components/Icon";
+import { resolveQuestion, TRANSLATION_UNAVAILABLE } from "../lib/questionLanguage";
 import { triggerHaptic } from "../utils/haptics";
+import { fmtDuration } from "./examFormat";
 
-const API = import.meta.env.VITE_API_URL || "http://localhost:5000";
+const cx = (...c) => c.filter(Boolean).join(" ");
+const BN_LETTERS = ["ক", "খ", "গ", "ঘ"];
+const EN_LETTERS = ["A", "B", "C", "D"];
 
 export default function LiveExamPage() {
   const { code } = useParams();
+  const examCode = String(code || "").toUpperCase();
   const navigate = useNavigate();
+  const localKey = `examino_attempt_${examCode}`;
 
-  // Authentication & Student Profile
-  const user = JSON.parse(localStorage.getItem("user") || "{}");
-  const studentName = user.name || "Student";
-  const studentRoll = user.roll || user.rollNumber || user.metadata?.rollNumber || user.phone || "—";
-
-  // Exam state
+  const [phase, setPhase] = useState("loading"); // loading | ready | error | submitting
+  const [error, setError] = useState("");
   const [exam, setExam] = useState(null);
   const [questions, setQuestions] = useState([]);
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [answers, setAnswers] = useState({}); // { [questionId]: "optionValue" }
-  const [markedForReview, setMarkedForReview] = useState(new Set()); // Set of questionIds
-  const [visited, setVisited] = useState(new Set()); // Set of indices visited
+  const [deadline, setDeadline] = useState(null);
+  const [offset, setOffset] = useState(0); // serverNow - clientNow
+  const [answers, setAnswers] = useState({});
+  const [marked, setMarked] = useState(() => new Set());
+  const [visited, setVisited] = useState(() => new Set([0]));
+  const [index, setIndex] = useState(0);
+  const [now, setNow] = useState(Date.now());
+  const [save, setSave] = useState({ state: "saved", at: null }); // saved | pending | saving | offline | error
+  const [online, setOnline] = useState(typeof navigator === "undefined" ? true : navigator.onLine);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [gridOpen, setGridOpen] = useState(false);
+  const [submitError, setSubmitError] = useState("");
+  const [lang, setLang] = useState(() => (localStorage.getItem("examino_language_mode") === "english" ? "english" : "bangla"));
 
-  // Timer & Status state
-  const [timeLeft, setTimeLeft] = useState(0); // In seconds
-  const [savingStatus, setSavingStatus] = useState("Saved");
-  const [submitting, setSubmitting] = useState(false);
-  const [showSubmitModal, setShowSubmitModal] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [sidebarOpen, setSidebarOpen] = useState(false); // Mobile drawer
+  const dirty = useRef(false);
+  const answersRef = useRef(answers);
+  answersRef.current = answers;
+  const submittedRef = useRef(false);
+  const idemKey = useRef(`${examCode}-${Math.random().toString(36).slice(2)}-${Date.now()}`);
 
-  const examCode = code ? code.toUpperCase() : "";
-  const storageProgressKey = `examino_progress_${examCode}`;
-  const storageTimerKey = `examino_timer_${examCode}`;
-
-  // 1. Load Exam from Server
+  // ---------------------------------------------------------------- start / resume
   useEffect(() => {
-    async function initExam() {
-      try {
-        const token = localStorage.getItem("token");
-        const headers = token ? { Authorization: `Bearer ${token}` } : {};
-
-        const res = await fetch(`${API}/api/exams/${examCode}`, { headers });
-        if (!res.ok) {
-          setError("Exam not found or unavailable.");
-          setLoading(false);
-          return;
-        }
-
-        const data = await res.json();
-        setExam(data);
-        const qList = data.questions || [];
-        setQuestions(qList);
-
-        // Load saved local progress if exists
+    let cancelled = false;
+    api
+      .startExam(examCode)
+      .then((res) => {
+        if (cancelled) return;
+        const serverAnswers = res.attempt?.answers || {};
+        // Merge any answers saved locally while offline (only for this attempt).
+        let local = {};
         try {
-          const savedProgress = JSON.parse(localStorage.getItem(storageProgressKey) || "{}");
-          if (savedProgress.answers) setAnswers(savedProgress.answers);
-          if (savedProgress.marked) setMarkedForReview(new Set(savedProgress.marked));
-        } catch (e) {
-          console.error("Local storage read error", e);
+          const saved = JSON.parse(localStorage.getItem(localKey) || "null");
+          if (saved && saved.startedAt === res.attempt.startedAt) {
+            local = saved.answers || {};
+            if (saved.marked) setMarked(new Set(saved.marked));
+          }
+        } catch {
+          /* ignore */
         }
-
-        // Initialize server-authoritative timer
-        const durationSec = (data.duration || 25) * 60;
-        const now = Date.now();
-        let targetEndTime;
-
-        const storedTimer = localStorage.getItem(storageTimerKey);
-        if (storedTimer) {
-          targetEndTime = parseInt(storedTimer, 10);
-        } else {
-          targetEndTime = now + durationSec * 1000;
-          localStorage.setItem(storageTimerKey, targetEndTime.toString());
+        const merged = { ...serverAnswers, ...local };
+        dirty.current = Object.keys(local).some((k) => local[k] !== serverAnswers[k]);
+        setOffset(new Date(res.serverNow).getTime() - Date.now());
+        setExam({ ...res.exam, startedAt: res.attempt.startedAt });
+        setQuestions(res.questions || []);
+        setDeadline(new Date(res.attempt.deadlineAt).getTime());
+        setAnswers(merged);
+        setPhase("ready");
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        if (err.status === 409) {
+          navigate(`/exams/${examCode}/result`, { replace: true });
+          return;
         }
+        setError(err.message);
+        setPhase("error");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [examCode, localKey, navigate]);
 
-        const remaining = Math.max(0, Math.floor((targetEndTime - now) / 1000));
-        setTimeLeft(remaining);
-      } catch (err) {
-        console.error("Failed to load live exam:", err);
-        setError("Network error connecting to exam server.");
-      } finally {
-        setLoading(false);
+  // ---------------------------------------------------------------- clock
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 500);
+    return () => clearInterval(t);
+  }, []);
+  const remaining = deadline ? Math.max(0, Math.floor((deadline - (now + offset)) / 1000)) : 0;
+
+  // ---------------------------------------------------------------- persistence
+  const persistLocal = useCallback(
+    (a, m) => {
+      try {
+        localStorage.setItem(localKey, JSON.stringify({ startedAt: exam?.startedAt, answers: a, marked: [...m] }));
+      } catch {
+        /* storage full or blocked */
       }
-    }
+    },
+    [localKey, exam]
+  );
 
-    initExam();
-  }, [examCode]);
-
-  // Mark current question index as visited
-  useEffect(() => {
-    if (questions.length > 0) {
-      setVisited((prev) => new Set([...prev, currentIndex]));
-    }
-  }, [currentIndex, questions.length]);
-
-  // 2. Countdown Timer
-  useEffect(() => {
-    if (loading || timeLeft <= 0) return;
-
-    const timer = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev <= 1) {
-          clearInterval(timer);
-          // Auto submit when time runs out!
-          handleFinalSubmit(true);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, [loading, timeLeft]);
-
-  // Format MM:SS
-  const formatTime = (secs) => {
-    const m = Math.floor(secs / 60);
-    const s = secs % 60;
-    return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
-  };
-
-  // 3. Answer Selection with instant auto-save & tactile haptics
-  const handleSelectOption = (qId, optionText) => {
-    triggerHaptic("medium");
-    const updated = { ...answers, [qId]: optionText };
-    setAnswers(updated);
-    setSavingStatus("Saving...");
-
-    // Persist to local storage
+  const flush = useCallback(async () => {
+    if (!dirty.current || submittedRef.current) return;
+    dirty.current = false;
+    setSave({ state: "saving", at: null });
     try {
-      localStorage.setItem(
-        storageProgressKey,
-        JSON.stringify({
-          answers: updated,
-          marked: Array.from(markedForReview),
-        })
-      );
-      setTimeout(() => setSavingStatus("Saved"), 300);
-    } catch {
-      setSavingStatus("Saved");
-    }
-  };
-
-  // Clear answer
-  const handleClearAnswer = (qId) => {
-    const updated = { ...answers };
-    delete updated[qId];
-    setAnswers(updated);
-
-    try {
-      localStorage.setItem(
-        storageProgressKey,
-        JSON.stringify({
-          answers: updated,
-          marked: Array.from(markedForReview),
-        })
-      );
-    } catch {}
-  };
-
-  // Toggle Mark for Review
-  const toggleMarkForReview = (qId) => {
-    const updated = new Set(markedForReview);
-    if (updated.has(qId)) {
-      updated.delete(qId);
-    } else {
-      updated.add(qId);
-    }
-    setMarkedForReview(updated);
-
-    try {
-      localStorage.setItem(
-        storageProgressKey,
-        JSON.stringify({
-          answers,
-          marked: Array.from(updated),
-        })
-      );
-    } catch {}
-  };
-
-  // 4. Final Submission
-  const handleFinalSubmit = async (isAuto = false) => {
-    if (submitting) return;
-    setSubmitting(true);
-
-    try {
-      const token = localStorage.getItem("token");
-      const headers = { "Content-Type": "application/json" };
-      if (token) headers["Authorization"] = `Bearer ${token}`;
-
-      const payload = {
-        examCode,
-        name: studentName,
-        roll: studentRoll,
-        answers,
-      };
-
-      const res = await fetch(`${API}/api/exams/submit`, {
-        method: "POST",
-        headers,
-        body: JSON.stringify(payload),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        if (res.status === 409) {
-          alert(data.message || "Duplicate submission rejected: A final submission has already been recorded for this student.");
-          navigate(`/exams/${examCode}/result`);
-          return;
-        }
-        if (res.status === 400) {
-          alert(data.message || "Exam deadline has passed. Submission rejected.");
-          navigate("/exams");
-          return;
-        }
-        alert(data.message || "Submission failed on server. Please try again.");
-        setSubmitting(false);
+      const r = await api.saveAnswers(examCode, answersRef.current);
+      setSave({ state: "saved", at: r.savedAt });
+    } catch (err) {
+      if (err.status === 410) {
+        setSave({ state: "error", at: null });
         return;
       }
-
-      // Clean local storage keys for this exam
-      localStorage.removeItem(storageProgressKey);
-      localStorage.removeItem(storageTimerKey);
-
-      // Save submission receipt
-      sessionStorage.setItem(
-        `examino_submission_${examCode}`,
-        JSON.stringify({
-          ...data,
-          examTitle: exam?.title,
-          submittedAt: new Date().toISOString(),
-          timeSpentSeconds: ((exam?.duration || 25) * 60) - timeLeft,
-        })
-      );
-
-      navigate(`/exams/${examCode}/submitted`);
-    } catch (err) {
-      console.error("Submission error:", err);
-      alert("Submission error. Please verify network and try again.");
-      setSubmitting(false);
+      dirty.current = true;
+      setSave({ state: err.status === 0 ? "offline" : "error", at: null });
     }
+  }, [examCode]);
+
+  useEffect(() => {
+    if (phase !== "ready") return undefined;
+    const t = setInterval(flush, 10_000); // retry / periodic save
+    return () => clearInterval(t);
+  }, [phase, flush]);
+
+  useEffect(() => {
+    const on = () => {
+      setOnline(true);
+      flush();
+    };
+    const off = () => setOnline(false);
+    window.addEventListener("online", on);
+    window.addEventListener("offline", off);
+    return () => {
+      window.removeEventListener("online", on);
+      window.removeEventListener("offline", off);
+    };
+  }, [flush]);
+
+  const debounce = useRef(null);
+  const changeAnswers = (next) => {
+    setAnswers(next);
+    persistLocal(next, marked);
+    dirty.current = true;
+    setSave({ state: "pending", at: null });
+    clearTimeout(debounce.current);
+    debounce.current = setTimeout(flush, 800);
   };
 
-  if (loading) {
+  // ---------------------------------------------------------------- submit
+  const submit = useCallback(
+    async (auto = false) => {
+      if (submittedRef.current) return;
+      submittedRef.current = true;
+      setPhase("submitting");
+      setSubmitError("");
+      try {
+        const res = await api.submitExam(examCode, answersRef.current, idemKey.current);
+        localStorage.removeItem(localKey);
+        sessionStorage.setItem(`examino_submission_${examCode}`, JSON.stringify({ ...res, auto }));
+        navigate(`/exams/${examCode}/submitted`, { replace: true });
+      } catch (err) {
+        if (err.status === 409) {
+          localStorage.removeItem(localKey);
+          navigate(`/exams/${examCode}/result`, { replace: true });
+          return;
+        }
+        submittedRef.current = false;
+        setPhase("ready");
+        setSubmitError(err.status === 0 ? "You appear to be offline. Your answers are saved on this device — reconnect and press Submit again." : err.message);
+      }
+    },
+    [examCode, localKey, navigate]
+  );
+
+  useEffect(() => {
+    // Auto-submit once at the deadline; if that fails the student retries from the banner.
+    if (phase === "ready" && deadline && remaining === 0 && !submitError) submit(true);
+  }, [phase, deadline, remaining, submit, submitError]);
+
+  // Warn before closing the tab mid-exam.
+  useEffect(() => {
+    if (phase !== "ready") return undefined;
+    const h = (e) => {
+      e.preventDefault();
+      e.returnValue = "";
+    };
+    window.addEventListener("beforeunload", h);
+    return () => window.removeEventListener("beforeunload", h);
+  }, [phase]);
+
+  const q = questions[index];
+  const view = useMemo(() => resolveQuestion(q, lang), [q, lang]);
+  const answeredCount = questions.filter((x) => answers[x._id]).length;
+  const letters = lang === "english" ? EN_LETTERS : BN_LETTERS;
+
+  const go = (i) => {
+    const n = Math.max(0, Math.min(questions.length - 1, i));
+    setIndex(n);
+    setVisited((v) => new Set(v).add(n));
+    setGridOpen(false);
+  };
+
+  if (phase === "loading") {
     return (
-      <div className="min-h-screen bg-[#F8FAFC] flex flex-col items-center justify-center font-sans p-6">
-        <div className="w-10 h-10 border-3 border-[#2563EB] border-t-transparent rounded-full animate-spin mb-4" />
-        <p className="text-sm font-semibold text-[#0F172A]">Preparing live examination workspace...</p>
-        <p className="text-xs text-[#64748B] mt-1">Connecting to authoritative server timer</p>
+      <div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-examino-bg text-sm text-examino-muted">
+        <Spinner size={28} className="text-examino-blue" />
+        Preparing your exam…
+      </div>
+    );
+  }
+  if (phase === "error") {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-examino-bg p-4">
+        <Card className="w-full max-w-md">
+          <ErrorState title="This exam can't be opened" message={error} />
+          <div className="flex justify-center gap-2 pb-8">
+            <Button variant="secondary" onClick={() => navigate(`/exams/${examCode}/details`)}>
+              Exam details
+            </Button>
+            <Button onClick={() => window.location.reload()}>Try again</Button>
+          </div>
+        </Card>
       </div>
     );
   }
 
-  if (error || questions.length === 0) {
-    return (
-      <div className="min-h-screen bg-[#F8FAFC] flex flex-col items-center justify-center font-sans p-6">
-        <div className="max-w-md w-full bg-white border border-[#E2E8F0] rounded-card p-8 text-center shadow-card">
-          <p className="text-base font-bold text-[#DC2626]">Exam Unavailable</p>
-          <p className="text-xs text-[#64748B] mt-2">{error || "No questions found for this exam."}</p>
-          <button
-            type="button"
-            onClick={() => navigate("/exams")}
-            className="mt-6 px-6 py-2.5 bg-[#2563EB] text-white text-xs font-semibold rounded-lg"
-          >
-            Back to Available Exams
-          </button>
-        </div>
+  const saveLabel = !online
+    ? "Offline — answers kept on this device"
+    : { saved: "All answers saved", pending: "Unsaved changes", saving: "Saving…", offline: "Offline — will retry", error: "Save failed — retrying" }[save.state];
+  const lowTime = remaining <= 300;
+
+  const Grid = (
+    <div>
+      <div className="mb-3 grid grid-cols-2 gap-2 text-xs">
+        <div className="rounded-lg bg-examino-blue-light px-3 py-2 font-semibold text-examino-blue-hover">Answered {answeredCount}</div>
+        <div className="rounded-lg bg-examino-amber-soft px-3 py-2 font-semibold text-amber-800">Marked {marked.size}</div>
       </div>
-    );
-  }
-
-  const currentQ = questions[currentIndex] || {};
-  const currentQId = currentQ._id ? currentQ._id.toString() : "";
-  const selectedAnswer = answers[currentQId];
-  const isCurrentMarked = markedForReview.has(currentQId);
-
-  // Bengali option indicators
-  const bengaliOptionLetters = ["ক", "খ", "গ", "ঘ"];
-
-  // Question navigation grid calculations
-  const totalQ = questions.length;
-  const answeredCount = Object.keys(answers).length;
-  const markedCount = markedForReview.size;
-  const unansweredCount = totalQ - answeredCount;
+      <div className="grid max-h-[50vh] grid-cols-5 gap-2 overflow-y-auto pr-1">
+        {questions.map((x, i) => {
+          const isAns = Boolean(answers[x._id]);
+          const isMark = marked.has(x._id);
+          return (
+            <button
+              key={x._id}
+              type="button"
+              onClick={() => go(i)}
+              aria-label={`Question ${i + 1}${isAns ? ", answered" : ""}${isMark ? ", marked" : ""}`}
+              aria-current={i === index ? "true" : undefined}
+              className={cx(
+                "h-10 rounded-lg border text-xs font-bold transition-colors",
+                isMark ? "border-amber-500 bg-examino-amber text-white" : isAns ? "border-examino-blue-hover bg-examino-blue text-white" : visited.has(i) ? "border-red-200 bg-examino-rose-light text-examino-rose-dark" : "border-slate-200 bg-slate-50 text-examino-muted",
+                i === index && "ring-2 ring-examino-navy ring-offset-1"
+              )}
+            >
+              {i + 1}
+            </button>
+          );
+        })}
+      </div>
+      <ul className="mt-4 space-y-1.5 border-t border-examino-border pt-3 text-xs text-examino-muted">
+        <li className="flex items-center gap-2"><span className="h-3 w-3 rounded bg-examino-blue" />Answered</li>
+        <li className="flex items-center gap-2"><span className="h-3 w-3 rounded border border-red-200 bg-examino-rose-light" />Seen, not answered</li>
+        <li className="flex items-center gap-2"><span className="h-3 w-3 rounded bg-examino-amber" />Marked for review</li>
+        <li className="flex items-center gap-2"><span className="h-3 w-3 rounded border border-slate-200 bg-slate-50" />Not visited</li>
+      </ul>
+    </div>
+  );
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] flex flex-col font-sans no-select">
-      
-      {/* ── DISTRACTION-FREE TOP BAR (matches PDF Design System) ── */}
-      <header className="sticky top-0 z-30 w-full bg-[#101B35] text-white border-b border-[#1E2D4A] shadow-md px-4 sm:px-6 py-3 flex items-center justify-between">
-        
-        {/* Left: Brand & Question Progress */}
-        <div className="flex items-center gap-4">
-          <ExaminoLogo light size="sm" to={null} />
-          <div className="border-l border-[#2B3E68] pl-3.5 hidden sm:block">
-            <h1 className="text-xs font-bold text-white tracking-tight truncate max-w-xs sm:max-w-md">
-              {exam?.title}
-            </h1>
-            <span className="text-[11px] text-[#94A3B8]">
-              Question {currentIndex + 1} of {totalQ}
-            </span>
+    <div className="flex min-h-screen flex-col bg-examino-bg no-select">
+      <header className="sticky top-0 z-30 border-b border-white/10 bg-examino-navy text-white">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-3 py-2.5 sm:px-6">
+          <div className="flex min-w-0 items-center gap-3">
+            <ExaminoLogo light size="sm" to={null} />
+            <div className="hidden min-w-0 border-l border-white/15 pl-3 sm:block">
+              <p className="truncate text-xs font-semibold font-bengali">{exam.title}</p>
+              <p className="text-[11px] text-slate-400">
+                Question {index + 1} of {questions.length}
+              </p>
+            </div>
           </div>
-        </div>
-
-        {/* Center: Server-Authoritative Timer */}
-        <div className="flex items-center gap-2">
           <div
-            className={`px-3.5 py-1.5 rounded-lg flex items-center gap-2 font-mono font-extrabold text-sm sm:text-base tracking-wider shadow-inner ${
-              timeLeft < 300
-                ? "bg-[#EF4444] text-white animate-pulse"
-                : "bg-[#1A294C] text-white border border-[#2B3E68]"
-            }`}
+            className={cx("flex items-center gap-2 rounded-lg px-3 py-1.5 font-mono text-base font-bold tabular-nums", lowTime ? "bg-examino-rose text-white" : "bg-white/10")}
+            role="timer"
+            aria-label={`Time remaining ${fmtDuration(remaining)}`}
           >
-            <svg className="w-4 h-4 text-[#94A3B8]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <span>{formatTime(timeLeft)}</span>
+            <Icon name="clock" size={16} />
+            {fmtDuration(remaining)}
           </div>
-        </div>
-
-        {/* Right: Saving Status & Submit Button */}
-        <div className="flex items-center gap-3">
-          
-          {/* Connection & Auto-save Indicator */}
-          <div className="hidden md:flex items-center gap-2 text-[11px] text-[#94A3B8]">
-            <span className="flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-[#10B981]"></span>
-              <span>Online</span>
+          <div className="flex items-center gap-2">
+            <span className={cx("hidden items-center gap-1.5 text-[11px] md:flex", !online || save.state === "offline" || save.state === "error" ? "text-amber-300" : "text-slate-300")}>
+              <Icon name={online ? "check" : "wifiOff"} size={13} />
+              {saveLabel}
             </span>
-            <span>·</span>
-            <span className="text-[#CBD5E1] font-medium">{savingStatus}</span>
+            <button type="button" onClick={() => setGridOpen(true)} className="rounded-lg bg-white/10 p-2 lg:hidden" aria-label="Open question list">
+              <Icon name="menu" size={18} />
+            </button>
+            <Button size="sm" onClick={() => setConfirmOpen(true)} loading={phase === "submitting"}>
+              Submit
+            </Button>
           </div>
-
-          {/* Question Grid Drawer Toggle on Mobile */}
-          <button
-            type="button"
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="lg:hidden p-2 text-white bg-[#1A294C] hover:bg-[#2563EB] rounded-lg transition-colors"
-            aria-label="Toggle Question Grid"
-          >
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h7" />
-            </svg>
-          </button>
-
-          {/* Final Submit Button */}
-          <button
-            type="button"
-            onClick={() => setShowSubmitModal(true)}
-            className="px-4 py-2 bg-[#2563EB] hover:bg-[#1D4ED8] text-white text-xs font-bold rounded-lg shadow transition-all focus:outline-none"
-          >
-            Submit exam
-          </button>
         </div>
-
+        {!online ? <div className="bg-amber-500 px-4 py-1 text-center text-xs font-semibold text-amber-950">You are offline. Keep answering — your answers are kept on this device and sent when you reconnect.</div> : null}
       </header>
 
-      {/* ── MAIN WORKSPACE: QUESTION AREA + QUESTION GRID ── */}
-      <div className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 flex gap-8">
-        
-        {/* ── LEFT: QUESTION & ANSWER PANEL ── */}
-        <div className="flex-1 flex flex-col justify-between bg-white border border-[#E2E8F0] rounded-card shadow-card p-6 sm:p-8 min-h-[580px]">
-          
-          <div>
-            {/* Question Header Meta */}
-            <div className="flex items-center justify-between pb-4 border-b border-[#F1F5F9] mb-5">
-              <div className="flex items-center gap-2.5">
-                <span className="px-2.5 py-1 bg-[#101B35] text-white text-xs font-bold rounded-md">
-                  Q{currentIndex + 1}
-                </span>
-                <span className="text-xs text-[#64748B] font-medium">
-                  {currentQ.chapter || "ICT Chapter Test"}
-                </span>
-              </div>
-
-              <div className="flex items-center gap-2 text-xs">
-                <span className="text-[#10B981] font-bold">+1.0</span>
-                <span className="text-[#64748B]">/</span>
-                <span className="text-[#EF4444] font-bold">−{exam?.negativeMarkPerWrong || "0.25"}</span>
-              </div>
+      <div className="mx-auto flex w-full max-w-7xl flex-1 gap-6 p-3 sm:p-6">
+        <Card className="flex min-h-[60vh] flex-1 flex-col p-5 sm:p-8">
+          <div className="mb-5 flex flex-wrap items-center justify-between gap-3 border-b border-examino-border pb-4">
+            <div className="flex min-w-0 items-center gap-2">
+              <span className="rounded-md bg-examino-navy px-2 py-1 text-xs font-bold text-white">Q{index + 1}</span>
+              <span className="truncate text-xs text-examino-muted font-bengali">{q?.chapter}</span>
             </div>
-
-            {/* Question Text */}
-            <div className="text-base sm:text-lg font-semibold text-[#0F172A] leading-relaxed mb-6 font-bengali">
-              <MathText text={currentQ.question} />
+            <div className="flex items-center gap-3">
+              <span className="text-xs">
+                <span className="font-bold text-emerald-600">+1</span>
+                {exam.negativeMarkPerWrong ? <span className="ml-1.5 font-bold text-examino-rose-dark">−{exam.negativeMarkPerWrong}</span> : null}
+              </span>
+              <Segmented size="sm" label="Question language" value={lang} onChange={setLang} options={[{ value: "bangla", label: "বাংলা" }, { value: "english", label: "EN" }]} />
             </div>
+          </div>
 
-            {/* Optional Diagram / Image */}
-            {currentQ.image && (
-              <div className="mb-6 max-w-md mx-auto p-2 border border-[#E2E8F0] rounded-lg bg-[#F8FAFC]">
-                <img
-                  src={currentQ.image}
-                  alt="Question Diagram"
-                  className="w-full h-auto object-contain rounded"
-                />
+          {view.available ? (
+            <>
+              <div className="mb-5 text-base font-semibold leading-relaxed text-examino-text sm:text-lg font-bengali">
+                <MathText text={view.text} />
               </div>
-            )}
-
-            {/* MCQ Options (A, B, C, D / ক, খ, গ, ঘ) */}
-            <div className="space-y-3">
-              {(currentQ.options || []).map((opt, optIdx) => {
-                const isSelected = selectedAnswer === opt;
-                const letter = bengaliOptionLetters[optIdx] || String.fromCharCode(65 + optIdx);
-
-                return (
-                  <button
-                    key={optIdx}
-                    type="button"
-                    onClick={() => handleSelectOption(currentQId, opt)}
-                    className={`btn-smooth w-full text-left p-3.5 sm:p-4 rounded-xl border text-sm font-medium transition-all flex items-start gap-3.5 active:scale-[0.99] select-none ${
-                      isSelected
-                        ? "bg-[#EFF6FF] border-[#2563EB] text-[#1E3A8A] ring-2 ring-[#2563EB]/40 shadow-sm"
-                        : "bg-white border-[#E2E8F0] text-[#0F172A] hover:bg-[#F8FAFC] hover:border-[#CBD5E1]"
-                    }`}
-                  >
-                    {/* Circle / Letter Indicator */}
-                    <span
-                      className={`w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs shrink-0 transition-colors ${
-                        isSelected
-                          ? "bg-[#2563EB] text-white"
-                          : "bg-[#F1F5F9] text-[#64748B] border border-[#CBD5E1]"
-                      }`}
+              <QuestionImage q={q} className="mb-5" />
+              <div className="space-y-3" role="radiogroup" aria-label={`Options for question ${index + 1}`}>
+                {view.options.map((opt, i) => {
+                  const value = q.options[i];
+                  const selected = answers[q._id] === value;
+                  return (
+                    <button
+                      key={i}
+                      type="button"
+                      role="radio"
+                      aria-checked={selected}
+                      onClick={() => {
+                        triggerHaptic("light");
+                        changeAnswers({ ...answers, [q._id]: value });
+                      }}
+                      className={cx(
+                        "flex w-full items-start gap-3 rounded-xl border p-3.5 text-left text-sm transition-colors sm:p-4",
+                        selected ? "border-examino-blue bg-examino-blue-light ring-2 ring-examino-blue/30" : "border-examino-border bg-white hover:border-slate-300 hover:bg-slate-50"
+                      )}
                     >
-                      {letter}
-                    </span>
-
-                    {/* Option Text */}
-                    <span className="flex-1 pt-0.5 leading-relaxed font-bengali">
-                      <MathText text={opt} />
-                    </span>
-                  </button>
-                );
-              })}
+                      <span className={cx("flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold", selected ? "bg-examino-blue text-white" : "bg-slate-100 text-examino-muted")}>{letters[i]}</span>
+                      <span className="flex-1 pt-0.5 font-medium text-examino-text font-bengali">
+                        <MathText text={opt} />
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </>
+          ) : (
+            <div className="flex flex-1 flex-col items-center justify-center rounded-xl border border-dashed border-amber-300 bg-examino-amber-soft p-8 text-center">
+              <p className="text-sm font-semibold text-amber-900">{TRANSLATION_UNAVAILABLE[lang]}</p>
+              <p className="mt-1 text-xs text-amber-800">This question is only available in {lang === "english" ? "Bengali" : "English"}.</p>
+              <Button size="sm" variant="secondary" className="mt-4" onClick={() => setLang(lang === "english" ? "bangla" : "english")}>
+                Show in {lang === "english" ? "বাংলা" : "English"}
+              </Button>
             </div>
-          </div>
+          )}
 
-          {/* Bottom Actions & Navigation Bar */}
-          <div className="pt-6 border-t border-[#F1F5F9] mt-8 flex flex-wrap items-center justify-between gap-4">
-            
-            {/* Mark for review & Clear answer */}
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => toggleMarkForReview(currentQId)}
-                className={`px-3.5 py-2 text-xs font-semibold rounded-lg border transition-all flex items-center gap-1.5 ${
-                  isCurrentMarked
-                    ? "bg-[#FFFBEB] border-[#F59E0B] text-[#D97706]"
-                    : "bg-white border-[#CBD5E1] text-[#64748B] hover:bg-[#F8FAFC]"
-                }`}
+          <div className="mt-auto flex flex-wrap items-center justify-between gap-3 border-t border-examino-border pt-5">
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                variant={marked.has(q?._id) ? "secondary" : "ghost"}
+                icon="flag"
+                onClick={() => {
+                  const m = new Set(marked);
+                  if (m.has(q._id)) m.delete(q._id);
+                  else m.add(q._id);
+                  setMarked(m);
+                  persistLocal(answers, m);
+                }}
               >
-                <svg className="w-4 h-4" fill={isCurrentMarked ? "currentColor" : "none"} viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
-                </svg>
-                <span>{isCurrentMarked ? "Marked for review" : "Mark for review"}</span>
-              </button>
-
-              {selectedAnswer && (
-                <button
-                  type="button"
-                  onClick={() => handleClearAnswer(currentQId)}
-                  className="px-3.5 py-2 text-xs font-semibold text-[#EF4444] hover:bg-[#FEF2F2] rounded-lg border border-transparent transition-colors"
+                {marked.has(q?._id) ? "Marked" : "Mark for review"}
+              </Button>
+              {answers[q?._id] ? (
+                <Button
+                  size="sm"
+                  variant="danger-ghost"
+                  onClick={() => {
+                    const next = { ...answers };
+                    delete next[q._id];
+                    changeAnswers(next);
+                  }}
                 >
-                  Clear answer
-                </button>
+                  Clear
+                </Button>
+              ) : null}
+            </div>
+            <div className="ml-auto flex gap-2">
+              <Button size="sm" variant="secondary" icon="chevronLeft" disabled={index === 0} onClick={() => go(index - 1)}>
+                Previous
+              </Button>
+              {index < questions.length - 1 ? (
+                <Button size="sm" iconRight="chevronRight" onClick={() => go(index + 1)}>
+                  Next
+                </Button>
+              ) : (
+                <Button size="sm" onClick={() => setConfirmOpen(true)}>
+                  Finish
+                </Button>
               )}
             </div>
-
-            {/* Previous & Next Buttons */}
-            <div className="flex items-center gap-2.5 ml-auto">
-              <button
-                type="button"
-                disabled={currentIndex === 0}
-                onClick={() => setCurrentIndex((prev) => Math.max(0, prev - 1))}
-                className="px-4 py-2 bg-white border border-[#CBD5E1] text-[#0F172A] hover:bg-[#F8FAFC] text-xs font-semibold rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                ← Previous
-              </button>
-
-              <button
-                type="button"
-                disabled={currentIndex === totalQ - 1}
-                onClick={() => setCurrentIndex((prev) => Math.min(totalQ - 1, prev + 1))}
-                className="px-5 py-2 bg-[#2563EB] hover:bg-[#1D4ED8] text-white text-xs font-semibold rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed shadow-sm"
-              >
-                Next →
-              </button>
-            </div>
-
           </div>
+        </Card>
 
-        </div>
-
-        {/* ── RIGHT: QUESTION NAVIGATION GRID (DESKTOP + MOBILE DRAWER) ── */}
-        <div
-          className={`lg:w-80 shrink-0 bg-white border border-[#E2E8F0] rounded-card shadow-card p-5 flex flex-col justify-between ${
-            sidebarOpen
-              ? "fixed inset-y-0 right-0 z-50 w-80 shadow-elevated"
-              : "hidden lg:flex"
-          }`}
-        >
-          <div>
-            {/* Header / Close button for mobile */}
-            <div className="flex items-center justify-between pb-3 border-b border-[#F1F5F9] mb-4">
-              <h3 className="text-xs font-bold tracking-wider text-[#64748B] uppercase">
-                Question Grid ({totalQ})
-              </h3>
-              {sidebarOpen && (
-                <button
-                  type="button"
-                  onClick={() => setSidebarOpen(false)}
-                  className="lg:hidden text-[#64748B] hover:text-[#0F172A] text-xs font-bold"
-                >
-                  ✕ Close
-                </button>
-              )}
-            </div>
-
-            {/* Quick Summary Pill Counters */}
-            <div className="grid grid-cols-2 gap-2 text-[11px] mb-4">
-              <div className="p-2 bg-[#EFF6FF] text-[#1E3A8A] rounded-lg font-medium flex items-center justify-between">
-                <span>Answered:</span>
-                <span className="font-extrabold">{answeredCount}</span>
-              </div>
-              <div className="p-2 bg-[#FEF3C7] text-[#92400E] rounded-lg font-medium flex items-center justify-between">
-                <span>Marked:</span>
-                <span className="font-extrabold">{markedCount}</span>
-              </div>
-            </div>
-
-            {/* Grid of Numbers */}
-            <div className="grid grid-cols-5 gap-2 max-h-[380px] overflow-y-auto pr-1">
-              {questions.map((q, idx) => {
-                const qId = q._id ? q._id.toString() : "";
-                const isAns = Boolean(answers[qId]);
-                const isMark = markedForReview.has(qId);
-                const isCurr = currentIndex === idx;
-                const isVis = visited.has(idx);
-
-                // Styling based on 4 approved design states:
-                let btnStyle = "bg-[#F1F5F9] text-[#64748B] border-[#CBD5E1]"; // Not visited
-                if (isMark) {
-                  btnStyle = "bg-[#F59E0B] text-white border-[#D97706]"; // Marked for review
-                } else if (isAns) {
-                  btnStyle = "bg-[#2563EB] text-white border-[#1D4ED8]"; // Answered
-                } else if (isVis) {
-                  btnStyle = "bg-[#FEE2E2] text-[#DC2626] border-[#FCA5A5]"; // Seen, not answered
-                }
-
-                return (
-                  <button
-                    key={qId || idx}
-                    type="button"
-                    onClick={() => {
-                      setCurrentIndex(idx);
-                      setSidebarOpen(false);
-                    }}
-                    className={`h-9 rounded-lg font-bold text-xs border flex items-center justify-center transition-all ${btnStyle} ${
-                      isCurr ? "ring-2 ring-[#0F172A] ring-offset-1 scale-105" : ""
-                    }`}
-                  >
-                    {idx + 1}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Grid Legend */}
-          <div className="pt-4 border-t border-[#F1F5F9] space-y-1.5 text-[11px] text-[#64748B]">
-            <div className="flex items-center gap-2">
-              <span className="w-3.5 h-3.5 rounded bg-[#2563EB]"></span>
-              <span>Answered ({answeredCount})</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="w-3.5 h-3.5 rounded bg-[#FEE2E2] border border-[#FCA5A5]"></span>
-              <span>Seen, not answered ({visited.size - answeredCount > 0 ? visited.size - answeredCount : 0})</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="w-3.5 h-3.5 rounded bg-[#F59E0B]"></span>
-              <span>Marked for review ({markedCount})</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="w-3.5 h-3.5 rounded bg-[#F1F5F9] border border-[#CBD5E1]"></span>
-              <span>Not visited ({totalQ - visited.size > 0 ? totalQ - visited.size : 0})</span>
-            </div>
-          </div>
-
-        </div>
-
+        <Card className="hidden h-fit w-72 shrink-0 p-5 lg:block">
+          <h2 className="mb-3 text-xs font-bold uppercase tracking-wider text-examino-muted">Questions ({questions.length})</h2>
+          {Grid}
+        </Card>
       </div>
 
-      {/* ── SUBMISSION CONFIRMATION MODAL ── */}
-      {showSubmitModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-          <div className="bg-white border border-[#E2E8F0] rounded-xl max-w-md w-full p-6 shadow-dropdown animate-in fade-in zoom-in-95">
-            
-            <h3 className="text-lg font-bold text-[#0F172A]">Submit your exam?</h3>
-            <p className="text-xs text-[#64748B] mt-1">
-              Please review your question completion status before confirming. Once submitted, answers cannot be edited.
-            </p>
+      <Modal open={gridOpen} onClose={() => setGridOpen(false)} title={`Questions (${questions.length})`} size="sm">
+        {Grid}
+      </Modal>
 
-            <div className="my-5 p-4 bg-[#F8FAFC] border border-[#E2E8F0] rounded-xl space-y-2 text-xs">
-              <div className="flex justify-between">
-                <span className="text-[#64748B]">Total questions:</span>
-                <span className="font-bold text-[#0F172A]">{totalQ}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-[#2563EB] font-medium">Answered:</span>
-                <span className="font-bold text-[#2563EB]">{answeredCount}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-[#EF4444] font-medium">Unanswered:</span>
-                <span className="font-bold text-[#EF4444]">{unansweredCount}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-[#F59E0B] font-medium">Marked for review:</span>
-                <span className="font-bold text-[#F59E0B]">{markedCount}</span>
-              </div>
+      <Modal
+        open={confirmOpen}
+        onClose={() => setConfirmOpen(false)}
+        title="Submit your exam?"
+        description="You can submit only once. After submitting, answers cannot be changed."
+        size="sm"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setConfirmOpen(false)}>
+              Keep answering
+            </Button>
+            <Button
+              loading={phase === "submitting"}
+              onClick={() => {
+                setConfirmOpen(false);
+                submit(false);
+              }}
+            >
+              Submit now
+            </Button>
+          </>
+        }
+      >
+        <dl className="space-y-2 text-sm">
+          {[
+            ["Total questions", questions.length, "text-examino-text"],
+            ["Answered", answeredCount, "text-examino-blue"],
+            ["Unanswered", questions.length - answeredCount, "text-examino-rose-dark"],
+            ["Marked for review", marked.size, "text-amber-600"],
+            ["Time left", fmtDuration(remaining), "text-examino-text"],
+          ].map(([k, v, c]) => (
+            <div key={k} className="flex justify-between">
+              <dt className="text-examino-muted">{k}</dt>
+              <dd className={`font-semibold ${c}`}>{v}</dd>
             </div>
+          ))}
+        </dl>
+      </Modal>
 
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                disabled={submitting}
-                onClick={() => setShowSubmitModal(false)}
-                className="flex-1 py-2.5 bg-white border border-[#CBD5E1] hover:bg-[#F8FAFC] text-[#0F172A] font-semibold text-xs rounded-lg transition-colors"
-              >
-                Cancel & keep answering
-              </button>
-              
-              <button
-                type="button"
-                disabled={submitting}
-                onClick={() => handleFinalSubmit(false)}
-                className="flex-1 py-2.5 bg-[#2563EB] hover:bg-[#1D4ED8] text-white font-bold text-xs rounded-lg shadow transition-colors flex items-center justify-center gap-2"
-              >
-                {submitting ? "Submitting..." : "Confirm & Submit"}
-              </button>
-            </div>
-
+      {submitError ? (
+        <div role="alert" className="fixed inset-x-3 bottom-3 z-50 mx-auto max-w-lg rounded-xl border border-red-200 bg-white p-4 shadow-dropdown">
+          <p className="text-sm font-semibold text-examino-rose-dark">Submission didn't go through</p>
+          <p className="mt-1 text-xs text-examino-muted">{submitError}</p>
+          <div className="mt-3 flex justify-end gap-2">
+            <Button size="sm" variant="ghost" onClick={() => setSubmitError("")}>
+              Dismiss
+            </Button>
+            <Button size="sm" onClick={() => submit(false)}>
+              Try again
+            </Button>
           </div>
         </div>
-      )}
-
+      ) : null}
     </div>
   );
 }

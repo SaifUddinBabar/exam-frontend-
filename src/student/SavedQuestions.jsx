@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import StudentLayout from "./StudentLayout";
 import MathText from "../components/MathText";
+import QuestionImage from "../components/QuestionImage";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
@@ -245,15 +246,7 @@ export default function SavedQuestions() {
                   <MathText text={q.question} />
                 </div>
 
-                {q.image && (
-                  <div className="mb-4 max-w-sm rounded-lg overflow-hidden border border-[#E2E8F0] p-2 bg-[#F8FAFC]">
-                    <img
-                      src={q.image.startsWith("http") ? q.image : `${API}${q.image}`}
-                      alt="Question diagram"
-                      className="w-full h-auto max-h-56 object-contain"
-                    />
-                  </div>
-                )}
+                {q.image ? <QuestionImage q={q} className="my-4" /> : null}
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-3">
                   {q.options.map((opt, optIdx) => {

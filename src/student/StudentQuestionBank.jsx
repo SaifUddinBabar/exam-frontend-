@@ -57,7 +57,7 @@ export default function StudentQuestionBank() {
   useEffect(() => {
     async function loadMeta() {
       try {
-        const res = await fetch(`${API}/api/practice/metadata?version=${languageMode}`);
+        const res = await fetch(`${API}/api/practice/metadata?version=${languageMode}`, { headers: { Authorization: `Bearer ${localStorage.getItem("token") || ""}` } });
         if (res.ok) {
           const data = await res.json();
           setMetadata(data);

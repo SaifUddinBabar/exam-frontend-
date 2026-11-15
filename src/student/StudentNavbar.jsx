@@ -1,407 +1,174 @@
-import React, { useState, useRef, useEffect } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
+import { Link, useLocation } from "react-router-dom";
 import ExaminoLogo from "../components/ExaminoLogo";
+import Icon from "../teacher/components/Icon";
+import { Avatar } from "../teacher/components/ui";
 import { signOutUser } from "../firebase/firebase";
-import { triggerHaptic } from "../utils/haptics";
+import { api } from "../teacher/api";
+import { setLanguagePref } from "../lib/questionLanguage";
+import { currentUser, useLanguage } from "../lib/useAsync";
+
+const cx = (...c) => c.filter(Boolean).join(" ");
+
+const NAV = [
+  { to: "/dashboard", label: "Home", icon: "home", match: ["/dashboard"] },
+  { to: "/exams", label: "Exams", icon: "clipboard", match: ["/exams", "/exam/"] },
+  { to: "/practice", label: "Practice", icon: "target", match: ["/practice", "/weak-topics", "/saved-questions"] },
+  { to: "/battle", label: "Battle", icon: "swords", match: ["/battle"] },
+  { to: "/league", label: "League", icon: "trophy", match: ["/league", "/leaderboard"] },
+];
+
+const MENU = [
+  { to: "/profile", label: "Profile", icon: "user" },
+  { to: "/batches", label: "My batches", icon: "layers" },
+  { to: "/notices", label: "Notices", icon: "megaphone" },
+  { to: "/performance", label: "Progress", icon: "chart" },
+  { to: "/history", label: "Exam history", icon: "clock" },
+  { to: "/weak-topics", label: "Weak topics", icon: "flag" },
+  { to: "/saved-questions", label: "Saved questions", icon: "star" },
+];
 
 export default function StudentNavbar() {
-  const location = useLocation();
-  const navigate = useNavigate();
-  const [dropdownOpen, setDropdownOpen] = useState(false);
-  const [notificationsOpen, setNotificationsOpen] = useState(false);
-  const dropdownRef = useRef(null);
-  const notifRef = useRef(null);
+  const { pathname } = useLocation();
+  const [user, setUser] = useState(currentUser);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [unread, setUnread] = useState(0);
+  const lang = useLanguage();
+  const menuRef = useRef(null);
 
-  // Retrieve authenticated student
-  const [currentUser, setCurrentUser] = useState(() => {
-    return JSON.parse(localStorage.getItem("user") || "{}");
-  });
-
-  // Language / Medium Mode State ("bangla" | "english")
-  const [languageMode, setLanguageMode] = useState(() => {
-    return localStorage.getItem("examino_language_mode") || "bangla";
-  });
-
-  const handleLanguageChange = (mode) => {
-    if (mode === languageMode) return;
-    setLanguageMode(mode);
-    localStorage.setItem("examino_language_mode", mode);
-    window.dispatchEvent(new CustomEvent("languageModeChanged", { detail: { mode } }));
-  };
+  const isActive = (item) => item.match.some((m) => pathname === m || pathname.startsWith(m.endsWith("/") ? m : `${m}/`) || pathname === m);
 
   useEffect(() => {
-    const handleModeUpdate = (e) => {
-      if (e.detail?.mode && e.detail.mode !== languageMode) {
-        setLanguageMode(e.detail.mode);
-      }
+    const ctrl = new AbortController();
+    api.notices({ signal: ctrl.signal }).then((r) => setUnread(r?.unread || 0)).catch(() => {});
+    if (!user.name) api.me({ signal: ctrl.signal }).then((r) => r?.user && (setUser(r.user), localStorage.setItem("user", JSON.stringify(r.user)))).catch(() => {});
+    const onRead = () => api.notices().then((r) => setUnread(r?.unread || 0)).catch(() => {});
+    window.addEventListener("examino:notices-changed", onRead);
+    return () => {
+      ctrl.abort();
+      window.removeEventListener("examino:notices-changed", onRead);
     };
-    window.addEventListener("languageModeChanged", handleModeUpdate);
-    return () => window.removeEventListener("languageModeChanged", handleModeUpdate);
-  }, [languageMode]);
-
-  const studentName = currentUser.name || "Student";
-
-  // Derive initials
-  const initials = studentName
-    .split(" ")
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((n) => n[0].toUpperCase())
-    .join("") || "ST";
-
-  // Verify and refresh profile from /api/auth/me if token exists
-  useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (token && (!currentUser.name || !currentUser.email)) {
-      fetch(`${import.meta.env.VITE_API_URL || "http://localhost:5000"}/api/auth/me`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-        .then((res) => res.json())
-        .then((data) => {
-          if (data.success && data.user) {
-            setCurrentUser(data.user);
-            localStorage.setItem("user", JSON.stringify(data.user));
-          }
-        })
-        .catch(() => {});
-    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Close dropdown on outside click
   useEffect(() => {
-    function handleClickOutside(event) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setDropdownOpen(false);
-      }
-      if (notifRef.current && !notifRef.current.contains(event.target)) {
-        setNotificationsOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    const onDown = (e) => menuRef.current && !menuRef.current.contains(e.target) && setMenuOpen(false);
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
   }, []);
-
-  const handleLogout = async () => {
-    await signOutUser();
-  };
-
-  const navLinks = [
-    { label: "Home", path: "/dashboard", bn: "হোম" },
-    { label: "Exams", path: "/exams", bn: "পরীক্ষা" },
-    { label: "Leaderboard", path: "/leaderboard", bn: "মেধা তালিকা" },
-    { label: "Weak Topics", path: "/weak-topics", bn: "রিভিশন দরকার" },
-    { label: "Performance", path: "/performance", bn: "ফলাফল" },
-    { label: "History", path: "/history", bn: "হিস্ট্রি" },
-  ];
-
-  const isActive = (path) => {
-    if (path === "/dashboard") {
-      return location.pathname === "/" || location.pathname === "/dashboard";
-    }
-    return location.pathname.startsWith(path);
-  };
+  useEffect(() => setMenuOpen(false), [pathname]);
 
   return (
     <>
-      {/* ── TOP HEADER (DESKTOP & TABLET) ── */}
-      <header className="sticky top-0 z-40 w-full bg-white border-b border-[#E2E8F0]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          
-          {/* Left: Brand Logo & Desktop Nav Links */}
-          <div className="flex items-center gap-10">
+      <header className="sticky top-0 z-40 w-full border-b border-examino-border bg-white/95 backdrop-blur">
+        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center gap-8">
             <ExaminoLogo to="/dashboard" />
-
-            <nav className="hidden md:flex items-center gap-1">
-              {navLinks.map((link) => {
-                const active = isActive(link.path);
-                return (
-                  <Link
-                    key={link.path}
-                    to={link.path}
-                    onClick={() => triggerHaptic("light")}
-                    className={`relative px-3.5 py-2 text-sm font-semibold transition-all btn-smooth ${
-                      active
-                        ? "text-[#2563EB] font-bold"
-                        : "text-[#64748B] hover:text-[#0F172A]"
-                    }`}
-                  >
-                    {languageMode === "bangla" && link.bn ? link.bn : link.label}
-                    {active && (
-                      <span className="absolute bottom-0 left-3.5 right-3.5 h-0.5 bg-[#2563EB] rounded-full" />
-                    )}
-                  </Link>
-                );
-              })}
+            <nav className="hidden items-center gap-1 md:flex" aria-label="Main">
+              {NAV.map((item) => (
+                <Link
+                  key={item.to}
+                  to={item.to}
+                  aria-current={isActive(item) ? "page" : undefined}
+                  className={cx(
+                    "inline-flex h-9 items-center gap-2 rounded-lg px-3 text-sm font-semibold transition-colors",
+                    isActive(item) ? "bg-examino-blue-light text-examino-blue" : "text-examino-muted hover:bg-slate-100 hover:text-examino-text"
+                  )}
+                >
+                  <Icon name={item.icon} size={16} />
+                  {item.label}
+                </Link>
+              ))}
             </nav>
           </div>
 
-          {/* Right: Notifications & Profile Avatar */}
-          <div className="flex items-center gap-2 sm:gap-3">
-            
-            {/* Language / Medium Mode Switcher Toggle */}
-            <div className="flex items-center bg-[#F1F5F9] p-0.5 sm:p-1 rounded-xl border border-[#E2E8F0]">
-              <button
-                type="button"
-                onClick={() => handleLanguageChange("bangla")}
-                className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1 text-xs font-semibold rounded-lg transition-all ${
-                  languageMode === "bangla"
-                    ? "bg-white text-[#15803D] shadow-xs"
-                    : "text-[#64748B] hover:text-[#0F172A]"
-                }`}
-                title="বাংলা মাধ্যম (NCTB ও বোর্ড প্রশ্নসমূহ)"
-              >
-                <span className="text-xs sm:text-sm">🇧🇩</span>
-                <span className="font-bold">বাংলা</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => handleLanguageChange("english")}
-                className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1 text-xs font-semibold rounded-lg transition-all ${
-                  languageMode === "english"
-                    ? "bg-white text-[#2563EB] shadow-xs"
-                    : "text-[#64748B] hover:text-[#0F172A]"
-                }`}
-                title="English Medium (ICT & Model Questions)"
-              >
-                <span className="text-xs sm:text-sm">🇬🇧</span>
-                <span className="font-bold">English</span>
-              </button>
+          <div className="flex items-center gap-2">
+            <div className="hidden rounded-lg border border-examino-border bg-slate-50 p-0.5 sm:flex" role="group" aria-label="Question language">
+              {[
+                ["bangla", "বাংলা"],
+                ["english", "English"],
+              ].map(([k, label]) => (
+                <button
+                  key={k}
+                  type="button"
+                  onClick={() => setLanguagePref(k)}
+                  aria-pressed={lang === k}
+                  className={cx("rounded-md px-2.5 py-1 text-xs font-semibold", lang === k ? "bg-white text-examino-text shadow-subtle" : "text-examino-muted hover:text-examino-text")}
+                >
+                  {label}
+                </button>
+              ))}
             </div>
 
-            {/* Direct Switch to Teacher Workspace (ONLY for verified Teacher / Admin) */}
-            {currentUser && (currentUser.role === "tutor" || currentUser.role === "teacher" || currentUser.globalRole === "super_admin") && (
-              <Link
-                to="/teacher"
-                className="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs font-bold rounded-xl bg-[#101B35] text-white hover:bg-[#1E293B] shadow-sm transition-all"
-                title="Open Examino Teacher Workspace"
-              >
-                <span className="text-sm">👨‍🏫</span>
-                <span className="hidden xs:inline sm:inline">Teacher</span>
-                <span className="hidden md:inline">Workspace</span>
-                <span className="text-[10px] text-[#F59E0B] font-extrabold hidden lg:inline">&rarr;</span>
-              </Link>
-            )}
+            <Link to="/notices" className="relative inline-flex h-10 w-10 items-center justify-center rounded-lg text-examino-muted hover:bg-slate-100 hover:text-examino-text" aria-label={`Notices${unread ? `, ${unread} unread` : ""}`}>
+              <Icon name="bell" size={19} />
+              {unread ? (
+                <span className="absolute right-1.5 top-1.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-examino-rose px-1 text-[10px] font-bold text-white">{unread > 9 ? "9+" : unread}</span>
+              ) : null}
+            </Link>
 
-            {/* Notification Bell */}
-            <div className="relative" ref={notifRef}>
+            <div className="relative" ref={menuRef}>
               <button
                 type="button"
-                onClick={() => setNotificationsOpen(!notificationsOpen)}
-                className="relative p-2 text-[#64748B] hover:text-[#0F172A] hover:bg-[#F1F5F9] rounded-full transition-colors focus:outline-none"
-                aria-label="Notifications"
+                onClick={() => setMenuOpen((o) => !o)}
+                aria-expanded={menuOpen}
+                aria-haspopup="menu"
+                className="flex items-center gap-2 rounded-lg p-1 hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-examino-blue"
               >
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="1.75"
-                    d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"
-                  />
-                </svg>
-                {/* Active notification indicator dot */}
-                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-[#EF4444] rounded-full ring-2 ring-white" />
+                <Avatar name={user.name || "Student"} size={32} />
+                <span className="hidden max-w-[120px] truncate text-sm font-semibold text-examino-text lg:block">{user.name || "Student"}</span>
+                <Icon name="chevronDown" size={14} className="hidden text-examino-muted lg:block" />
               </button>
-
-              {/* Notification Popover */}
-              {notificationsOpen && (
-                <div className="absolute right-0 mt-2 w-80 bg-white border border-[#E2E8F0] rounded-xl shadow-dropdown py-3 px-4 z-50">
-                  <div className="flex items-center justify-between pb-2 border-b border-[#F1F5F9]">
-                    <span className="text-xs font-semibold text-[#0F172A] uppercase tracking-wider">Notifications</span>
-                    <span className="text-[11px] text-[#2563EB] cursor-pointer hover:underline">Mark all read</span>
+              {menuOpen ? (
+                <div role="menu" className="absolute right-0 mt-2 w-60 overflow-hidden rounded-xl border border-examino-border bg-white py-1 shadow-dropdown">
+                  <div className="border-b border-examino-border px-4 py-3">
+                    <p className="truncate text-sm font-semibold text-examino-text">{user.name || "Student"}</p>
+                    <p className="truncate text-xs text-examino-muted">{user.email || user.phone || ""}</p>
                   </div>
-                  <div className="divide-y divide-[#F1F5F9] text-xs text-[#0F172A]">
-                    <div className="py-2.5">
-                      <p className="font-semibold text-[#0F172A]">Physics Model Test 04 Result Published</p>
-                      <p className="text-[#64748B] text-[11px] mt-0.5">Your score is 35.5 / 40 (Rank 4 of 126). View detailed answer review.</p>
-                      <span className="text-[10px] text-[#94A3B8] mt-1 block">15m ago</span>
-                    </div>
-                    <div className="py-2.5">
-                      <p className="font-semibold text-[#0F172A]">Upcoming Exam Tonight</p>
-                      <p className="text-[#64748B] text-[11px] mt-0.5">ICT Chapter Test starts at 8:00 PM. Instructions open 15 mins early.</p>
-                      <span className="text-[10px] text-[#94A3B8] mt-1 block">2h ago</span>
-                    </div>
+                  <div className="flex gap-1 border-b border-examino-border p-2 sm:hidden">
+                    {[
+                      ["bangla", "বাংলা"],
+                      ["english", "English"],
+                    ].map(([k, label]) => (
+                      <button key={k} type="button" onClick={() => setLanguagePref(k)} className={cx("flex-1 rounded-md py-1.5 text-xs font-semibold", lang === k ? "bg-examino-blue-light text-examino-blue" : "text-examino-muted")}>
+                        {label}
+                      </button>
+                    ))}
                   </div>
-                </div>
-              )}
-            </div>
-
-            {/* Profile Avatar Pill */}
-            <div className="relative" ref={dropdownRef}>
-              <button
-                type="button"
-                onClick={() => setDropdownOpen(!dropdownOpen)}
-                className="flex items-center gap-2 p-1 rounded-full hover:bg-[#F1F5F9] transition-colors focus:outline-none"
-              >
-                <div className="w-9 h-9 rounded-full bg-[#DBEAFE] text-[#1D4ED8] font-bold text-sm flex items-center justify-center ring-2 ring-transparent hover:ring-[#2563EB]/20 transition-all">
-                  {initials}
-                </div>
-              </button>
-
-              {/* Dropdown Menu */}
-              {dropdownOpen && (
-                <div className="absolute right-0 mt-2 w-56 bg-white border border-[#E2E8F0] rounded-xl shadow-dropdown py-2 z-50">
-                  <div className="px-4 py-2 border-b border-[#F1F5F9]">
-                    <p className="text-sm font-semibold text-[#0F172A] truncate">{studentName}</p>
-                    <p className="text-xs text-[#64748B] truncate">{currentUser.email || "student@examino.edu.bd"}</p>
-                    <span className="inline-block mt-1 px-1.5 py-0.5 text-[10px] font-medium bg-[#ECFDF5] text-[#059669] rounded">
-                      Student Account
-                    </span>
-                  </div>
-
-                  <Link
-                    to="/profile"
-                    onClick={() => setDropdownOpen(false)}
-                    className="flex items-center gap-2.5 px-4 py-2 text-sm text-[#0F172A] hover:bg-[#F8FAFC] transition-colors"
-                  >
-                    <svg className="w-4 h-4 text-[#64748B]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                    </svg>
-                    Profile & settings
-                  </Link>
-
-                  {(currentUser.role === "tutor" || currentUser.role === "org_admin" || currentUser.globalRole === "super_admin") && (
-                    <Link
-                      to="/teacher"
-                      onClick={() => setDropdownOpen(false)}
-                      className="flex items-center gap-2.5 px-4 py-2 text-sm text-[#2563EB] font-bold bg-[#EFF6FF] hover:bg-[#DBEAFE] transition-colors"
-                    >
-                      <svg className="w-4 h-4 text-[#2563EB]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                      </svg>
-                      Teacher Workspace &rarr;
+                  {MENU.map((m) => (
+                    <Link key={m.to} to={m.to} role="menuitem" className="flex items-center gap-3 px-4 py-2 text-sm text-examino-text hover:bg-slate-50">
+                      <Icon name={m.icon} size={16} className="text-examino-muted" />
+                      {m.label}
+                      {m.to === "/notices" && unread ? <span className="ml-auto rounded-full bg-examino-rose-light px-1.5 text-[11px] font-bold text-examino-rose-dark">{unread}</span> : null}
                     </Link>
-                  )}
-
-                  <Link
-                    to="/practice"
-                    onClick={() => setDropdownOpen(false)}
-                    className="flex items-center gap-2.5 px-4 py-2 text-sm text-[#0F172A] hover:bg-[#F8FAFC] transition-colors"
-                  >
-                    <svg className="w-4 h-4 text-[#2563EB]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                    </svg>
-                    Practice Zone
-                  </Link>
-
-                  <Link
-                    to="/question-bank"
-                    onClick={() => setDropdownOpen(false)}
-                    className="flex items-center gap-2.5 px-4 py-2 text-sm text-[#0F172A] hover:bg-[#F8FAFC] transition-colors"
-                  >
-                    <svg className="w-4 h-4 text-[#64748B]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253" />
-                    </svg>
-                    Question Bank
-                  </Link>
-
-                  <Link
-                    to="/saved-questions"
-                    onClick={() => setDropdownOpen(false)}
-                    className="flex items-center gap-2.5 px-4 py-2 text-sm text-[#0F172A] hover:bg-[#F8FAFC] transition-colors"
-                  >
-                    <svg className="w-4 h-4 text-[#F59E0B]" fill="currentColor" viewBox="0 0 20 20">
-                      <path d="M5 4a2 2 0 012-2h6a2 2 0 012 2v14l-5-2.5L5 18V4z" />
-                    </svg>
-                    Saved Questions
-                  </Link>
-
-                  <Link
-                    to="/history"
-                    onClick={() => setDropdownOpen(false)}
-                    className="flex items-center gap-2.5 px-4 py-2 text-sm text-[#0F172A] hover:bg-[#F8FAFC] transition-colors"
-                  >
-                    <svg className="w-4 h-4 text-[#64748B]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    Exam history
-                  </Link>
-
-                  <div className="border-t border-[#F1F5F9] my-1" />
-
-                  <button
-                    type="button"
-                    onClick={handleLogout}
-                    className="w-full flex items-center gap-2.5 px-4 py-2 text-sm text-[#EF4444] hover:bg-[#FEF2F2] transition-colors text-left"
-                  >
-                    <svg className="w-4 h-4 text-[#EF4444]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                    </svg>
+                  ))}
+                  <button type="button" role="menuitem" onClick={() => signOutUser()} className="flex w-full items-center gap-3 border-t border-examino-border px-4 py-2.5 text-sm text-examino-rose-dark hover:bg-examino-rose-light">
+                    <Icon name="logout" size={16} />
                     Sign out
                   </button>
                 </div>
-              )}
+              ) : null}
             </div>
-
           </div>
         </div>
       </header>
 
-      {/* ── MOBILE BOTTOM NAVIGATION (SMARTPHONES) ── */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-[#E2E8F0] shadow-elevated">
-        <div className="grid grid-cols-5 h-16">
-          
-          <Link
-            to="/dashboard"
-            className={`flex flex-col items-center justify-center text-xs font-medium transition-colors ${
-              isActive("/dashboard") ? "text-[#2563EB]" : "text-[#64748B]"
-            }`}
-          >
-            <svg className="w-5 h-5 mb-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-            </svg>
-            <span>Home</span>
-          </Link>
-
-          <Link
-            to="/exams"
-            onClick={() => triggerHaptic("light")}
-            className={`flex flex-col items-center justify-center text-xs font-medium transition-colors btn-smooth ${
-              isActive("/exams") ? "text-[#2563EB] font-bold" : "text-[#64748B]"
-            }`}
-          >
-            <svg className="w-5 h-5 mb-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-            <span>{languageMode === "bangla" ? "পরীক্ষা" : "Exams"}</span>
-          </Link>
-
-          <Link
-            to="/leaderboard"
-            onClick={() => triggerHaptic("light")}
-            className={`flex flex-col items-center justify-center text-xs font-medium transition-colors btn-smooth ${
-              isActive("/leaderboard") ? "text-[#2563EB] font-bold" : "text-[#64748B]"
-            }`}
-          >
-            <span className="text-lg leading-none mb-0.5">🏆</span>
-            <span>{languageMode === "bangla" ? "র‍্যাঙ্কিং" : "Ranks"}</span>
-          </Link>
-
-          <Link
-            to="/weak-topics"
-            onClick={() => triggerHaptic("light")}
-            className={`flex flex-col items-center justify-center text-xs font-medium transition-colors btn-smooth ${
-              isActive("/weak-topics") ? "text-[#2563EB] font-bold" : "text-[#64748B]"
-            }`}
-          >
-            <span className="text-lg leading-none mb-0.5">📖</span>
-            <span>{languageMode === "bangla" ? "রিভিশন" : "Revise"}</span>
-          </Link>
-
-          <Link
-            to="/profile"
-            onClick={() => triggerHaptic("light")}
-            className={`flex flex-col items-center justify-center text-xs font-medium transition-colors btn-smooth ${
-              isActive("/profile") ? "text-[#2563EB] font-bold" : "text-[#64748B]"
-            }`}
-          >
-            <div className="w-5 h-5 mb-0.5 rounded-full bg-[#DBEAFE] text-[#1D4ED8] font-bold text-[10px] flex items-center justify-center">
-              {initials}
-            </div>
-            <span>{languageMode === "bangla" ? "প্রোফাইল" : "Profile"}</span>
-          </Link>
-
+      {/* Mobile bottom navigation */}
+      <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-examino-border bg-white pb-[env(safe-area-inset-bottom)] md:hidden" aria-label="Main">
+        <div className="grid grid-cols-5">
+          {NAV.map((item) => (
+            <Link
+              key={item.to}
+              to={item.to}
+              aria-current={isActive(item) ? "page" : undefined}
+              className={cx("flex h-16 flex-col items-center justify-center gap-1 text-[11px] font-semibold", isActive(item) ? "text-examino-blue" : "text-examino-muted")}
+            >
+              <Icon name={item.icon} size={20} />
+              {item.label}
+            </Link>
+          ))}
         </div>
-      </div>
+      </nav>
     </>
   );
 }

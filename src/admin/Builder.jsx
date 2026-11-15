@@ -456,7 +456,7 @@ function Builder() {
        if (topic) p.append("topic", topic);
     }
 
-    fetch(`${API}/api/questions?${p}`)
+    fetch(`${API}/api/questions?${p}`, { headers: getAuthHeaders() })
       .then(r => r.json())
       .then(data => {
         const q = data || [];
@@ -497,7 +497,7 @@ function Builder() {
       p.append("chapter", chapter);
       p.append("total", examData.marks);
 
-      const res = await fetch(`${API}/api/questions/auto-generate?${p}`);
+      const res = await fetch(`${API}/api/questions/auto-generate?${p}`, { headers: getAuthHeaders() });
       const data = await res.json();
 
       if (!res.ok) {

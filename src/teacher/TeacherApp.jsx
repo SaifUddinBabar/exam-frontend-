@@ -16,6 +16,8 @@ const Subscription = lazy(() => import("./pages/Subscription"));
 const Settings = lazy(() => import("./pages/Settings"));
 const Help = lazy(() => import("./pages/Help"));
 const ComingSoon = lazy(() => import("./pages/ComingSoon"));
+const Batches = lazy(() => import("./pages/Batches"));
+const Notices = lazy(() => import("./pages/Notices"));
 
 function PageFallback() {
   return (
@@ -35,6 +37,8 @@ export default function TeacherApp() {
           <Route index element={page(<Overview />)} />
           <Route path="courses" element={page(<ComingSoon module="courses" />)} />
           <Route path="students" element={page(<Students />)} />
+          <Route path="batches" element={page(<Batches />)} />
+          <Route path="notices" element={page(<Notices />)} />
           <Route path="questions" element={page(<QuestionBank />)} />
           <Route path="questions/new" element={<Navigate to="/teacher/questions?tab=create" replace />} />
           <Route path="exams" element={page(<Exams />)} />

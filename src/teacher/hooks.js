@@ -34,20 +34,20 @@ export function useQuestionMetadata() {
   return state;
 }
 
-export const EMPTY_FILTERS = { search: "", subject: "", chapter: "", topic: "", difficulty: "", boardName: "", boardYear: "" };
+export const EMPTY_FILTERS = { search: "", subject: "", chapter: "", topic: "", difficulty: "", boardName: "", boardYear: "", version: "" };
 
 // GET /api/practice/question-bank (server-side pagination, search and filters)
 export function useQuestionSearch(filters, page, limit = 15) {
   const search = useDebounced(filters.search, 350);
   const [state, setState] = useState({ key: null, status: "loading", questions: [], total: 0, totalPages: 1, error: null });
   const [tick, setTick] = useState(0);
-  const { subject, chapter, topic, difficulty, boardName, boardYear } = filters;
-  const key = JSON.stringify([page, limit, search, subject, chapter, topic, difficulty, boardName, boardYear, tick]);
+  const { subject, chapter, topic, difficulty, boardName, boardYear, version } = filters;
+  const key = JSON.stringify([page, limit, search, subject, chapter, topic, difficulty, boardName, boardYear, version, tick]);
 
   useEffect(() => {
     const ctrl = new AbortController();
     api
-      .questionBank({ page, limit, search, subject, chapter, topic, difficulty, boardName, boardYear }, { signal: ctrl.signal })
+      .questionBank({ page, limit, search, subject, chapter, topic, difficulty, boardName, boardYear, version }, { signal: ctrl.signal })
       .then((res) =>
         setState({
           key,
@@ -62,7 +62,7 @@ export function useQuestionSearch(filters, page, limit = 15) {
         if (err.name !== "AbortError") setState({ key, status: "error", questions: [], total: 0, totalPages: 1, error: err.message });
       });
     return () => ctrl.abort();
-  }, [key, page, limit, search, subject, chapter, topic, difficulty, boardName, boardYear]);
+  }, [key, page, limit, search, subject, chapter, topic, difficulty, boardName, boardYear, version]);
 
   const reload = useCallback(() => setTick((t) => t + 1), []);
   // While a new request is in flight the previous result is stale, so report "loading".

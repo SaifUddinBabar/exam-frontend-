@@ -58,7 +58,7 @@ export default function CreatePracticeTest() {
     async function fetchMeta() {
       setLoadingMeta(true);
       try {
-        const res = await fetch(`${API}/api/practice/metadata?version=${languageMode}`);
+        const res = await fetch(`${API}/api/practice/metadata?version=${languageMode}`, { headers: { Authorization: `Bearer ${localStorage.getItem("token") || ""}` } });
         if (res.ok) {
           const data = await res.json();
           setMetadata(data);
@@ -115,7 +115,7 @@ export default function CreatePracticeTest() {
           difficulty: selectedDifficulty,
           version: languageMode,
         });
-        const res = await fetch(`${API}/api/practice/available-count?${params.toString()}`);
+        const res = await fetch(`${API}/api/practice/available-count?${params.toString()}`, { headers: { Authorization: `Bearer ${localStorage.getItem("token") || ""}` } });
         if (res.ok && !isCancelled) {
           const data = await res.json();
           setAvailableCount(data.count || 0);

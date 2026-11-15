@@ -10,6 +10,8 @@ export const NAV_SECTIONS = [
     items: [
       { to: "/teacher/courses", label: "My Courses", icon: "book", soon: true },
       { to: "/teacher/students", label: "My Students", icon: "users" },
+      { to: "/teacher/batches", label: "Batches", icon: "layers" },
+      { to: "/teacher/notices", label: "Notices", icon: "megaphone" },
     ],
   },
   {

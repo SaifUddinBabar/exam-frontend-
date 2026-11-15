@@ -1,219 +1,175 @@
-import { useState, useEffect } from "react";
-import { useSearchParams, useNavigate } from "react-router-dom";
+import { useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { QuestionPicker } from "../components/questions";
 import CreateQuestion from "./CreateQuestion";
 import PaperBuilder from "./PaperBuilder";
 import { useTeacherData } from "../teacherData";
-import { triggerHaptic } from "../../utils/haptics";
-import Icon from "../components/Icon";
+import { api } from "../api";
+import { useToast } from "../toast";
+import { Badge, Button, Drawer, EmptyState, ErrorState, PageHeader, SkeletonRows, Tabs } from "../components/ui";
+import useAsync from "../../lib/useAsync";
+import { fmtDateTime } from "../utils";
 
-const cx = (...c) => c.filter(Boolean).join(" ");
+const REASON = {
+  wrong_answer: "Wrong correct answer",
+  typo: "Typo / formatting",
+  wrong_subject: "Wrong subject / chapter",
+  wrong_topic: "Wrong topic",
+  image_missing: "Image missing / wrong",
+  duplicate: "Duplicate",
+  language: "Language mixed",
+  other: "Other",
+};
+
+function ReportsDrawer({ open, onClose }) {
+  const res = useAsync((signal) => (open ? api.questionReports("open", { signal }) : Promise.resolve({ reports: [] })), [open]);
+  const { notify } = useToast();
+  const act = async (r, status) => {
+    try {
+      await api.resolveReport(r._id, status);
+      notify({ title: status === "resolved" ? "Marked as fixed" : "Report dismissed" });
+      res.reload();
+    } catch (e) {
+      notify({ tone: "error", title: "Couldn't update", description: e.message });
+    }
+  };
+  return (
+    <Drawer open={open} onClose={onClose} title="Question reports">
+      {res.status === "loading" ? (
+        <SkeletonRows rows={3} />
+      ) : res.status === "error" ? (
+        <ErrorState message={res.error} onRetry={res.reload} />
+      ) : !res.data.reports.length ? (
+        <EmptyState icon="check" title="No open reports." />
+      ) : (
+        <ul className="space-y-3">
+          {res.data.reports.map((r) => (
+            <li key={r._id} className="rounded-xl border border-examino-border p-3">
+              <div className="mb-1 flex items-center gap-2">
+                <Badge tone="amber">{REASON[r.reason] || r.reason}</Badge>
+                <span className="text-xs text-examino-muted">{fmtDateTime(r.createdAt)}</span>
+              </div>
+              <p className="line-clamp-2 text-sm font-medium text-examino-text font-bengali">{r.questionId?.question}</p>
+              <p className="text-xs text-examino-muted font-bengali">{[r.questionId?.chapter, r.questionId?.topic].filter(Boolean).join(" › ")}</p>
+              {r.note ? <p className="mt-1 text-sm text-slate-700">“{r.note}”</p> : null}
+              <p className="mt-1 text-xs text-examino-muted">By {r.reportedBy?.name || "user"}</p>
+              <div className="mt-2 flex gap-2">
+                <Button size="sm" variant="secondary" onClick={() => act(r, "resolved")}>
+                  Mark fixed
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => act(r, "dismissed")}>
+                  Dismiss
+                </Button>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </Drawer>
+  );
+}
 
 export default function QuestionBank() {
   const { userId } = useTeacherData();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  const tab = searchParams.get("tab") || "browse";
+  const [selected, setSelected] = useState(() => new Map());
+  const [editing, setEditing] = useState(null);
+  const [reportsOpen, setReportsOpen] = useState(false);
+  const chosen = [...selected.values()];
 
-  // Tab: 'browse' | 'create' | 'builder'
-  const currentTab = searchParams.get("tab") || "browse";
-  const [selectedQuestions, setSelectedQuestions] = useState(() => new Map());
-  const [editingQuestion, setEditingQuestion] = useState(null);
-
-  const switchTab = (tabName) => {
-    triggerHaptic("light");
-    if (tabName !== "create") setEditingQuestion(null);
-    setSearchParams({ tab: tabName });
+  const switchTab = (t) => {
+    if (t !== "create") setEditing(null);
+    setSearchParams({ tab: t });
   };
-
-  const handleEditQuestion = (q) => {
-    triggerHaptic("medium");
-    setEditingQuestion(q);
-    setSearchParams({ tab: "create" });
-  };
-
-  const toggleQuestion = (q) => {
-    setSelectedQuestions((prev) => {
-      const next = new Map(prev);
-      if (next.has(q._id)) next.delete(q._id);
-      else next.set(q._id, q);
-      return next;
+  const toggle = (q) =>
+    setSelected((prev) => {
+      const m = new Map(prev);
+      if (m.has(q._id)) m.delete(q._id);
+      else m.set(q._id, q);
+      return m;
     });
-  };
-
-  const selectPage = (questions, add) => {
-    setSelectedQuestions((prev) => {
-      const next = new Map(prev);
-      questions.forEach((q) => {
-        if (add) next.set(q._id, q);
-        else next.delete(q._id);
-      });
-      return next;
+  const selectPage = (qs, add) =>
+    setSelected((prev) => {
+      const m = new Map(prev);
+      qs.forEach((q) => (add ? m.set(q._id, q) : m.delete(q._id)));
+      return m;
     });
-  };
-
-  const chosenList = Array.from(selectedQuestions.values());
 
   return (
     <div className="flex flex-col gap-5">
-      {/* Workspace Header & Integrated Tabs */}
-      <div className="flex flex-col gap-4 border-b border-slate-200 pb-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight font-bengali">
-            প্রশ্ন ব্যাংক ও প্রশ্নপত্র প্রস্তুতকরণ
-          </h1>
-          <p className="mt-1 text-xs sm:text-sm text-slate-500 font-medium">
-            প্রশ্ন ব্রাউজ ও ফিল্টারিং, নতুন প্রশ্ন প্রণয়ন এবং প্রিন্ট-উপযোগী প্রশ্নপত্র তৈরি—সব এক জায়গায়।
-          </p>
-        </div>
+      <PageHeader
+        title="Question Bank"
+        description="Browse and filter questions, create or edit questions, and build printable papers — all in one place."
+        actions={
+          <Button variant="secondary" icon="flag" onClick={() => setReportsOpen(true)}>
+            Reports
+          </Button>
+        }
+      />
+      <Tabs
+        label="Question bank sections"
+        value={tab}
+        onChange={switchTab}
+        tabs={[
+          { value: "browse", label: "Browse questions" },
+          { value: "create", label: editing ? "Edit question" : "Create question" },
+          { value: "builder", label: "PDF / Print builder", count: chosen.length || undefined },
+        ]}
+      />
 
-        {/* 3 Unified Tabs */}
-        <div className="flex items-center gap-1 rounded-2xl bg-slate-100 p-1 border border-slate-200/80 shadow-2xs self-start sm:self-auto">
-          <button
-            type="button"
-            onClick={() => switchTab("browse")}
-            className={cx(
-              "flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all",
-              currentTab === "browse"
-                ? "bg-white text-emerald-800 shadow-xs ring-1 ring-slate-200"
-                : "text-slate-600 hover:text-slate-900"
-            )}
-          >
-            <Icon name="database" size={16} />
-            <span>প্রশ্ন ব্যাংক</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => switchTab("create")}
-            className={cx(
-              "flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all",
-              currentTab === "create"
-                ? "bg-white text-emerald-800 shadow-xs ring-1 ring-slate-200"
-                : "text-slate-600 hover:text-slate-900"
-            )}
-          >
-            <Icon name="plusSquare" size={16} />
-            <span>নতুন প্রশ্ন তৈরি</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => switchTab("builder")}
-            className={cx(
-              "flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all",
-              currentTab === "builder"
-                ? "bg-white text-emerald-800 shadow-xs ring-1 ring-slate-200"
-                : "text-slate-600 hover:text-slate-900"
-            )}
-          >
-            <Icon name="file" size={16} />
-            <span>প্রশ্নপত্র বিল্ডার</span>
-            {chosenList.length > 0 && (
-              <span className="ml-0.5 px-2 py-0.2 rounded-full bg-emerald-100 text-emerald-800 text-[11px] font-extrabold">
-                {chosenList.length}
-              </span>
-            )}
-          </button>
-        </div>
-      </div>
-
-      {/* Tab 1: Browse Questions */}
-      {currentTab === "browse" && (
-        <div className="flex flex-col gap-5">
+      {tab === "browse" ? (
+        <>
           <QuestionPicker
-            selected={selectedQuestions}
-            onToggle={toggleQuestion}
+            selected={selected}
+            onToggle={toggle}
             onSelectPage={selectPage}
             userId={userId}
             limit={12}
-            examTitle="প্রশ্ন ব্যাংক এক্সপ্লোরার"
-            onSave={() => switchTab("builder")}
-            onEditQuestion={handleEditQuestion}
+            examTitle="Browse questions"
+            onEditQuestion={(q) => {
+              setEditing(q);
+              setSearchParams({ tab: "create" });
+            }}
           />
-
-          {/* Sticky Quick-Action Bar when questions are chosen */}
-          {chosenList.length > 0 && (
-            <div className="sticky bottom-4 z-40 flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-[#0F172A] p-4 text-white shadow-2xl border border-slate-700 animate-slideUp">
-              <div className="flex items-center gap-3">
-                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500 font-bold text-xs text-white">
-                  ✓
-                </span>
-                <div>
-                  <p className="font-extrabold text-sm text-white">
-                    {chosenList.length} টি প্রশ্ন বাছাই করা হয়েছে
-                  </p>
-                  <p className="text-[11px] text-slate-400">
-                    এখনই প্রশ্নপত্র তৈরি করুন অথবা অনলাইন পরীক্ষা হিসেবে প্রকাশ করুন।
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    triggerHaptic("light");
-                    setSelectedQuestions(new Map());
-                  }}
-                  className="px-3 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white transition-colors"
-                >
-                  সব মুছুন
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    triggerHaptic("medium");
-                    switchTab("builder");
-                  }}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white text-slate-900 font-bold text-xs hover:bg-slate-100 transition-all shadow-xs"
-                >
-                  <Icon name="file" size={14} />
-                  <span>প্রশ্নপত্র তৈরি করুন ({chosenList.length})</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    triggerHaptic("success");
-                    navigate("/teacher/exams/new", { state: { questions: chosenList } });
-                  }}
-                  className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-600 text-white font-bold text-xs hover:bg-emerald-700 transition-all shadow-xs"
-                >
-                  <Icon name="clipboard" size={14} />
-                  <span>অনলাইন পরীক্ষা তৈরি</span>
-                </button>
+          {chosen.length ? (
+            <div className="sticky bottom-4 z-30 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-white/10 bg-examino-navy p-4 text-white shadow-dropdown">
+              <p className="text-sm font-semibold">{chosen.length} questions selected</p>
+              <div className="flex flex-wrap gap-2">
+                <Button size="sm" variant="ghost" className="!text-slate-300 hover:!bg-white/10" onClick={() => setSelected(new Map())}>
+                  Clear
+                </Button>
+                <Button size="sm" variant="secondary" icon="file" onClick={() => switchTab("builder")}>
+                  Build paper
+                </Button>
+                <Button size="sm" icon="clipboard" onClick={() => navigate("/teacher/exams/new", { state: { questions: chosen } })}>
+                  Create online exam
+                </Button>
               </div>
             </div>
-          )}
-        </div>
-      )}
+          ) : null}
+        </>
+      ) : null}
 
-      {/* Tab 2: Create / Edit Question */}
-      {currentTab === "create" && (
-        <div className="animate-fadeIn">
-          <CreateQuestion
-            embedded={true}
-            editQuestion={editingQuestion}
-            onCancelEdit={() => {
-              setEditingQuestion(null);
-              switchTab("browse");
-            }}
-            onSuccess={() => {
-              setEditingQuestion(null);
-              switchTab("browse");
-            }}
-          />
-        </div>
-      )}
+      {tab === "create" ? (
+        <CreateQuestion
+          embedded
+          editQuestion={editing}
+          onCancelEdit={() => {
+            setEditing(null);
+            switchTab("browse");
+          }}
+          onSuccess={() => {
+            setEditing(null);
+            switchTab("browse");
+          }}
+        />
+      ) : null}
 
-      {/* Tab 3: Question Paper / PDF Builder */}
-      {currentTab === "builder" && (
-        <div className="animate-fadeIn">
-          <PaperBuilder
-            embedded={true}
-            preloadedQuestions={chosenList}
-          />
-        </div>
-      )}
+      {tab === "builder" ? <PaperBuilder embedded preloadedQuestions={chosen} /> : null}
+
+      <ReportsDrawer open={reportsOpen} onClose={() => setReportsOpen(false)} />
     </div>
   );
 }

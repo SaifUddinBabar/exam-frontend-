@@ -36,8 +36,12 @@ const CreatePracticeTest = lazy(() => import("./student/CreatePracticeTest"));
 const PracticeSessionPage = lazy(() => import("./student/PracticeSessionPage"));
 const PracticeMistakes = lazy(() => import("./student/PracticeMistakes"));
 const SavedQuestions = lazy(() => import("./student/SavedQuestions"));
-const Leaderboard = lazy(() => import("./student/Leaderboard"));
 const WeakTopics = lazy(() => import("./student/WeakTopics"));
+const StudentNotices = lazy(() => import("./student/StudentNotices"));
+const StudentBatches = lazy(() => import("./student/StudentBatches"));
+const BattleLobby = lazy(() => import("./student/battle/BattleLobby"));
+const BattleMatch = lazy(() => import("./student/battle/BattleMatch"));
+const LeaguePage = lazy(() => import("./student/league/LeaguePage"));
 
 // =========================
 // LAZY-LOADED SUPER ADMIN & COACHING (PRESERVED)
@@ -227,14 +231,7 @@ export default function App() {
             </ProtectedRoute>
           }
         />
-        <Route
-          path="/leaderboard"
-          element={
-            <ProtectedRoute allowedRoles={["student", "tutor", "teacher", "org_admin", "super_admin"]}>
-              <Leaderboard />
-            </ProtectedRoute>
-          }
-        />
+        <Route path="/leaderboard" element={<Navigate to="/league" replace />} />
         <Route
           path="/weak-topics"
           element={
@@ -296,6 +293,47 @@ export default function App() {
           element={
             <ProtectedRoute allowedRoles={["student", "tutor", "teacher", "org_admin", "super_admin"]}>
               <SavedQuestions />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/notices"
+          element={
+            <ProtectedRoute allowedRoles={["student", "tutor", "teacher", "org_admin", "super_admin"]}>
+              <StudentNotices />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/batches"
+          element={
+            <ProtectedRoute allowedRoles={["student"]}>
+              <StudentBatches />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/battle"
+          element={
+            <ProtectedRoute allowedRoles={["student"]}>
+              <BattleLobby />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/battle/:id"
+          element={
+            <ProtectedRoute allowedRoles={["student"]}>
+              <BattleMatch />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/league"
+          element={
+            <ProtectedRoute allowedRoles={["student", "tutor", "teacher", "org_admin", "super_admin"]}>
+              <LeaguePage />
             </ProtectedRoute>
           }
         />

@@ -1,6 +1,38 @@
 import React, { useState, useEffect } from "react";
 import StudentLayout from "./StudentLayout";
 import { signOutUser } from "../firebase/firebase";
+import { Link } from "react-router-dom";
+import { api } from "../teacher/api";
+import useAsync, { currentUser as readUser } from "../lib/useAsync";
+
+// Real academic details: level/group from the profile, batches from memberships.
+function AcademicInfo() {
+  const u = readUser();
+  const { data } = useAsync((signal) => api.myBatches({ signal }), []);
+  const batches = data?.batches || [];
+  const item = (label, value) => (
+    <div>
+      <span className="block text-[11px] text-examino-muted">{label}</span>
+      <p className="mt-0.5 font-bold text-examino-text">{value || "—"}</p>
+    </div>
+  );
+  return (
+    <div className="grid grid-cols-2 gap-4 text-xs sm:grid-cols-3">
+      {item("Level", u.metadata?.level)}
+      {item("Group", u.metadata?.group)}
+      <div>
+        <span className="block text-[11px] text-examino-muted">Batches</span>
+        {batches.length ? (
+          <p className="mt-0.5 font-bold text-examino-text">{batches.map((b) => b.name).join(", ")}</p>
+        ) : (
+          <Link to="/batches" className="mt-0.5 inline-block font-semibold text-examino-blue hover:underline">
+            Join a batch
+          </Link>
+        )}
+      </div>
+    </div>
+  );
+}
 
 export default function StudentProfile() {
   const [currentUser, setCurrentUser] = useState(() => {
@@ -288,24 +320,7 @@ export default function StudentProfile() {
                 <span className="text-[11px] text-[#64748B]">Managed by your coaching centre</span>
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
-                <div>
-                  <span className="text-[#64748B] block text-[11px]">Level</span>
-                  <p className="font-bold text-[#0F172A] mt-0.5">HSC 2027</p>
-                </div>
-                <div>
-                  <span className="text-[#64748B] block text-[11px]">Group</span>
-                  <p className="font-bold text-[#0F172A] mt-0.5">Science</p>
-                </div>
-                <div>
-                  <span className="text-[#64748B] block text-[11px]">Batch</span>
-                  <p className="font-bold text-[#0F172A] mt-0.5">Batch A · Sat/Mon/Wed</p>
-                </div>
-                <div>
-                  <span className="text-[#64748B] block text-[11px]">Centre</span>
-                  <p className="font-bold text-[#0F172A] mt-0.5">Nobodoy Academic Care, Mirpur</p>
-                </div>
-              </div>
+              <AcademicInfo />
             </div>
 
             {/* 3. Preferences Card */}

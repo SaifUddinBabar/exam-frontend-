@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import MathText from "../components/MathText";
+import QuestionImage from "../components/QuestionImage";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
@@ -29,6 +30,7 @@ export default function PracticeSessionPage() {
   const isTimed = durationMinutes > 0;
   const [secondsRemaining, setSecondsRemaining] = useState(durationMinutes * 60);
   const startTimeRef = useRef(Date.now());
+  const submitRef = useRef(null);
 
   useEffect(() => {
     if (!sessionData || !sessionData.questions || sessionData.questions.length === 0) {
@@ -41,7 +43,8 @@ export default function PracticeSessionPage() {
       setSecondsRemaining((prev) => {
         if (prev <= 1) {
           clearInterval(timer);
-          handleSubmitTest(); // Auto-submit when time expires
+          // Auto-submit when time expires — use the latest handler so current answers are sent.
+          submitRef.current?.();
           return 0;
         }
         return prev - 1;
@@ -165,6 +168,7 @@ export default function PracticeSessionPage() {
       setSubmitting(false);
     }
   };
+  submitRef.current = handleSubmitTest;
 
   // Format timer seconds
   const formatTime = (secs) => {
@@ -299,15 +303,7 @@ export default function PracticeSessionPage() {
                     <MathText text={q.question} />
                   </div>
 
-                  {q.image && (
-                    <div className="mb-4 max-w-sm rounded-lg overflow-hidden border border-[#E2E8F0] p-2 bg-[#F8FAFC]">
-                      <img
-                        src={q.image.startsWith("http") ? q.image : `${API}${q.image}`}
-                        alt="Question diagram"
-                        className="w-full h-auto max-h-56 object-contain"
-                      />
-                    </div>
-                  )}
+                  {q.image ? <QuestionImage q={q} className="my-4" /> : null}
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-4">
                     {q.options.map((opt, optIdx) => {
@@ -491,15 +487,7 @@ export default function PracticeSessionPage() {
             </div>
 
             {/* Optional Image */}
-            {currentQ.image && (
-              <div className="max-w-md rounded-xl overflow-hidden border border-[#E2E8F0] p-2 bg-[#F8FAFC]">
-                <img
-                  src={currentQ.image.startsWith("http") ? currentQ.image : `${API}${currentQ.image}`}
-                  alt="Question Diagram"
-                  className="w-full h-auto max-h-64 object-contain"
-                />
-              </div>
-            )}
+            {currentQ.image ? <QuestionImage q={currentQ} className="my-4" /> : null}
 
             {/* 4 Interactive Options */}
             <div className="space-y-3 pt-2">

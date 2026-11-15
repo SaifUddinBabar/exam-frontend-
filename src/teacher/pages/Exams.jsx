@@ -13,7 +13,6 @@ import {
   IconButton,
   LinkButton,
   MenuItem,
-  Notice,
   PageHeader,
   SearchInput,
   Select,
@@ -21,14 +20,125 @@ import {
   Tabs,
 } from "../components/ui";
 import { EXAM_STATUS, examQuestionCount, examStatus, fmtDate, fmtDateTime, fmtNum } from "../utils";
+import { Button, Field, Input, Modal, Toggle } from "../components/ui";
+import AudiencePicker, { audienceError } from "../components/AudiencePicker";
 
-function ExamActions({ exam, onDuplicate, onDelete, onCopy }) {
+const toLocalInput = (d) => {
+  if (!d) return "";
+  const x = new Date(d);
+  return new Date(x.getTime() - x.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+};
+
+function EditExamDialog({ exam, onClose, onSaved }) {
+  const { notify } = useToast();
+  const [f, setF] = useState(null);
+  const [audience, setAudience] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+  if (exam && (!f || f.code !== exam.examCode)) {
+    setF({
+      code: exam.examCode,
+      title: exam.title,
+      duration: exam.duration,
+      startTime: toLocalInput(exam.startTime),
+      endTime: toLocalInput(exam.endTime),
+      solutionReleaseTime: toLocalInput(exam.solutionReleaseTime),
+      allowRetake: Boolean(exam.allowRetake),
+      maxAttempts: exam.maxAttempts || 1,
+      isPublished: exam.isPublished !== false,
+    });
+    const a = exam.assignment || {};
+    setAudience({ mode: a.mode || "all", batchIds: (a.batchIds || []).map(String), students: (a.studentIds || []).map((id) => ({ _id: String(id), name: "Selected student" })) });
+  }
+  if (!exam || !f || !audience) return null;
+  const save = async () => {
+    const a = audienceError(audience);
+    if (a) return setErr(a);
+    if (f.startTime && f.endTime && new Date(f.endTime) <= new Date(f.startTime)) return setErr("End must be after start.");
+    setBusy(true);
+    setErr("");
+    try {
+      const iso = (v) => (v ? new Date(v).toISOString() : null);
+      await api.updateExam(exam.examCode, {
+        title: f.title,
+        duration: Number(f.duration),
+        startTime: iso(f.startTime),
+        endTime: iso(f.endTime),
+        solutionReleaseTime: iso(f.solutionReleaseTime),
+        allowRetake: f.allowRetake,
+        maxAttempts: Number(f.maxAttempts) || 1,
+        isPublished: f.isPublished,
+        assignment: { mode: audience.mode, batchIds: audience.batchIds, studentIds: audience.students.map((s) => s._id) },
+      });
+      notify({ title: "Exam updated", description: exam.title });
+      onSaved();
+    } catch (e) {
+      setErr(e.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <Modal
+      open
+      onClose={onClose}
+      size="lg"
+      title="Exam settings"
+      description={exam.examCode + " · questions can't be changed after publishing; duplicate the exam for a new question set."}
+      footer={
+        <>
+          <Button variant="secondary" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button loading={busy} onClick={save}>
+            Save changes
+          </Button>
+        </>
+      }
+    >
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Field label="Title" htmlFor="ee-title" className="sm:col-span-2">
+          <Input id="ee-title" value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} />
+        </Field>
+        <Field label="Duration (minutes)" htmlFor="ee-dur">
+          <Input id="ee-dur" type="number" min={1} max={600} value={f.duration} onChange={(e) => setF({ ...f, duration: e.target.value })} />
+        </Field>
+        <div className="self-end pb-1">
+          <Toggle checked={f.isPublished} onChange={(v) => setF({ ...f, isPublished: v })} label="Published" description="Unpublished exams are hidden from students." />
+        </div>
+        <Field label="Opens" htmlFor="ee-start">
+          <Input id="ee-start" type="datetime-local" value={f.startTime} onChange={(e) => setF({ ...f, startTime: e.target.value })} />
+        </Field>
+        <Field label="Closes" htmlFor="ee-end">
+          <Input id="ee-end" type="datetime-local" value={f.endTime} onChange={(e) => setF({ ...f, endTime: e.target.value })} />
+        </Field>
+        <Field label="Solutions published" htmlFor="ee-sol">
+          <Input id="ee-sol" type="datetime-local" value={f.solutionReleaseTime} onChange={(e) => setF({ ...f, solutionReleaseTime: e.target.value })} />
+        </Field>
+        <div className="flex items-end gap-3">
+          <Toggle checked={f.allowRetake} onChange={(v) => setF({ ...f, allowRetake: v })} label="Allow retakes" />
+          {f.allowRetake ? <Input aria-label="Max attempts" type="number" min={1} max={20} value={f.maxAttempts} onChange={(e) => setF({ ...f, maxAttempts: e.target.value })} className="h-9 w-20" /> : null}
+        </div>
+        <div className="sm:col-span-2">
+          <p className="mb-2 text-[13px] font-medium text-examino-text">Who can take this exam</p>
+          <AudiencePicker value={audience} onChange={setAudience} />
+        </div>
+        {err ? <p className="text-sm font-medium text-examino-rose-dark sm:col-span-2">{err}</p> : null}
+      </div>
+    </Modal>
+  );
+}
+
+function ExamActions({ exam, onDuplicate, onDelete, onCopy, onEdit }) {
   const navigate = useNavigate();
   return (
     <Dropdown
       width="w-48"
       trigger={({ toggle, open }) => <IconButton icon="dots" label={`Actions for ${exam.title}`} aria-expanded={open} onClick={toggle} className="h-8 w-8" />}
     >
+      <MenuItem icon="settings" onClick={() => onEdit(exam)}>
+        Edit settings
+      </MenuItem>
       <MenuItem icon="chart" onClick={() => navigate(`/teacher/results/${exam.examCode}`)}>
         View results
       </MenuItem>
@@ -40,7 +150,7 @@ function ExamActions({ exam, onDuplicate, onDelete, onCopy }) {
       </MenuItem>
       <div className="my-1 h-px bg-examino-border" />
       <MenuItem icon="trash" tone="danger" onClick={() => onDelete(exam)}>
-        Delete…
+        Remove…
       </MenuItem>
     </Dropdown>
   );
@@ -54,6 +164,7 @@ export default function Exams() {
   const [sort, setSort] = useState("newest");
   const [toDelete, setToDelete] = useState(null);
   const [deleting, setDeleting] = useState(false);
+  const [editing, setEditing] = useState(null);
 
   const counts = useMemo(() => {
     const c = { all: exams.length, live: 0, scheduled: 0, open: 0, completed: 0, draft: 0 };
@@ -92,9 +203,16 @@ export default function Exams() {
         questions: exam.questions,
         duration: exam.duration,
         negativeMarkPerWrong: exam.negativeMarkPerWrong || 0,
+        examType: exam.examType,
+        allowRetake: exam.allowRetake,
+        maxAttempts: exam.maxAttempts,
+        isPublished: false,
+        assignment: exam.assignment?.mode
+          ? { mode: exam.assignment.mode, batchIds: (exam.assignment.batchIds || []).map(String), studentIds: (exam.assignment.studentIds || []).map(String) }
+          : { mode: "all" },
       });
       addExam({ ...created, submissionCount: 0 });
-      notify({ title: "Exam duplicated", description: `New code ${created.examCode}` });
+      notify({ title: "Exam duplicated as unpublished", description: `New code ${created.examCode}. Open Edit settings to schedule and publish it.` });
     } catch (err) {
       notify({ tone: "error", title: "Couldn't duplicate exam", description: err.message });
     }
@@ -105,10 +223,10 @@ export default function Exams() {
     try {
       await api.deleteExam(toDelete.examCode);
       removeExam(toDelete.examCode);
-      notify({ title: "Exam deleted", description: toDelete.title });
+      notify({ title: "Exam removed", description: `${toDelete.title}. Student results were kept.` });
       setToDelete(null);
     } catch (err) {
-      notify({ tone: "error", title: "Couldn't delete exam", description: err.message });
+      notify({ tone: "error", title: "Couldn't remove exam", description: err.message });
     } finally {
       setDeleting(false);
     }
@@ -162,9 +280,9 @@ export default function Exams() {
           />
         ) : !list.length ? (
           tab === "draft" ? (
-            <EmptyState icon="info" title="No drafts" description="Exams created through the current API are published immediately, so there are no drafts to show." />
+            <EmptyState icon="info" title="No unpublished exams" description="Duplicated exams start unpublished; publish them from Edit settings." />
           ) : tab === "scheduled" || tab === "live" ? (
-            <EmptyState icon="clock" title={`No ${tab} exams`} description="The create-exam API doesn't accept start and end times yet, so new exams stay open until you delete them." />
+            <EmptyState icon="clock" title={`No ${tab} exams`} description="Set opening and closing times when you create an exam, or from Edit settings." />
           ) : (
             <EmptyState icon="search" title="No exams match" description="Try another search or tab." />
           )
@@ -220,24 +338,8 @@ export default function Exams() {
                         <td className="px-3 py-3 text-examino-muted">{fmtDate(e.createdAt)}</td>
                         <td className="px-5 py-3 text-right">
                           <div className="flex items-center justify-end gap-1.5">
-                            <button
-                              type="button"
-                              title="Delete Exam"
-                              onClick={() => setToDelete(e)}
-                              className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
-                            >
-                              <Icon name="trash" size={16} />
-                            </button>
                             <div className="flex items-center gap-1 shrink-0">
-                      <button
-                        type="button"
-                        title="Delete Exam"
-                        onClick={() => setToDelete(e)}
-                        className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
-                      >
-                        <Icon name="trash" size={17} />
-                      </button>
-                      <ExamActions exam={e} onCopy={copyLink} onDuplicate={duplicate} onDelete={setToDelete} />
+                      <ExamActions exam={e} onCopy={copyLink} onDuplicate={duplicate} onDelete={setToDelete} onEdit={setEditing} />
                     </div>
                           </div>
                         </td>
@@ -263,15 +365,7 @@ export default function Exams() {
                       </span>
                     </Link>
                     <div className="flex items-center gap-1 shrink-0">
-                      <button
-                        type="button"
-                        title="Delete Exam"
-                        onClick={() => setToDelete(e)}
-                        className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
-                      >
-                        <Icon name="trash" size={17} />
-                      </button>
-                      <ExamActions exam={e} onCopy={copyLink} onDuplicate={duplicate} onDelete={setToDelete} />
+                      <ExamActions exam={e} onCopy={copyLink} onDuplicate={duplicate} onDelete={setToDelete} onEdit={setEditing} />
                     </div>
                   </li>
                 );
@@ -281,23 +375,28 @@ export default function Exams() {
         )}
       </Card>
 
-      <Notice tone="neutral" className="mt-5">
-        Editing an exam, saving drafts, scheduling and attempt limits need backend support that isn't available yet. To change an exam today, duplicate it with new questions and delete the old one.
-      </Notice>
+      <EditExamDialog
+        exam={editing}
+        onClose={() => setEditing(null)}
+        onSaved={() => {
+          setEditing(null);
+          reload();
+        }}
+      />
 
       <ConfirmDialog
         open={!!toDelete}
-        title="Delete this exam?"
-        confirmLabel="Delete exam"
+        title="Remove this exam?"
+        confirmLabel="Remove exam"
         busy={deleting}
         onCancel={() => setToDelete(null)}
         onConfirm={confirmDelete}
       >
         <p>
-          <b className="font-semibold text-examino-text">{toDelete?.title}</b> ({toDelete?.examCode}) will be removed for everyone.
+          <b className="font-semibold text-examino-text">{toDelete?.title}</b> ({toDelete?.examCode}) will be hidden from students and from this list.
         </p>
         <p className="mt-2">
-          The server also permanently deletes its <b className="font-semibold text-examino-text">{fmtNum(toDelete?.submissionCount || 0)} submissions</b>. Download results first if you need them. This can't be undone.
+          Its <b className="font-semibold text-examino-text">{fmtNum(toDelete?.submissionCount || 0)} submissions</b> stay in the database; nothing is permanently deleted.
         </p>
       </ConfirmDialog>
     </>
