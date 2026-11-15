@@ -15,9 +15,7 @@ export const NAV_SECTIONS = [
   {
     label: "Content",
     items: [
-      { to: "/teacher/questions", label: "Question Bank", icon: "database", end: true },
-      { to: "/teacher/questions/new", label: "Create Question", icon: "plusSquare" },
-      { to: "/teacher/paper-builder", label: "Question Paper Builder", icon: "file" },
+      { to: "/teacher/questions", label: "Question Bank", icon: "database" },
     ],
   },
   {

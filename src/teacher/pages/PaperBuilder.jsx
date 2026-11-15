@@ -104,14 +104,14 @@ function Paper({ info, sections, showKey }) {
   );
 }
 
-export default function PaperBuilder() {
+export default function PaperBuilder({ preloadedQuestions, initialTitle, embedded = false }) {
   const location = useLocation();
   const { exams, userId } = useTeacherData();
   const { notify } = useToast();
-  const initialQs = location.state?.questions || [];
+  const initialQs = location.state?.questions || preloadedQuestions || [];
   const [info, setInfo] = useState(() => ({
     institution: "",
-    examName: location.state?.title || "",
+    examName: location.state?.title || initialTitle || "",
     className: "",
     subject: initialQs[0]?.subject || "",
     duration: 25,

@@ -14,7 +14,7 @@ const BOARDS = ["Dhaka", "Chittagong", "Rajshahi", "Cumilla", "Jessore", "Barish
 const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
 
 const blank = (keep = {}) => ({
-  subject: keep.subject || "",
+  subject: keep.subject || "ICT",
   chapter: keep.chapter || "",
   topic: keep.topic || "",
   difficulty: keep.difficulty || "medium",
@@ -22,9 +22,16 @@ const blank = (keep = {}) => ({
   boardName: keep.boardName || "",
   boardYear: keep.boardYear || "",
   question: "",
+  questionBn: "",
+  questionEn: "",
   options: ["", "", "", ""],
+  optionsBn: ["", "", "", ""],
+  optionsEn: ["", "", "", ""],
   correct: null,
   explanation: "",
+  explanationBn: "",
+  explanationEn: "",
+  langMode: "bangla", // 'bangla' | 'english' | 'bilingual'
 });
 
 function validate(f) {
@@ -45,11 +52,11 @@ function validate(f) {
   return e;
 }
 
-export default function CreateQuestion() {
+export default function CreateQuestion({ embedded = false, onSuccess, editQuestion = null, onCancelEdit }) {
   const meta = useQuestionMetadata();
   const navigate = useNavigate();
   const { notify } = useToast();
-  const [form, setForm] = useState(blank);
+  const [form, setForm] = useState(() => blank());
   const [image, setImage] = useState(null);
   const [errors, setErrors] = useState({});
   const [touched, setTouched] = useState(false);
@@ -57,6 +64,37 @@ export default function CreateQuestion() {
   const [serverError, setServerError] = useState("");
   const fileRef = useRef(null);
   const questionRef = useRef(null);
+
+  useEffect(() => {
+    if (editQuestion) {
+      const opts = Array.isArray(editQuestion.options)
+        ? editQuestion.options.map((o) => (typeof o === "string" ? o : o.text || ""))
+        : ["", "", "", ""];
+      while (opts.length < 4) opts.push("");
+      const correctIdx = opts.findIndex((o) => o === editQuestion.correctAnswer);
+      const isEnglish = editQuestion.version === "english" || (/^[a-zA-Z0-9\s.,?!'"()-]+$/.test(editQuestion.question || "") && !/[\u0980-\u09FF]/.test(editQuestion.question || ""));
+      setForm({
+        subject: editQuestion.subject || "ICT",
+        chapter: editQuestion.chapter || "",
+        topic: editQuestion.topic || "",
+        difficulty: editQuestion.difficulty || "medium",
+        questionType: editQuestion.questionType || "normal",
+        boardName: editQuestion.boardName || "",
+        boardYear: editQuestion.boardYear || "",
+        question: editQuestion.question || "",
+        questionBn: editQuestion.questionBn || (!isEnglish ? editQuestion.question : ""),
+        questionEn: editQuestion.questionEn || (isEnglish ? editQuestion.question : ""),
+        options: opts.slice(0, 4),
+        optionsBn: editQuestion.optionsBn?.length === 4 ? editQuestion.optionsBn : opts.slice(0, 4),
+        optionsEn: editQuestion.optionsEn?.length === 4 ? editQuestion.optionsEn : ["", "", "", ""],
+        correct: correctIdx >= 0 ? correctIdx : 0,
+        explanation: editQuestion.explanation || "",
+        explanationBn: editQuestion.explanationBn || (!isEnglish ? editQuestion.explanation : ""),
+        explanationEn: editQuestion.explanationEn || (isEnglish ? editQuestion.explanation : ""),
+        langMode: editQuestion.questionBn && editQuestion.questionEn ? "bilingual" : (isEnglish ? "english" : "bangla")
+      });
+    }
+  }, [editQuestion]);
 
   const set = (patch) => {
     const next = { ...form, ...patch };
@@ -121,8 +159,9 @@ export default function CreateQuestion() {
       return;
     }
     const options = form.options.map((o) => o.trim());
+    const mainQuestion = (form.question || (form.langMode === "english" ? form.questionEn : form.questionBn) || "").trim();
     const fd = new FormData();
-    fd.append("question", form.question.trim());
+    fd.append("question", mainQuestion);
     fd.append("options", JSON.stringify(options));
     fd.append("correctAnswer", options[form.correct]);
     fd.append("subject", form.subject.trim());
@@ -130,6 +169,11 @@ export default function CreateQuestion() {
     fd.append("topic", form.topic.trim());
     fd.append("difficulty", form.difficulty);
     fd.append("questionType", form.questionType);
+    if (form.questionBn) fd.append("questionBn", form.questionBn.trim());
+    if (form.questionEn) fd.append("questionEn", form.questionEn.trim());
+    if (form.explanationBn) fd.append("explanationBn", form.explanationBn.trim());
+    if (form.explanationEn) fd.append("explanationEn", form.explanationEn.trim());
+    fd.append("version", form.langMode === "english" ? "english" : (form.langMode === "bangla" ? "bangla" : "bilingual"));
     if (form.questionType === "board") {
       fd.append("boardName", form.boardName);
       fd.append("boardYear", form.boardYear);
@@ -139,20 +183,35 @@ export default function CreateQuestion() {
 
     setSaving(true);
     try {
-      await api.createQuestion(fd);
-      notify({
-        title: "Question saved",
-        description: `${form.subject} · ${form.chapter}`,
-        action: { label: "View bank", onClick: () => navigate(`/teacher/questions?search=${encodeURIComponent(form.question.trim().slice(0, 40))}`) },
-      });
-      setForm(blank(form));
+      if (editQuestion?._id) {
+        await api.updateQuestion(editQuestion._id, fd);
+        notify({
+          title: "প্রশ্ন আপডেট সম্পন্ন হয়েছে",
+          description: `${form.subject} · ${form.chapter}`
+        });
+      } else {
+        await api.createQuestion(fd);
+        notify({
+          title: "প্রশ্ন সংরক্ষণ করা হয়েছে",
+          description: `${form.subject} · ${form.chapter}`,
+          action: {
+            label: "ব্যাংক দেখুন",
+            onClick: () => {
+              if (onSuccess) onSuccess();
+              else navigate(`/teacher/questions?search=${encodeURIComponent(mainQuestion.slice(0, 40))}`);
+            }
+          }
+        });
+        setForm(blank(form));
+      }
       setImage(null);
       setTouched(false);
       setErrors({});
       questionRef.current?.focus();
+      if (onSuccess) onSuccess();
     } catch (err) {
       setServerError(err.message);
-      notify({ tone: "error", title: "Couldn't save the question", description: err.message });
+      notify({ tone: "error", title: "সংরক্ষণ করা যায়নি", description: err.message });
     } finally {
       setSaving(false);
     }
@@ -180,11 +239,43 @@ export default function CreateQuestion() {
         </Notice>
       ) : null}
 
+      {editQuestion ? (
+        <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-amber-500/10 border border-amber-300 p-4">
+          <div className="flex items-center gap-2">
+            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-amber-500 text-white font-bold text-xs">
+              ✏️
+            </span>
+            <div>
+              <p className="font-extrabold text-sm text-amber-900">প্রশ্ন সম্পাদনা মোড (Edit Question)</p>
+              <p className="text-xs text-amber-700">Question ID: {editQuestion._id}</p>
+            </div>
+          </div>
+          {onCancelEdit ? (
+            <Button variant="secondary" size="sm" onClick={onCancelEdit}>
+              বাতিল করুন (Cancel)
+            </Button>
+          ) : null}
+        </div>
+      ) : null}
+
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_400px]">
         <div className="flex flex-col gap-6">
           <Card>
-            <CardHeader title="Classification" description="Used for filtering in the bank and for exam analytics" />
+            <CardHeader title="Classification & Language" description="বিষয়, চ্যাপ্টার, টপিক, ভাষা এবং কাঠিন্যের মান নির্ধারণ করুন" />
             <div className="grid gap-4 p-5 sm:grid-cols-2">
+              <Field label="ভাষার ধরন (Language)" className="sm:col-span-2">
+                <Segmented
+                  label="Language Mode"
+                  value={form.langMode}
+                  onChange={(v) => set({ langMode: v })}
+                  options={[
+                    { value: "bangla", label: "🇧🇩 বাংলা ভার্সন" },
+                    { value: "english", label: "🇬🇧 English Version" },
+                    { value: "bilingual", label: "🌐 উভয় ভার্সন (Bilingual)" },
+                  ]}
+                />
+              </Field>
+
               <Field label="Subject" htmlFor="cq-subject" required error={errors.subject}>
                 <Input id="cq-subject" list="cq-subjects" value={form.subject} invalid={!!errors.subject} onChange={(e) => set({ subject: e.target.value, chapter: "", topic: "" })} placeholder="e.g. ICT" />
                 <datalist id="cq-subjects">
@@ -215,9 +306,10 @@ export default function CreateQuestion() {
                   value={form.difficulty}
                   onChange={(v) => set({ difficulty: v })}
                   options={[
-                    { value: "easy", label: "Easy" },
-                    { value: "medium", label: "Medium" },
-                    { value: "hard", label: "Hard" },
+                    { value: "easy", label: "সহজ" },
+                    { value: "medium", label: "মাঝারি" },
+                    { value: "hard", label: "কঠিন" },
+                    { value: "unclassified", label: "অনির্ধারিত" },
                   ]}
                 />
               </Field>

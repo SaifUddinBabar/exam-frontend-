@@ -1,6 +1,6 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import MathText from "../../components/MathText";
-import { imageUrl } from "../api";
+import { api, imageUrl } from "../api";
 import { EMPTY_FILTERS, useQuestionMetadata, useQuestionSearch } from "../hooks";
 import { Badge, Button, EmptyState, ErrorState, Pagination, SearchInput, Select, SkeletonRows } from "./ui";
 import Icon from "./Icon";
@@ -232,7 +232,7 @@ export function QuestionFilters({ filters, onChange, meta, compact }) {
   );
 }
 
-export function QuestionCard({ q, index, selected, onToggle, showAnswer = true, mine }) {
+export function QuestionCard({ q, index, selected, onToggle, showAnswer = true, mine, langVersion = "bangla", onReport, onEdit }) {
   const [openExplanation, setOpenExplanation] = useState(false);
 
   const handleToggle = () => {
@@ -278,14 +278,50 @@ export function QuestionCard({ q, index, selected, onToggle, showAnswer = true, 
                   {q.boardName} {q.boardYear}
                 </span>
               ) : null}
+              {q.difficulty ? (
+                <span
+                  className={cx(
+                    "inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold tracking-wide border shadow-2xs",
+                    q.difficulty === "easy"
+                      ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                      : q.difficulty === "hard"
+                      ? "bg-rose-50 text-rose-700 border-rose-200"
+                      : q.difficulty === "unclassified"
+                      ? "bg-slate-100 text-slate-700 border-slate-300"
+                      : "bg-amber-50 text-amber-700 border-amber-200"
+                  )}
+                >
+                  {q.difficulty === "easy"
+                    ? "সহজ"
+                    : q.difficulty === "hard"
+                    ? "কঠিন"
+                    : q.difficulty === "unclassified"
+                    ? "অনির্ধারিত"
+                    : "মাঝারি"}
+                </span>
+              ) : null}
               {q.topic ? (
-                <span className="max-w-[200px] truncate text-[11px] font-medium text-slate-500">
+                <span className="max-w-[180px] truncate text-[11px] font-medium text-slate-500">
                   {q.topic}
                 </span>
               ) : null}
             </div>
 
             <div className="flex items-center gap-2">
+              {onEdit ? (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    triggerHaptic("light");
+                    onEdit(q);
+                  }}
+                  title="প্রশ্ন সম্পাদনা করুন"
+                  className="text-xs font-semibold text-slate-500 hover:text-blue-600 flex items-center gap-1 px-1.5 py-0.5 rounded hover:bg-blue-50 transition-colors"
+                >
+                  <span>✏️ এডিট</span>
+                </button>
+              ) : null}
               {q.explanation ? (
                 <button
                   type="button"
@@ -299,9 +335,32 @@ export function QuestionCard({ q, index, selected, onToggle, showAnswer = true, 
                   <span>{openExplanation ? "ব্যাখ্যা লুকান" : "ব্যাখ্যা দেখুন"}</span>
                 </button>
               ) : null}
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  triggerHaptic("light");
+                  if (onReport) onReport(q);
+                }}
+                title="প্রশ্নে ভুল থাকলে রিপোর্ট করুন"
+                className="text-xs font-semibold text-slate-400 hover:text-rose-600 flex items-center gap-1 px-1.5 py-0.5 rounded transition-colors"
+              >
+                <span>🚩 রিপোর্ট</span>
+              </button>
               <span className="text-slate-400 text-sm">💬</span>
             </div>
           </div>
+
+          {/* Language mismatch notice */}
+          {langVersion === "english" && !/[a-zA-Z]/.test(q.question) ? (
+            <div className="mt-2 px-3 py-1 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-[11px] font-bold">
+              ⚠️ Translation unavailable (শুধুমাত্র বাংলা সংস্করণ উপলব্ধ)
+            </div>
+          ) : langVersion === "bangla" && !/[\u0980-\u09FF]/.test(q.question) ? (
+            <div className="mt-2 px-3 py-1 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-[11px] font-bold">
+              ⚠️ অনুবাদ উপলব্ধ নেই (English Version Only)
+            </div>
+          ) : null}
 
           {/* Question Text */}
           <div className="mt-3">
@@ -311,14 +370,23 @@ export function QuestionCard({ q, index, selected, onToggle, showAnswer = true, 
             </p>
           </div>
 
-          {q.image ? (
-            <img
-              src={imageUrl(q.image)}
-              alt="Question figure"
-              loading="lazy"
-              className="mt-3 max-h-48 rounded-xl border border-slate-200 object-contain shadow-xs"
-            />
-          ) : null}
+          {(() => {
+            const rawImg = q.image || q.imageUrl || (Array.isArray(q.images) && q.images[0]);
+            if (!rawImg) return null;
+            return (
+              <div className="mt-3 group relative inline-block">
+                <img
+                  src={imageUrl(rawImg)}
+                  alt="Question figure"
+                  loading="lazy"
+                  onError={(e) => {
+                    e.currentTarget.style.display = "none";
+                  }}
+                  className="max-h-56 max-w-full rounded-xl border border-slate-200 bg-white p-1 object-contain shadow-xs transition-transform hover:scale-[1.02]"
+                />
+              </div>
+            );
+          })()}
 
           {/* 4 Options Grid matching user screenshot */}
           <div className="mt-3.5 grid gap-2 sm:grid-cols-2">
@@ -377,7 +445,8 @@ export function QuestionPicker({
   limit = 15,
   examTitle = "",
   onPreview,
-  onSave
+  onSave,
+  onEditQuestion
 }) {
   const meta = useQuestionMetadata();
   const [filters, setFilters] = useState({
@@ -388,6 +457,10 @@ export function QuestionPicker({
   const [page, setPage] = useState(1);
   const [mobileTopicOpen, setMobileTopicOpen] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [langVersion, setLangVersion] = useState("bangla");
+  const [topicCounts, setTopicCounts] = useState({});
+  const [diffStats, setDiffStats] = useState({ total: 0, easy: 0, medium: 0, hard: 0 });
+  const [reportNotification, setReportNotification] = useState("");
 
   // Chapter list
   const allChapters = useMemo(() => {
@@ -419,6 +492,25 @@ export function QuestionPicker({
     );
     return match ? HSC_STANDARD_CHAPTER_TOPICS[match] : [];
   }, [filters.chapter]);
+
+  // Live Topic Counts & Difficulty Breakdown from Backend
+  useEffect(() => {
+    let active = true;
+    if (!filters.chapter) return;
+    api.topicCounts({
+      chapter: filters.chapter,
+      subject: filters.subject || "ICT",
+      version: langVersion,
+      topics: JSON.stringify(currentTopics),
+    })
+      .then((res) => {
+        if (!active || !res?.success) return;
+        setTopicCounts(res.topicCounts || {});
+        if (res.stats) setDiffStats(res.stats);
+      })
+      .catch((err) => console.warn("Failed to fetch topic counts:", err));
+    return () => { active = false; };
+  }, [filters.chapter, filters.subject, langVersion, currentTopics]);
 
   // When chapter changes, clear selected topics
   const handleChapterChange = (chapterName) => {
@@ -483,13 +575,51 @@ export function QuestionPicker({
         <div className="flex flex-col gap-4 min-w-0">
           {/* Top Action Bar (Matching screenshot) */}
           <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-slate-200 shadow-xs">
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
               <span className="font-bold text-slate-800 text-base sm:text-lg">
                 {examTitle || "প্রশ্ন নির্বাচন"}
               </span>
               <span className="px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 font-bold text-xs border border-emerald-200 shadow-2xs">
                 {selected.size} নির্বাচিত
               </span>
+
+              {/* Language Version Switcher */}
+              <div className="flex items-center gap-1 rounded-xl bg-slate-100 p-1 border border-slate-200/80">
+                <button
+                  type="button"
+                  onClick={() => {
+                    triggerHaptic("light");
+                    setLangVersion("bangla");
+                    setFilters((prev) => ({ ...prev, version: "bangla" }));
+                    setPage(1);
+                  }}
+                  className={cx(
+                    "flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold transition-all",
+                    langVersion === "bangla"
+                      ? "bg-white text-emerald-800 shadow-xs ring-1 ring-slate-200"
+                      : "text-slate-600 hover:text-slate-900"
+                  )}
+                >
+                  <span>🇧🇩 বাংলা ভার্সন</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    triggerHaptic("light");
+                    setLangVersion("english");
+                    setFilters((prev) => ({ ...prev, version: "english" }));
+                    setPage(1);
+                  }}
+                  className={cx(
+                    "flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold transition-all",
+                    langVersion === "english"
+                      ? "bg-white text-emerald-800 shadow-xs ring-1 ring-slate-200"
+                      : "text-slate-600 hover:text-slate-900"
+                  )}
+                >
+                  <span>🇬🇧 English Version</span>
+                </button>
+              </div>
             </div>
 
             <div className="flex items-center gap-3">
@@ -541,12 +671,19 @@ export function QuestionPicker({
             </div>
           </div>
 
+          {/* Report Alert Banner if triggered */}
+          {reportNotification && (
+            <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-center text-xs font-semibold text-emerald-900 animate-fadeIn">
+              {reportNotification}
+            </div>
+          )}
+
           {/* Yellow Banner (Matching screenshot) */}
           <div className="rounded-xl border border-amber-200/90 bg-amber-50/80 px-4 py-2.5 text-center text-xs font-semibold text-amber-900 shadow-2xs">
             প্রশ্নে ভুল পেলে রিপোর্ট করে প্রশ্নব্যাংক সমৃদ্ধ করুন।
           </div>
 
-          {/* Search & Difficulty Filter Mini-bar */}
+          {/* Search & Difficulty Filter Mini-bar with Live Counts */}
           <div className="flex flex-wrap items-center gap-2">
             <div className="flex-1 min-w-[200px]">
               <SearchInput
@@ -559,24 +696,36 @@ export function QuestionPicker({
                 label="Search"
               />
             </div>
-            <div className="flex items-center gap-1">
-              {["", "easy", "medium", "hard"].map((diff) => (
+            <div className="flex items-center gap-1 flex-wrap">
+              {[
+                { id: "", label: "সকল", count: diffStats.total || result.total },
+                { id: "easy", label: "সহজ", count: diffStats.easy },
+                { id: "medium", label: "মাঝারি", count: diffStats.medium },
+                { id: "hard", label: "কঠিন", count: diffStats.hard },
+                ...(diffStats.unclassified ? [{ id: "unclassified", label: "অনির্ধারিত", count: diffStats.unclassified }] : []),
+              ].map((diff) => (
                 <button
-                  key={diff}
+                  key={diff.id}
                   type="button"
                   onClick={() => {
                     triggerHaptic("light");
-                    setFilters((prev) => ({ ...prev, difficulty: diff }));
+                    setFilters((prev) => ({ ...prev, difficulty: diff.id }));
                     setPage(1);
                   }}
                   className={cx(
-                    "px-3 py-2 rounded-xl text-xs font-bold transition-all",
-                    filters.difficulty === diff
+                    "px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5",
+                    filters.difficulty === diff.id
                       ? "bg-slate-900 text-white shadow-xs"
                       : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"
                   )}
                 >
-                  {diff === "" ? "সকল" : diff === "easy" ? "সহজ" : diff === "medium" ? "মাঝারি" : "কঠিন"}
+                  <span>{diff.label}</span>
+                  <span className={cx(
+                    "px-1.5 py-0.2 rounded-full text-[10px]",
+                    filters.difficulty === diff.id ? "bg-white/20 text-white" : "bg-slate-100 text-slate-600"
+                  )}>
+                    {diff.count}
+                  </span>
                 </button>
               ))}
             </div>
@@ -610,7 +759,13 @@ export function QuestionPicker({
                   index={(page - 1) * limit + i + 1}
                   selected={selected.has(q._id)}
                   onToggle={onToggle}
+                  onEdit={onEditQuestion}
                   showAnswer={true}
+                  langVersion={langVersion}
+                  onReport={(reportedQ) => {
+                    setReportNotification(`প্রশ্ন নং ${(page - 1) * limit + i + 1} সফলভাবে রিপোর্ট করা হয়েছে। আমাদের টিম পর্যালোচনা করবে।`);
+                    setTimeout(() => setReportNotification(""), 5000);
+                  }}
                   mine={userId && q.tutorId === userId}
                 />
               ))}
@@ -688,12 +843,13 @@ export function QuestionPicker({
 
             {currentTopics.map((topic) => {
               const checked = selectedTopics.includes(topic);
+              const count = topicCounts[topic] ?? 0;
               return (
                 <label
                   key={topic}
                   onClick={() => triggerHaptic("light")}
                   className={cx(
-                    "flex items-start gap-2.5 px-2.5 py-2 rounded-xl cursor-pointer text-xs transition-colors select-none",
+                    "flex items-start gap-2.5 px-2.5 py-2 rounded-xl cursor-pointer text-xs transition-colors select-none group",
                     checked
                       ? "bg-emerald-50/70 text-emerald-900 font-bold"
                       : "text-slate-700 hover:bg-slate-50"
@@ -705,7 +861,15 @@ export function QuestionPicker({
                     onChange={() => handleTopicToggle(topic)}
                     className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 accent-emerald-600"
                   />
-                  <span className="min-w-0 flex-1 leading-snug">{topic}</span>
+                  <span className="min-w-0 flex-1 leading-snug flex items-center justify-between">
+                    <span>{topic}</span>
+                    <span className={cx(
+                      "ml-1 text-[11px] font-bold",
+                      checked ? "text-emerald-700" : "text-slate-400 group-hover:text-slate-600"
+                    )}>
+                      ({count})
+                    </span>
+                  </span>
                 </label>
               );
             })}
@@ -749,6 +913,7 @@ export function QuestionPicker({
             <div className="flex-1 overflow-y-auto space-y-1">
               {currentTopics.map((topic) => {
                 const checked = selectedTopics.includes(topic);
+                const count = topicCounts[topic] ?? 0;
                 return (
                   <label
                     key={topic}
@@ -763,7 +928,12 @@ export function QuestionPicker({
                       onChange={() => handleTopicToggle(topic)}
                       className="mt-0.5 h-4 w-4 shrink-0 rounded border-slate-300 text-emerald-600"
                     />
-                    <span className="min-w-0 flex-1">{topic}</span>
+                    <span className="min-w-0 flex-1 flex items-center justify-between">
+                      <span>{topic}</span>
+                      <span className="ml-1 text-[11px] font-bold text-slate-400">
+                        ({count})
+                      </span>
+                    </span>
                   </label>
                 );
               })}

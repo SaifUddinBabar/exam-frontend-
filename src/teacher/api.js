@@ -73,7 +73,9 @@ export const api = {
   // Questions (routes/questionRoutes.js + routes/practiceRoutes.js)
   metadata: (opts) => request("/api/practice/metadata", opts),
   questionBank: (params, opts) => request(`/api/practice/question-bank?${toQuery(params)}`, opts),
+  topicCounts: (params, opts) => request(`/api/practice/topic-counts?${toQuery(params)}`, opts),
   createQuestion: (formData) => request("/api/questions", { method: "POST", formData }),
+  updateQuestion: (id, formData) => request(`/api/questions/${encodeURIComponent(id)}`, { method: "PUT", formData }),
 
   // Organizations (routes/organizationRoutes.js)
   organizations: (opts) => request("/api/organizations", opts),
@@ -81,8 +83,13 @@ export const api = {
 
 export function imageUrl(file) {
   if (!file) return "";
-  if (/^https?:\/\//i.test(file)) return file;
-  return `${API_BASE}/uploads/${file}`;
+  if (Array.isArray(file)) file = file[0];
+  if (typeof file !== "string") return "";
+  const trimmed = file.trim();
+  if (/^(?:https?:|\/\/|data:image\/)/i.test(trimmed)) return trimmed;
+  // If already starts with /uploads/ or uploads/, normalize to single /uploads/
+  const clean = trimmed.replace(/^\/?(?:uploads\/)?/i, "");
+  return `${API_BASE}/uploads/${clean}`;
 }
 
 export function studentExamLink(code) {

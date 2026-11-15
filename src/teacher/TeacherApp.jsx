@@ -36,10 +36,10 @@ export default function TeacherApp() {
           <Route path="courses" element={page(<ComingSoon module="courses" />)} />
           <Route path="students" element={page(<Students />)} />
           <Route path="questions" element={page(<QuestionBank />)} />
-          <Route path="questions/new" element={page(<CreateQuestion />)} />
+          <Route path="questions/new" element={<Navigate to="/teacher/questions?tab=create" replace />} />
           <Route path="exams" element={page(<Exams />)} />
           <Route path="exams/new" element={page(<CreateExam />)} />
-          <Route path="paper-builder" element={page(<PaperBuilder />)} />
+          <Route path="paper-builder" element={<Navigate to="/teacher/questions?tab=builder" replace />} />
           <Route path="results" element={page(<Results />)} />
           <Route path="results/:code" element={page(<Results />)} />
           <Route path="payments" element={page(<ComingSoon module="payments" />)} />
