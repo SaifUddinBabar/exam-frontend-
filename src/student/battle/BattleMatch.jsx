@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import ExaminoLogo from "../../components/ExaminoLogo";
 import MathText from "../../components/MathText";
 import QuestionImage from "../../components/QuestionImage";
-import { api } from "../../teacher/api";
+import { api, streamBattle } from "../../teacher/api";
 import { Badge, Button, Card, ConfirmDialog, ErrorState, LinkButton, Spinner } from "../../teacher/components/ui";
 import Icon from "../../teacher/components/Icon";
 import { resolveQuestion, setLanguagePref, TRANSLATION_UNAVAILABLE } from "../../lib/questionLanguage";
@@ -27,7 +27,7 @@ export default function BattleMatch() {
   const [leaveOpen, setLeaveOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [league, setLeague] = useState(null);
-  const pollRef = useRef(null);
+  const [live, setLive] = useState(false);
 
   const apply = useCallback((b) => {
     setBattle(b);
@@ -48,12 +48,54 @@ export default function BattleMatch() {
     load();
   }, [load]);
 
-  // Poll while waiting / active (server is the source of truth).
+  // Live updates: one Server-Sent Events stream while the battle is open (the server is the
+  // source of truth and the stream is also our heartbeat). If it fails, fall back to polling
+  // every 2.5 s and try the stream again.
+  const open = Boolean(battle) && battle.status !== "finished" && battle.status !== "cancelled";
   useEffect(() => {
-    if (!battle || battle.status === "finished" || battle.status === "cancelled") return undefined;
-    pollRef.current = setInterval(load, battle.status === "waiting" ? 2000 : 2500);
-    return () => clearInterval(pollRef.current);
-  }, [battle?.status, load]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (!open) return undefined;
+    const ctrl = new AbortController();
+    let stopped = false;
+    let poll = null;
+    let retry = null;
+    const stopPoll = () => {
+      clearInterval(poll);
+      poll = null;
+    };
+    const connect = async () => {
+      let failed = false;
+      try {
+        await streamBattle(
+          id,
+          (b) => {
+            setLive(true);
+            stopPoll();
+            apply(b);
+          },
+          ctrl.signal
+        );
+      } catch (e) {
+        if (e?.name === "AbortError") return;
+        failed = true;
+      }
+      if (stopped) return;
+      setLive(false);
+      if (!poll) poll = setInterval(load, 2500);
+      retry = setTimeout(connect, failed ? 10_000 : 1_000);
+    };
+    connect();
+    return () => {
+      stopped = true;
+      ctrl.abort();
+      stopPoll();
+      clearTimeout(retry);
+    };
+  }, [id, open, load, apply]);
+
+  // A random room that was paired with an older waiting room moves to that battle.
+  useEffect(() => {
+    if (battle?.mergedInto) navigate(`/battle/${battle.mergedInto}`, { replace: true });
+  }, [battle?.mergedInto, navigate]);
 
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 250);
@@ -131,7 +173,46 @@ export default function BattleMatch() {
         <span className="mx-auto mb-4 inline-flex h-16 w-16 items-center justify-center rounded-full bg-examino-blue-light text-examino-blue">
           <Icon name="swords" size={28} />
         </span>
-        {battle.mode === "friend" ? (
+        {battle.mode === "group" ? (
+          <>
+            <h1 className="text-xl font-bold text-examino-text">Group room · {battle.players.length}/{battle.maxPlayers} players</h1>
+            <p className="mt-1 text-sm text-examino-muted">Share the code. {battle.isHost ? "Start when everyone has joined." : "The host will start the battle."}</p>
+            <button
+              type="button"
+              onClick={() => navigator.clipboard?.writeText(battle.roomCode).then(() => setCopied(true))}
+              className="mx-auto mt-5 flex items-center gap-3 rounded-xl border-2 border-dashed border-examino-blue/40 bg-examino-blue-light/40 px-6 py-3 font-mono text-3xl font-bold tracking-[0.3em] text-examino-navy"
+              aria-label={`Copy room code ${battle.roomCode}`}
+            >
+              {battle.roomCode}
+              <Icon name={copied ? "check" : "copy"} size={18} className="text-examino-blue" />
+            </button>
+            <ul className="mx-auto mt-5 max-w-xs space-y-1.5 text-left text-sm">
+              {battle.players.map((pl, i) => (
+                <li key={i} className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2">
+                  <span className="font-medium text-examino-text">{pl.name}</span>
+                  {i === 0 ? <Badge tone="blue">Host</Badge> : pl.isMe ? <Badge tone="neutral">You</Badge> : null}
+                </li>
+              ))}
+            </ul>
+            {battle.isHost ? (
+              <Button
+                className="mt-5"
+                icon="swords"
+                disabled={battle.players.length < 2}
+                onClick={async () => {
+                  try {
+                    const r = await api.startGroupBattle(battle._id);
+                    apply(r.battle);
+                  } catch (e) {
+                    setError(e.message);
+                  }
+                }}
+              >
+                Start battle
+              </Button>
+            ) : null}
+          </>
+        ) : battle.mode === "friend" ? (
           <>
             <h1 className="text-xl font-bold text-examino-text">Share this room code</h1>
             <p className="mt-1 text-sm text-examino-muted">Your friend opens Battle → Join a room and enters it.</p>
@@ -185,8 +266,23 @@ export default function BattleMatch() {
       <div className="space-y-6">
         <Card className="overflow-hidden">
           <div className={cx("px-6 py-8 text-center text-white", res.winner === "me" ? "bg-gradient-to-br from-examino-blue to-examino-navy" : res.winner === "draw" ? "bg-slate-600" : "bg-examino-navy")}>
-            <p className="text-sm uppercase tracking-widest text-white/70">{res.reason === "forfeit" ? "Forfeit" : res.reason === "time" ? "Won on time" : "Final score"}</p>
-            <h1 className="mt-1 text-3xl font-bold">{res.winner === "me" ? "Victory!" : res.winner === "draw" ? "Draw" : "Defeat"}</h1>
+            <p className="text-sm uppercase tracking-widest text-white/70">{res.reason === "forfeit" ? "Forfeit" : res.reason === "disconnect" ? (res.winner === "me" ? "Opponent disconnected" : "You were disconnected") : res.reason === "time" ? "Won on time" : "Final score"}</p>
+            <h1 className="mt-1 text-3xl font-bold">{battle.mode === "group" ? (res.placement === 1 && res.winner !== "draw" ? "1st place!" : `#${res.placement} of ${battle.players.length}`) : res.winner === "me" ? "Victory!" : res.winner === "draw" ? "Draw" : "Defeat"}</h1>
+            {battle.mode === "group" ? (
+              <ol className="mx-auto mt-4 max-w-sm space-y-1 text-left text-sm">
+                {[...battle.players]
+                  .sort((x, y) => (x.placement || 99) - (y.placement || 99))
+                  .map((pl) => (
+                    <li key={pl.name + pl.placement} className={cx("flex justify-between rounded-lg px-3 py-1.5", pl.isMe ? "bg-white/20 font-semibold" : "bg-white/10")}>
+                      <span>
+                        #{pl.placement} {pl.name}
+                        {pl.left ? " (left)" : ""}
+                      </span>
+                      <span>{pl.score}</span>
+                    </li>
+                  ))}
+              </ol>
+            ) : null}
             <div className="mt-5 flex items-center justify-center gap-6 text-lg">
               <div>
                 <p className="text-sm text-white/70">You</p>
@@ -276,7 +372,13 @@ export default function BattleMatch() {
     return shell(
       <Card className="p-10 text-center">
         <p className="text-sm text-examino-muted">
-          You vs <span className="font-semibold text-examino-text">{opp?.name}</span>
+          {battle.mode === "group" ? (
+            <>Group battle · {battle.players.length} players</>
+          ) : (
+            <>
+              You vs <span className="font-semibold text-examino-text">{opp?.name}</span>
+            </>
+          )}
         </p>
         <p className="mt-4 text-6xl font-bold text-examino-blue tabular-nums">{startsIn}</p>
         <p className="mt-2 text-sm text-examino-muted">Get ready…</p>
@@ -310,8 +412,32 @@ export default function BattleMatch() {
     }
   };
 
+  const oppGrace = battle.mode !== "group" && opp && opp.connected === false && opp.graceEndsAt ? Math.max(0, Math.ceil((new Date(opp.graceEndsAt).getTime() - serverNow) / 1000)) : null;
   return shell(
     <div className="space-y-4">
+      {oppGrace !== null ? (
+        <p role="status" className="flex items-center gap-2 rounded-xl border border-amber-200 bg-examino-amber-soft px-4 py-2.5 text-sm font-medium text-amber-900">
+          <Spinner size={14} className="text-amber-700" />
+          {opp.name} lost connection. Keep playing — they forfeit if not back in {oppGrace}s.
+        </p>
+      ) : null}
+      {error && !live ? (
+        <p role="status" className="rounded-xl border border-examino-border bg-white px-4 py-2.5 text-sm text-examino-muted">
+          Connection problem — retrying. Your answers are saved on the server.
+        </p>
+      ) : null}
+      {battle.mode === "group" ? (
+        <div className="flex flex-wrap gap-2">
+          {battle.players
+            .filter((pl) => !pl.isMe)
+            .map((pl, i) => (
+              <span key={i} className={cx("rounded-full border px-3 py-1 text-xs font-semibold", pl.left ? "border-slate-200 text-examino-subtle line-through" : pl.connected === false ? "border-amber-200 bg-examino-amber-soft text-amber-900" : "border-examino-border bg-white text-examino-text")}>
+                {pl.name} · {pl.score} · {pl.answered}/{total}
+                {!pl.left && pl.connected === false ? " · reconnecting" : ""}
+              </span>
+            ))}
+        </div>
+      ) : null}
       <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
         <div>
           <p className="truncate text-sm font-semibold text-examino-text">You · {me.score}</p>
@@ -322,7 +448,7 @@ export default function BattleMatch() {
         <div className={cx("rounded-lg px-3 py-1.5 font-mono text-lg font-bold tabular-nums", remaining <= 20 ? "bg-examino-rose text-white" : "bg-examino-navy text-white")} role="timer">
           {Math.floor(remaining / 60)}:{String(remaining % 60).padStart(2, "0")}
         </div>
-        <div className="text-right">
+        <div className={cx("text-right", battle.mode === "group" && "invisible")} aria-hidden={battle.mode === "group"}>
           <p className="truncate text-sm font-semibold text-examino-text">
             {opp?.name} · {opp?.score ?? 0}
           </p>

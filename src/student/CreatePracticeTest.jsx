@@ -576,7 +576,7 @@ export default function CreatePracticeTest() {
 
               {availableCount !== null && effectiveCount > availableCount && (
                 <p className="text-[11px] font-semibold text-[#D97706] pt-1 border-t border-[#E2E8F0]">
-                  ⚠️ Requested {effectiveCount} questions, but only {availableCount} are available for this specific filter. Your test will include all {availableCount} questions.
+                  Requested {effectiveCount} questions, but only {availableCount} are available for this specific filter. Your test will include all {availableCount} questions.
                 </p>
               )}
             </div>

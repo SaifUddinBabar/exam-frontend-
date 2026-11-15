@@ -112,7 +112,7 @@ const BADGE_TONES = {
   neutral: "bg-slate-100 text-slate-600",
   slate: "bg-slate-100 text-slate-700 ring-1 ring-inset ring-slate-200",
   blue: "bg-examino-blue-light text-examino-blue-hover",
-  indigo: "bg-indigo-50 text-indigo-700",
+  indigo: "bg-blue-50 text-blue-700",
   green: "bg-examino-green-light text-emerald-700",
   amber: "bg-examino-amber-soft text-amber-700",
   red: "bg-examino-rose-light text-red-700",

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import ExaminoLogo from "../components/ExaminoLogo";
+import Icon from "../teacher/components/Icon";
 import { sendFirebaseOtp, clearRecaptcha } from "../firebase/firebase";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:5000";
@@ -361,7 +362,7 @@ export default function ForgotPassword() {
               className="px-2.5 py-1 rounded-full bg-white/10 hover:bg-white/20 text-white text-xs font-semibold transition-colors flex items-center gap-1.5 border border-white/10"
               title="Change Language"
             >
-              <span>{lang === "bangla" ? "🇧🇩 বাংলা" : "🇬🇧 English"}</span>
+              <span>{lang === "bangla" ? "বাংলা" : "English"}</span>
               <span className="text-[10px] text-slate-300">⇄</span>
             </button>
           </div>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import ExaminoLogo from "../components/ExaminoLogo";
+import Icon from "../teacher/components/Icon";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
@@ -110,7 +111,7 @@ export default function AcceptInvitation() {
         ) : (
           <div>
             <div className="w-14 h-14 rounded-2xl bg-[#EFF6FF] text-[#2563EB] flex items-center justify-center text-2xl mx-auto mb-4 border border-[#BFDBFE]">
-              🏫
+              <Icon name="school" size={26} />
             </div>
 
             <span className="text-[11px] font-bold uppercase tracking-wider text-[#2563EB] bg-[#EFF6FF] px-2.5 py-0.5 rounded-full">

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import ExaminoLogo from "../components/ExaminoLogo";
+import Icon from "../teacher/components/Icon";
 import { sendFirebaseOtp, clearRecaptcha, signInWithGoogle } from "../firebase/firebase";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:5000";
@@ -536,7 +537,7 @@ export default function CommonRegister() {
               className="px-2.5 py-1 rounded-full bg-white/10 hover:bg-white/20 text-white text-xs font-semibold transition-colors flex items-center gap-1.5 border border-white/10"
               title="Change Language"
             >
-              <span>{lang === "bangla" ? "🇧🇩 বাংলা" : "🇬🇧 English"}</span>
+              <span>{lang === "bangla" ? "বাংলা" : "English"}</span>
               <span className="text-[10px] text-slate-300">⇄</span>
             </button>
           </div>
@@ -568,7 +569,7 @@ export default function CommonRegister() {
               </div>
               <div className="flex items-center gap-3 text-slate-300">
                 <span className="w-5 h-5 rounded-full bg-[#F59E0B]/20 text-[#F59E0B] flex items-center justify-center font-bold text-xs">✓</span>
-                <span>{lang === "bangla" ? "দ্বৈত ভাষা সাপোর্ট: 🇧🇩 বাংলা মাধ্যম ও 🇬🇧 English Medium" : "Dual language support: 🇧🇩 বাংলা মাধ্যম ও 🇬🇧 English Medium"}</span>
+                <span>{lang === "bangla" ? "দ্বৈত ভাষা সাপোর্ট: বাংলা মাধ্যম ও English Medium" : "Dual language support: বাংলা মাধ্যম ও English Medium"}</span>
               </div>
             </div>
           </div>
@@ -607,7 +608,7 @@ export default function CommonRegister() {
           {/* Student Dedicated Registration Badge */}
           <div className="flex items-center justify-between p-3.5 bg-[#EFF6FF] rounded-xl mb-5 border border-[#BFDBFE]">
             <div className="flex items-center gap-2.5">
-              <span className="text-xl">👨‍🎓</span>
+              <Icon name="book" size={18} className=" text-examino-blue" />
               <div>
                 <p className="text-xs font-bold text-[#1E40AF]">
                   {lang === "bangla" ? "শিক্ষার্থী একাউন্ট নিবন্ধন" : "Student Account Registration"}
@@ -621,7 +622,7 @@ export default function CommonRegister() {
               to="/login?teacher=true"
               className="text-[11px] font-bold text-[#1E40AF] hover:underline whitespace-nowrap bg-white px-2.5 py-1.5 rounded-lg border border-[#DBEAFE] shadow-2xs"
             >
-              {lang === "bangla" ? "শিক্ষক প্রবেশ ➔" : "Teacher Access ➔"}
+              {lang === "bangla" ? "শিক্ষক প্রবেশ" : "Teacher Access"} <Icon name="arrowRight" size={14} className="inline" />
             </Link>
           </div>
 
@@ -744,7 +745,7 @@ export default function CommonRegister() {
                   placeholder={lang === "bangla" ? "যেমন: নবোদয় একাডেমি কেয়ার, মিরপুর" : "e.g. Nobodoy Academic Care, Mirpur"}
                   value={orgName}
                   onChange={(e) => setOrgName(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-white border border-[#CBD5E1] rounded-lg text-sm text-[#0F172A] placeholder-[#94A3B8] focus:outline-none focus:border-[#7C3AED] transition-all font-medium"
+                  className="w-full px-3.5 py-2.5 bg-white border border-[#CBD5E1] rounded-lg text-sm text-[#0F172A] placeholder-[#94A3B8] focus:outline-none focus:border-[#2563EB] transition-all font-medium"
                 />
               </div>
             )}
@@ -908,7 +909,7 @@ export default function CommonRegister() {
                   placeholder={lang === "bangla" ? "যেমন: মিরপুর-১০, ঢাকা" : "e.g. Mirpur-10, Dhaka"}
                   value={location}
                   onChange={(e) => setLocation(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-white border border-[#CBD5E1] rounded-lg text-xs text-[#0F172A] placeholder-[#94A3B8] focus:outline-none focus:border-[#7C3AED]"
+                  className="w-full px-3.5 py-2.5 bg-white border border-[#CBD5E1] rounded-lg text-xs text-[#0F172A] placeholder-[#94A3B8] focus:outline-none focus:border-[#2563EB]"
                 />
               </div>
             )}
@@ -1026,7 +1027,7 @@ export default function CommonRegister() {
               disabled={loading}
               className={`w-full py-2.5 px-4 rounded-lg text-white text-sm font-bold shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 ${
                 activeTab === "organization"
-                  ? "bg-[#7C3AED] hover:bg-[#6D28D9]"
+                  ? "bg-[#2563EB] hover:bg-[#1D4ED8]"
                   : activeTab === "teacher"
                   ? "bg-[#101B35] hover:bg-[#1E293B]"
                   : "bg-[#2563EB] hover:bg-[#1D4ED8]"
@@ -1064,8 +1065,8 @@ export default function CommonRegister() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0F172A]/60 backdrop-blur-xs animate-fadeIn">
           <div className="bg-white rounded-2xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-[#E2E8F0] animate-scaleUp">
             <div className="text-center mb-6">
-              <div className="w-12 h-12 rounded-full bg-[#FAF5FF] text-[#7C3AED] flex items-center justify-center mx-auto mb-3 text-2xl">
-                🏫
+              <div className="w-12 h-12 rounded-full bg-[#FAF5FF] text-[#2563EB] flex items-center justify-center mx-auto mb-3 text-2xl">
+                <Icon name="globe" size={20} />
               </div>
               <h3 className="text-xl font-extrabold text-[#0F172A]">
                 {lang === "bangla" ? "কোচিং সেন্টারের তথ্য" : "Coaching Center Workspace"}
@@ -1089,7 +1090,7 @@ export default function CommonRegister() {
                   placeholder={lang === "bangla" ? "যেমন: নবোদয় একাডেমি কেয়ার" : "e.g. Nobodoy Academic Care"}
                   value={orgName}
                   onChange={(e) => setOrgName(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-white border border-[#CBD5E1] rounded-lg text-sm text-[#0F172A] focus:outline-none focus:border-[#7C3AED] font-medium"
+                  className="w-full px-3.5 py-2.5 bg-white border border-[#CBD5E1] rounded-lg text-sm text-[#0F172A] focus:outline-none focus:border-[#2563EB] font-medium"
                 />
               </div>
 
@@ -1102,7 +1103,7 @@ export default function CommonRegister() {
                   placeholder={lang === "bangla" ? "যেমন: মিরপুর-১০, ঢাকা" : "e.g. Mirpur-10, Dhaka"}
                   value={location}
                   onChange={(e) => setLocation(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-white border border-[#CBD5E1] rounded-lg text-sm text-[#0F172A] focus:outline-none focus:border-[#7C3AED] font-medium"
+                  className="w-full px-3.5 py-2.5 bg-white border border-[#CBD5E1] rounded-lg text-sm text-[#0F172A] focus:outline-none focus:border-[#2563EB] font-medium"
                 />
               </div>
 
@@ -1117,7 +1118,7 @@ export default function CommonRegister() {
                 <button
                   type="submit"
                   disabled={googleLoading}
-                  className="flex-1 py-2.5 px-4 rounded-xl bg-[#7C3AED] hover:bg-[#6D28D9] text-white text-xs font-bold shadow-md flex items-center justify-center gap-1.5"
+                  className="flex-1 py-2.5 px-4 rounded-xl bg-[#2563EB] hover:bg-[#1D4ED8] text-white text-xs font-bold shadow-md flex items-center justify-center gap-1.5"
                 >
                   {googleLoading ? (
                     <>
@@ -1140,7 +1141,7 @@ export default function CommonRegister() {
           <div className="bg-white rounded-2xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-[#E2E8F0] animate-scaleUp">
             <div className="text-center mb-6">
               <div className="w-12 h-12 rounded-full bg-[#EFF6FF] text-[#2563EB] flex items-center justify-center mx-auto mb-3 text-xl">
-                📱
+                <Icon name="phone" size={22} />
               </div>
               <h3 className="text-xl font-extrabold text-[#0F172A]">
                 {lang === "bangla" ? "মোবাইল নম্বর যাচাই করুন" : "Verify Your Mobile Number"}

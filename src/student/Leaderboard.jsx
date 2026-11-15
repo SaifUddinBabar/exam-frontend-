@@ -199,7 +199,7 @@ export default function Leaderboard() {
 
       {/* ── MY POSITION HIGHLIGHT BANNER ── */}
       {myRank && activeExam && (
-        <div className="mb-6 p-4 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md flex items-center justify-between">
+        <div className="mb-6 p-4 rounded-2xl bg-gradient-to-r from-blue-600 to-blue-600 text-white shadow-md flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center font-black text-xl backdrop-blur-xs">
               #{myRank}

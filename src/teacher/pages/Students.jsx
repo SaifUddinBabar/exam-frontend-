@@ -125,10 +125,10 @@ function StudentDrawer({ student, onClose, onRemove }) {
             <span className="font-mono bg-slate-100 px-2 py-0.5 rounded text-slate-700 font-bold">
               রোল / ID: {activeStudent.roll || "—"}
             </span>
-            <span>📱 {activeStudent.phone || "ফোন নেই"}</span>
+            <span>{activeStudent.phone || "ফোন নেই"}</span>
           </div>
           <p className="text-xs text-examino-muted mt-1 truncate">
-            ✉️ {activeStudent.email}
+            {activeStudent.email}
           </p>
         </div>
       </div>
@@ -158,7 +158,7 @@ function StudentDrawer({ student, onClose, onRemove }) {
           <div className="mt-6">
             <div className="flex items-center justify-between mb-2">
               <p className="text-xs font-bold text-rose-700 uppercase tracking-wider flex items-center gap-1.5">
-                <span>⚠️</span>
+                
                 <span>দুর্বল বিষয়সমূহ (Weak Topics & Mistakes)</span>
               </p>
               <span className="text-[11px] text-examino-muted">
@@ -198,7 +198,7 @@ function StudentDrawer({ student, onClose, onRemove }) {
               </div>
             ) : (
               <div className="p-4 rounded-xl border border-emerald-200 bg-emerald-50 text-center text-xs font-semibold text-emerald-800">
-                🎉 এই শিক্ষার্থীর কোনো উল্লেখযোগ্য দুর্বল টপিক নেই বা যথেষ্ট পরীক্ষা সম্পন্ন হয়নি!
+                এই শিক্ষার্থীর কোনো উল্লেখযোগ্য দুর্বল টপিক নেই বা যথেষ্ট পরীক্ষা সম্পন্ন হয়নি!
               </div>
             )}
           </div>
@@ -261,7 +261,7 @@ function StudentDrawer({ student, onClose, onRemove }) {
                 className="w-full text-xs font-bold text-rose-600 hover:text-white hover:bg-rose-600 border border-rose-300"
                 onClick={() => setConfirmRemove(true)}
               >
-                🗑️ শিক্ষার্থীকে রিমুভ করুন (Remove Student)
+                শিক্ষার্থীকে রিমুভ করুন (Remove Student)
               </Button>
             ) : (
               <div className="p-3.5 bg-rose-50 border border-rose-300 rounded-xl space-y-2">

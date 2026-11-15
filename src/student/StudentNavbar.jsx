@@ -14,7 +14,7 @@ const NAV = [
   { to: "/dashboard", label: "Home", icon: "home", match: ["/dashboard"] },
   { to: "/exams", label: "Exams", icon: "clipboard", match: ["/exams", "/exam/"] },
   { to: "/practice", label: "Practice", icon: "target", match: ["/practice", "/weak-topics", "/saved-questions"] },
-  { to: "/battle", label: "Battle", icon: "swords", match: ["/battle"] },
+  { to: "/battle", label: "Battle", icon: "swords", match: ["/battle", "/tournament"] },
   { to: "/league", label: "League", icon: "trophy", match: ["/league", "/leaderboard"] },
 ];
 

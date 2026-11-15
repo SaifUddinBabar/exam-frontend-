@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import StudentLayout from "./StudentLayout";
 import { triggerHaptic } from "../utils/haptics";
+import Icon from "../teacher/components/Icon";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
@@ -70,7 +71,7 @@ export default function WeakTopics() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-rose-50 text-rose-800 text-xs font-bold mb-2 border border-rose-200">
-            <span className="text-sm">⚠️</span>
+            
             <span>দুর্বল বিষয়সমূহ ও রিভিশন প্ল্যান</span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-[#0F172A] tracking-tight">
@@ -85,7 +86,8 @@ export default function WeakTopics() {
           to="/exams"
           className="btn-smooth px-4 py-2 bg-[#2563EB] text-white text-xs font-bold rounded-xl shadow-xs hover:bg-[#1D4ED8] flex items-center gap-2 self-start sm:self-auto"
         >
-          <span>পরীক্ষায় অংশ নিন ➔</span>
+          <span>পরীক্ষায় অংশ নিন</span>
+          <Icon name="arrowRight" size={16} />
         </Link>
       </div>
 
@@ -130,7 +132,7 @@ export default function WeakTopics() {
         </div>
       ) : weakTopics.length === 0 ? (
         <div className="p-12 text-center bg-white rounded-2xl border border-slate-200 shadow-sm">
-          <span className="text-4xl block mb-2">🎉</span>
+          
           <h3 className="text-base font-extrabold text-[#0F172A]">অসাধারণ! আপনার কোনো দুর্বল টপিক নেই।</h3>
           <p className="text-xs text-[#64748B] mt-1 max-w-md mx-auto">
             আপনি পরীক্ষায় চমৎকার ফলাফল করেছেন অথবা এখনো কোনো পরীক্ষায় ভুল করেননি। নতুন কোনো পরীক্ষায় অংশ নিয়ে নিজেকে যাচাই করুন!
@@ -139,7 +141,8 @@ export default function WeakTopics() {
             to="/exams"
             className="btn-smooth inline-flex items-center gap-2 mt-5 px-5 py-2.5 bg-[#2563EB] text-white text-xs font-bold rounded-xl shadow-xs"
           >
-            <span>উপলব্ধ পরীক্ষাগুলো দেখুন ➔</span>
+            <span>উপলব্ধ পরীক্ষাগুলো দেখুন</span>
+            <Icon name="arrowRight" size={16} />
           </Link>
         </div>
       ) : (
@@ -178,7 +181,7 @@ export default function WeakTopics() {
 
                     {/* Revision Study Note */}
                     <p className="text-xs text-[#475569] mt-2 leading-relaxed bg-[#F8FAFC] p-3 rounded-xl border border-slate-100">
-                      💡 <b>রিভিশন টিপস:</b> {getGuide(item.topic, item.chapter)}
+                      <b>রিভিশন টিপস:</b> {getGuide(item.topic, item.chapter)}
                     </p>
                   </div>
 
@@ -200,7 +203,7 @@ export default function WeakTopics() {
                           : "bg-slate-100 text-slate-700 hover:bg-slate-200"
                       }`}
                     >
-                      <span>{isRevised ? "✓ রিভিশন শেষ হয়েছে" : "📖 রিভিশন সম্পন্ন করুন"}</span>
+                      <span>{isRevised ? "✓ রিভিশন শেষ হয়েছে" : "রিভিশন সম্পন্ন করুন"}</span>
                     </button>
                   </div>
                 </div>

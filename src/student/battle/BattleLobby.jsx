@@ -17,6 +17,7 @@ export default function BattleLobby() {
   const [f, setF] = useState({ className: "", subject: "", chapter: "", topic: "", difficulty: "mixed" });
   const [mode, setMode] = useState("random");
   const [roomCode, setRoomCode] = useState("");
+  const [groupSize, setGroupSize] = useState(4);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
 
@@ -33,7 +34,7 @@ export default function BattleLobby() {
     setErr("");
     try {
       const filters = { ...f, subject: f.subject || subject?.name || "" };
-      const r = action === "join" ? await api.joinFriendBattle(roomCode.trim().toUpperCase()) : action === "friend" ? await api.createFriendBattle(filters) : await api.findBattle(filters);
+      const r = action === "join" ? await api.joinFriendBattle(roomCode.trim().toUpperCase()) : action === "friend" ? await api.createFriendBattle(filters) : action === "group" ? await api.createFriendBattle({ ...filters, group: true, maxPlayers: groupSize }) : await api.findBattle(filters);
       navigate(`/battle/${r.battle._id}`);
     } catch (e) {
       setErr(e.message);
@@ -132,10 +133,11 @@ export default function BattleLobby() {
 
               <div>
                 <p className="mb-1.5 text-[13px] font-medium text-examino-text">Mode</p>
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
                   {[
                     ["random", "swords", "Random opponent", "Ranked · changes your rating"],
-                    ["friend", "users", "Challenge a friend", "Create a room and share the code"],
+                    ["friend", "users", "Challenge a friend", "1 v 1 room with a code"],
+                    ["group", "layers", "Group battle", "3–6 players, you start it"],
                     ["join", "link", "Join a room", "Enter your friend's code"],
                   ].map(([v, icon, title, sub]) => (
                     <button
@@ -153,6 +155,12 @@ export default function BattleLobby() {
                 </div>
               </div>
 
+              {mode === "group" ? (
+                <div className="flex items-center gap-3">
+                  <span className="text-[13px] font-medium text-examino-text">Players</span>
+                  <Segmented label="Group size" size="sm" value={groupSize} onChange={setGroupSize} options={[3, 4, 5, 6].map((n) => ({ value: n, label: String(n) }))} />
+                </div>
+              ) : null}
               {mode === "join" ? (
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
                   <Field label="Room code" htmlFor="room" className="flex-1">
@@ -164,7 +172,7 @@ export default function BattleLobby() {
                 </div>
               ) : (
                 <Button size="lg" icon="swords" loading={busy} disabled={available < 5 || Boolean(open)} onClick={() => go(mode)} className="w-full sm:w-auto">
-                  {mode === "friend" ? "Create room" : "Find opponent"}
+                  {mode === "friend" ? "Create room" : mode === "group" ? "Create group room" : "Find opponent"}
                 </Button>
               )}
               {available < 5 && mode !== "join" ? <p className="text-sm text-examino-rose-dark">At least 5 questions are needed. Choose a wider topic.</p> : null}
@@ -179,13 +187,24 @@ export default function BattleLobby() {
         </Card>
 
         <div className="space-y-6">
+          <Card className="overflow-hidden">
+            <div className="bg-examino-navy p-5 text-white">
+              <p className="text-xs font-semibold uppercase tracking-wider text-slate-300">Daily tournament</p>
+              <p className="mt-1 text-lg font-bold">Same 10 questions for everyone today</p>
+              <p className="mt-1 text-sm text-slate-300">One attempt. Results and answers open tomorrow.</p>
+              <LinkButton to="/tournament" size="sm" className="mt-4 bg-white !text-examino-navy hover:bg-slate-100" icon="trophy">
+                Open tournament
+              </LinkButton>
+            </div>
+          </Card>
           <Card className="p-5">
             <p className="text-sm font-semibold text-examino-text">How scoring works</p>
             <ul className="mt-2 space-y-1.5 text-sm text-examino-muted">
               <li>Correct: +10, plus up to +5 for speed</li>
               <li>Wrong: −2 · No answer: 0</li>
               <li>Tie on score → faster player wins</li>
-              <li>Leaving a running battle counts as a loss</li>
+              <li>Leaving a running battle counts as a loss; losing connection for about 40 s does too</li>
+              <li>Random opponents are matched by rating first, then anyone after 40 s</li>
               <li>Random battles change your rating; friend rooms don't</li>
             </ul>
             <LinkButton to="/league" size="sm" variant="secondary" className="mt-4">

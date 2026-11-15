@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import MathText from "../../components/MathText";
 import QuestionImage from "../../components/QuestionImage";
 import { api } from "../api";
@@ -231,7 +231,7 @@ export function QuestionCard({ q, index, selected, onToggle, showAnswer = true, 
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-2.5">
             <div className="flex min-w-0 flex-wrap items-center gap-2">
               {q.questionType === "board" ? (
-                <span className="inline-flex items-center gap-1 rounded-md bg-indigo-50 px-2.5 py-0.5 text-xs font-semibold text-indigo-700 border border-indigo-100 font-bengali">
+                <span className="inline-flex items-center gap-1 rounded-md bg-blue-50 px-2.5 py-0.5 text-xs font-semibold text-blue-700 border border-blue-100 font-bengali">
                   <Icon name="book" size={12} />
                   {q.boardName} {q.boardYear ? toBanglaDigits(q.boardYear) : ""}
                 </span>
@@ -407,7 +407,7 @@ function TopicList({ chapters, chapter, onChapter, topics, noTopicCount, selecte
             এই অধ্যায়ে কোনো নির্দিষ্ট টপিক পাওয়া যায়নি।
           </div>
         ) : (
-          topics.map((t) => {
+          [...topics, ...(noTopicCount ? [{ name: "__none__", label: "অশ্রেণীকৃত (Uncategorised)", count: noTopicCount }] : [])].map((t) => {
             const checked = selectedTopics.includes(t.name);
             const count = t.count || 0;
             return (
@@ -467,9 +467,11 @@ export function QuestionPicker({ selected, onToggle, onSelectPage, userId, limit
     return [...map.values()].sort((a, b) => a.name.localeCompare(b.name, "bn"));
   }, [meta.subjects]);
 
-  // Default to first available chapter if none chosen yet
+  // Open on the first chapter once, but still let the teacher choose "All chapters" later.
+  const defaultedChapter = useRef(false);
   useEffect(() => {
-    if (!filters.chapter && chapters.length > 0) {
+    if (!defaultedChapter.current && !filters.chapter && chapters.length > 0) {
+      defaultedChapter.current = true;
       setFilters((f) => ({ ...f, chapter: chapters[0].name }));
     }
   }, [chapters, filters.chapter]);
@@ -482,8 +484,7 @@ export function QuestionPicker({ selected, onToggle, onSelectPage, userId, limit
       .then((res) =>
         setCounts({
           topics: Object.entries(res.topicCounts || {})
-            .map(([name, count]) => ({ name, count }))
-            .sort((a, b) => b.count - a.count),
+            .map(([name, count]) => ({ name, count })), // syllabus order
           noTopic: res.noTopicCount || 0,
           stats: res.stats || null,
         })

@@ -73,6 +73,7 @@ export const api = {
   // Questions (routes/questionRoutes.js + routes/practiceRoutes.js)
   metadata: (opts) => request("/api/practice/metadata", opts),
   questionBank: (params, opts) => request(`/api/practice/question-bank?${toQuery(params)}`, opts),
+  reviewQueue: (query, opts) => request(`/api/questions/review?${query}`, opts),
   topicCounts: (params, opts) => request(`/api/practice/topic-counts?${toQuery(params)}`, opts),
   createQuestion: (formData) => request("/api/questions", { method: "POST", formData }),
   updateQuestion: (id, formData) => request(`/api/questions/${encodeURIComponent(id)}`, { method: "PUT", formData }),
@@ -131,12 +132,59 @@ export const api = {
   battle: (id, opts) => request(`/api/battles/${id}`, opts),
   answerBattle: (id, index, optionIndex) => request(`/api/battles/${id}/answer`, { method: "POST", body: { index, optionIndex } }),
   leaveBattle: (id) => request(`/api/battles/${id}/leave`, { method: "POST" }),
+  startGroupBattle: (id) => request(`/api/battles/${id}/start`, { method: "POST" }),
+  tournamentToday: (opts) => request("/api/tournament/today", opts),
+  tournamentStart: () => request("/api/tournament/today/start", { method: "POST" }),
+  tournamentAnswer: (index, optionIndex) => request("/api/tournament/today/answer", { method: "POST", body: { index, optionIndex } }),
+  tournamentFinish: () => request("/api/tournament/today/finish", { method: "POST" }),
   currentBattle: (opts) => request("/api/battles/current", opts),
   battleHistory: (opts) => request("/api/battles/history", opts),
   leaderboard: (params, opts) => request(`/api/league/leaderboard?${toQuery(params)}`, opts),
   myLeague: (opts) => request("/api/league/me", opts),
   leagueRules: (opts) => request("/api/league/rules", opts),
+
+  // Platform admin (super admin)
+  adminOverview: (opts) => request("/api/admin/overview", opts),
+  adminUsers: (params, opts) => request(`/api/admin/users?${toQuery(params)}`, opts),
+  adminUpdateUser: (id, body) => request(`/api/admin/users/${id}`, { method: "PATCH", body }),
+  adminOrganizations: (opts) => request("/api/admin/organizations", opts),
+  adminUpdateOrganization: (id, body) => request(`/api/admin/organizations/${id}`, { method: "PATCH", body }),
+  adminAuditLog: (opts) => request("/api/admin/audit-log", opts),
+
+  // Organization admin
+  orgOverview: (opts) => request("/api/org/overview", opts),
+  orgMembers: (params, opts) => request(`/api/org/members?${toQuery(params)}`, opts),
+  orgUpdateMember: (id, body) => request(`/api/org/members/${id}`, { method: "PATCH", body }),
+  orgAuditLog: (opts) => request("/api/org/audit-log", opts),
+  orgInvitations: (orgId, opts) => request(`/api/invitations/list/${orgId}`, opts),
+  createInvitation: (body) => request("/api/invitations/create", { method: "POST", body }),
+  revokeInvitation: (id) => request(`/api/invitations/${id}`, { method: "DELETE" }),
 };
+
+/**
+ * Live battle updates over Server-Sent Events, read with fetch() so the token stays in the
+ * Authorization header. Calls onBattle for every update; resolves when the server closes
+ * the stream (battle over, or the connection's lifetime ended) and throws on failure.
+ */
+export async function streamBattle(id, onBattle, signal) {
+  const token = localStorage.getItem("token");
+  const res = await fetch(`${API_BASE}/api/battles/${encodeURIComponent(id)}/stream`, { headers: token ? { Authorization: `Bearer ${token}` } : {}, signal });
+  if (!res.ok || !res.body) throw new ApiError(`Live updates unavailable (${res.status}).`, res.status);
+  const reader = res.body.pipeThrough(new TextDecoderStream()).getReader();
+  let buf = "";
+  for (;;) {
+    const { value, done } = await reader.read();
+    if (done) return;
+    buf += value;
+    let i;
+    while ((i = buf.indexOf("\n\n")) >= 0) {
+      const block = buf.slice(0, i);
+      buf = buf.slice(i + 2);
+      const line = block.split("\n").find((l) => l.startsWith("data: "));
+      if (line) onBattle(JSON.parse(line.slice(6)).battle);
+    }
+  }
+}
 
 export function imageUrl(file) {
   if (!file) return "";

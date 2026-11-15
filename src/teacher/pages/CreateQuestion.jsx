@@ -7,7 +7,6 @@ import { useToast } from "../toast";
 import { Badge, Button, Card, CardHeader, Field, Input, Notice, PageHeader, Segmented, Select, Textarea } from "../components/ui";
 import Icon from "../components/Icon";
 import { BN_OPTION_LETTERS } from "../utils";
-import { HSC_STANDARD_CHAPTER_TOPICS } from "../components/questions";
 
 // Board names accepted by models/Question.js
 const BOARDS = ["Dhaka", "Chittagong", "Rajshahi", "Cumilla", "Jessore", "Barishal", "Sylhet", "Dinajpur", "Mymensingh"];
@@ -108,31 +107,21 @@ export default function CreateQuestion({ embedded = false, onSuccess, editQuesti
   const subjectMeta = meta.subjects.find((s) => s.name === form.subject);
   const chapterMeta = subjectMeta?.chapters.find((c) => c.name === form.chapter);
 
+  // Standard HSC chapters and topics come from the API (same list as the Question Bank filters).
   const allChapters = useMemo(() => {
     const set = new Set();
-    (meta.subjects || []).forEach((s) => {
-      (s.chapters || []).forEach((c) => set.add(c.name));
-    });
-    Object.keys(HSC_STANDARD_CHAPTER_TOPICS).forEach((k) => set.add(k));
+    (meta.subjects || []).forEach((s) => (s.chapters || []).forEach((c) => set.add(c.name)));
+    if (form.chapter) set.add(form.chapter); // keep an existing question's stored chapter selectable
     return Array.from(set);
-  }, [meta.subjects]);
+  }, [meta.subjects, form.chapter]);
 
-  const chapters = (subjectMeta?.chapters && subjectMeta.chapters.length > 0)
-    ? subjectMeta.chapters.map((c) => c.name)
-    : allChapters;
-
-  const standardTopics = useMemo(() => {
-    if (!form.chapter) return [];
-    if (HSC_STANDARD_CHAPTER_TOPICS[form.chapter]) return HSC_STANDARD_CHAPTER_TOPICS[form.chapter];
-    const matchKey = Object.keys(HSC_STANDARD_CHAPTER_TOPICS).find((k) =>
-      k.toLowerCase().includes(form.chapter.toLowerCase()) || form.chapter.toLowerCase().includes(k.toLowerCase())
-    );
-    return matchKey ? HSC_STANDARD_CHAPTER_TOPICS[matchKey] : [];
-  }, [form.chapter]);
+  const chapters = allChapters;
 
   const availableTopics = useMemo(() => {
-    return Array.from(new Set([...(chapterMeta?.topics || []), ...standardTopics]));
-  }, [chapterMeta, standardTopics]);
+    const list = [...(chapterMeta?.topics || [])];
+    if (form.topic && !list.includes(form.topic)) list.unshift(form.topic); // keep the stored topic visible when editing
+    return list;
+  }, [chapterMeta, form.topic]);
 
   const onFile = (file) => {
     if (!file) return;
@@ -243,7 +232,7 @@ export default function CreateQuestion({ embedded = false, onSuccess, editQuesti
         <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-amber-500/10 border border-amber-300 p-4">
           <div className="flex items-center gap-2">
             <span className="flex h-7 w-7 items-center justify-center rounded-full bg-amber-500 text-white font-bold text-xs">
-              ✏️
+              <Icon name="edit" size={14} />
             </span>
             <div>
               <p className="font-extrabold text-sm text-amber-900">প্রশ্ন সম্পাদনা মোড (Edit Question)</p>
@@ -271,7 +260,7 @@ export default function CreateQuestion({ embedded = false, onSuccess, editQuesti
                   options={[
                     { value: "bangla", label: "🇧🇩 বাংলা ভার্সন" },
                     { value: "english", label: "🇬🇧 English Version" },
-                    { value: "bilingual", label: "🌐 উভয় ভার্সন (Bilingual)" },
+                    { value: "bilingual", label: "উভয় ভার্সন (Bilingual)" },
                   ]}
                 />
               </Field>

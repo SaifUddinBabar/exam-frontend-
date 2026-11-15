@@ -5,6 +5,7 @@ export const LEAGUE_COLORS = {
   gold: ["#CA8A04", "#FEF3C7"],
   platinum: ["#0E7490", "#CFFAFE"],
   diamond: ["#2563EB", "#DBEAFE"],
+  // Deliberate exception to the brand palette: each tier needs its own colour.
   champion: ["#7C3AED", "#EDE9FE"],
 };
 

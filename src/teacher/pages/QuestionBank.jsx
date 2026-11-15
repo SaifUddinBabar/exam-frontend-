@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { QuestionPicker } from "../components/questions";
 import CreateQuestion from "./CreateQuestion";
 import PaperBuilder from "./PaperBuilder";
+import QuestionReview from "./QuestionReview";
 import { useTeacherData } from "../teacherData";
 import { api } from "../api";
 import { useToast } from "../toast";
@@ -116,6 +117,7 @@ export default function QuestionBank() {
           { value: "browse", label: "Browse questions" },
           { value: "create", label: editing ? "Edit question" : "Create question" },
           { value: "builder", label: "PDF / Print builder", count: chosen.length || undefined },
+          { value: "review", label: "Needs review" },
         ]}
       />
 
@@ -168,6 +170,15 @@ export default function QuestionBank() {
       ) : null}
 
       {tab === "builder" ? <PaperBuilder embedded preloadedQuestions={chosen} /> : null}
+
+      {tab === "review" ? (
+        <QuestionReview
+          onEditQuestion={(q) => {
+            setEditing(q);
+            setSearchParams({ tab: "create" });
+          }}
+        />
+      ) : null}
 
       <ReportsDrawer open={reportsOpen} onClose={() => setReportsOpen(false)} />
     </div>

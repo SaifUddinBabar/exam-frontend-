@@ -1,12 +1,51 @@
 import { useMemo, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import MathText from "../../components/MathText";
-import { api, imageUrl } from "../api";
+import { api } from "../api";
 import { useTeacherData } from "../teacherData";
 import { useToast } from "../toast";
 import { QuestionPicker } from "../components/questions";
 import { Button, Card, CardHeader, Field, IconButton, Input, Modal, Notice, PageHeader, Select, Toggle } from "../components/ui";
 import { BN_OPTION_LETTERS, BN_SECTION_LETTERS, toBanglaDigits } from "../utils";
+import { Segmented } from "../components/ui";
+import QuestionImage from "../../components/QuestionImage";
+import { resolveQuestion } from "../../lib/questionLanguage";
+
+// Paper text per language version. Questions are shown strictly in the chosen language.
+const PAPER_TEXT = {
+  bangla: {
+    digits: toBanglaDigits,
+    letters: BN_OPTION_LETTERS,
+    sections: BN_SECTION_LETTERS,
+    institution: "প্রতিষ্ঠানের নাম",
+    exam: "পরীক্ষার নাম",
+    cls: "শ্রেণি",
+    subject: "বিষয়",
+    time: "সময়",
+    minutes: "মিনিট",
+    total: "পূর্ণমান",
+    section: "বিভাগ",
+    key: "উত্তরমালা",
+    note: "[দ্রষ্টব্য: সরবরাহকৃত বহুনির্বাচনি অভীক্ষার উত্তরপত্রে প্রশ্নের ক্রমিক নম্বরের বিপরীতে প্রদত্ত বর্ণসংবলিত বৃত্তসমূহ হতে সঠিক/সর্বোৎকৃষ্ট উত্তরের বৃত্তটি বল পয়েন্ট কলম দ্বারা সম্পূর্ণ ভরাট কর। প্রশ্নপত্রে কোনো প্রকার দাগ/চিহ্ন দেওয়া যাবে না।]",
+    unavailable: "অনুবাদ উপলব্ধ নেই",
+  },
+  english: {
+    digits: (n) => String(n),
+    letters: ["A", "B", "C", "D"],
+    sections: ["A", "B", "C", "D", "E", "F"],
+    institution: "Institution name",
+    exam: "Exam name",
+    cls: "Class",
+    subject: "Subject",
+    time: "Time",
+    minutes: "minutes",
+    total: "Full marks",
+    section: "Section",
+    key: "Answer key",
+    note: "[Note: On the answer sheet, completely fill the circle with the letter of the correct/best answer against each question number using a ball-point pen. Do not mark the question paper.]",
+    unavailable: "Translation unavailable",
+  },
+};
 
 let sectionSeq = 0;
 const newSection = (title = "বহুনির্বাচনি প্রশ্ন", questions = []) => ({ id: `s${++sectionSeq}`, title, marks: 1, questions });
@@ -20,27 +59,30 @@ const PRINT_CSS = `
   .paper-question { break-inside: avoid; }
 }`;
 
-function Paper({ info, sections, showKey }) {
+function Paper({ info, sections, showKey, lang = "bangla" }) {
+  const T = PAPER_TEXT[lang];
   const total = sections.reduce((sum, s) => sum + s.questions.length * (Number(s.marks) || 0), 0);
   const starts = sections.map((_, i) => sections.slice(0, i).reduce((sum, s) => sum + s.questions.length, 0));
   const n = sections.reduce((sum, s) => sum + s.questions.length, 0);
   return (
     <div id="exam-paper" className="mx-auto w-full max-w-[794px] bg-white px-6 py-8 font-bengali text-[13.5px] leading-relaxed text-black shadow-elevated ring-1 ring-examino-border sm:px-12 sm:py-10">
       <header className="text-center">
-        <p className="text-xl font-bold">{info.institution || "প্রতিষ্ঠানের নাম"}</p>
-        <p className="mt-0.5 text-[15px] font-semibold">{info.examName || "পরীক্ষার নাম"}</p>
+        <p className="text-xl font-bold">{info.institution || T.institution}</p>
+        <p className="mt-0.5 text-[15px] font-semibold">{info.examName || T.exam}</p>
         <p className="mt-0.5">
-          {info.className ? `শ্রেণি: ${info.className}` : null}
+          {info.className ? `${T.cls}: ${info.className}` : null}
           {info.className && info.subject ? " · " : null}
-          {info.subject ? `বিষয়: ${info.subject}` : null}
+          {info.subject ? `${T.subject}: ${info.subject}` : null}
         </p>
         <div className="mt-3 flex justify-between border-y border-black py-1.5 text-[13px] font-semibold">
-          <span>সময়: {toBanglaDigits(info.duration || 0)} মিনিট</span>
-          <span>পূর্ণমান: {toBanglaDigits(total)}</span>
+          <span>
+            {T.time}: {T.digits(info.duration || 0)} {T.minutes}
+          </span>
+          <span>
+            {T.total}: {T.digits(total)}
+          </span>
         </div>
-        <p className="mt-2 text-left text-[12px] italic">
-          [দ্রষ্টব্য: সরবরাহকৃত বহুনির্বাচনি অভীক্ষার উত্তরপত্রে প্রশ্নের ক্রমিক নম্বরের বিপরীতে প্রদত্ত বর্ণসংবলিত বৃত্তসমূহ হতে সঠিক/সর্বোৎকৃষ্ট উত্তরের বৃত্তটি বল পয়েন্ট কলম দ্বারা সম্পূর্ণ ভরাট কর। প্রশ্নপত্রে কোনো প্রকার দাগ/চিহ্ন দেওয়া যাবে না।]
-        </p>
+        <p className="mt-2 text-left text-[12px] italic">{T.note}</p>
       </header>
 
       {sections.every((s) => !s.questions.length) ? (
@@ -52,29 +94,34 @@ function Paper({ info, sections, showKey }) {
           <section key={s.id} className="mt-5">
             <div className="mb-2 flex items-baseline justify-between border-b border-dashed border-slate-400 pb-1">
               <p className="font-bold">
-                {BN_SECTION_LETTERS[si] || toBanglaDigits(si + 1)} বিভাগ — {s.title}
+                {lang === "english" ? `${T.section} ${T.sections[si] || si + 1}` : `${T.sections[si] || T.digits(si + 1)} ${T.section}`} — {s.title}
               </p>
               <p className="text-[12px]">
-                {toBanglaDigits(s.marks)} × {toBanglaDigits(s.questions.length)} = {toBanglaDigits(s.marks * s.questions.length)}
+                {T.digits(s.marks)} × {T.digits(s.questions.length)} = {T.digits(s.marks * s.questions.length)}
               </p>
             </div>
             <ol className="space-y-3">
               {s.questions.map((q, qi) => {
+                const v = resolveQuestion(q, lang);
                 return (
                   <li key={q._id} className="paper-question">
                     <p>
-                      <span className="mr-1 font-semibold">{toBanglaDigits(starts[si] + qi + 1)}.</span>
-                      <MathText text={q.question} />
+                      <span className="mr-1 font-semibold">{T.digits(starts[si] + qi + 1)}.</span>
+                      {v.available ? <MathText text={v.text} /> : <span className="rounded bg-amber-100 px-1 text-[12px] font-semibold text-amber-900">[{T.unavailable}]</span>}
                     </p>
-                    {q.image ? <img src={imageUrl(q.image)} alt="" className="my-1 ml-5 max-h-36" crossOrigin="anonymous" /> : null}
-                    <div className="ml-5 mt-1 grid grid-cols-2 gap-x-6 gap-y-0.5">
-                      {(q.options || []).map((o, i) => (
-                        <p key={i}>
-                          <span className="mr-1">{BN_OPTION_LETTERS[i]})</span>
-                          <MathText text={o} />
-                        </p>
-                      ))}
-                    </div>
+                    {v.available ? (
+                      <>
+                        <QuestionImage q={q} className="my-1 ml-5" />
+                        <div className="ml-5 mt-1 grid grid-cols-2 gap-x-6 gap-y-0.5">
+                          {v.options.map((o, i) => (
+                            <p key={i}>
+                              <span className="mr-1">{T.letters[i]})</span>
+                              <MathText text={o} />
+                            </p>
+                          ))}
+                        </div>
+                      </>
+                    ) : null}
                   </li>
                 );
               })}
@@ -85,7 +132,7 @@ function Paper({ info, sections, showKey }) {
 
       {showKey && n > 0 ? (
         <section className="mt-8 border-t-2 border-black pt-3" style={{ breakBefore: "page" }}>
-          <p className="mb-2 text-center font-bold">উত্তরমালা</p>
+          <p className="mb-2 text-center font-bold">{T.key}</p>
           <div className="grid grid-cols-5 gap-1 text-[12.5px] sm:grid-cols-8">
             {sections
               .flatMap((s) => s.questions)
@@ -93,7 +140,7 @@ function Paper({ info, sections, showKey }) {
                 const idx = (q.options || []).indexOf(q.correctAnswer);
                 return (
                   <span key={q._id}>
-                    {toBanglaDigits(i + 1)}. {idx >= 0 ? BN_OPTION_LETTERS[idx] : "—"}
+                    {T.digits(i + 1)}. {idx >= 0 ? T.letters[idx] : "—"}
                   </span>
                 );
               })}
@@ -120,6 +167,8 @@ export default function PaperBuilder({ preloadedQuestions, initialTitle, embedde
   const [activeId, setActiveId] = useState(() => sections[0].id);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [showKey, setShowKey] = useState(false);
+  const [lang, setLang] = useState("bangla");
+  const unavailableCount = sections.flatMap((s) => s.questions).filter((q) => !resolveQuestion(q, lang).available).length;
   const [loadingExam, setLoadingExam] = useState(false);
   const [exporting, setExporting] = useState(false);
   const paperRef = useRef(null);
@@ -234,6 +283,15 @@ export default function PaperBuilder({ preloadedQuestions, initialTitle, embedde
                   <p className="flex h-10 items-center rounded-lg bg-slate-50 px-3 text-sm font-semibold tabular-nums">{totalMarks}</p>
                 </Field>
               </div>
+              <div>
+                <p className="mb-1.5 text-[13px] font-medium text-examino-text">Paper version</p>
+                <Segmented label="Paper language" value={lang} onChange={setLang} options={[{ value: "bangla", label: "বাংলা" }, { value: "english", label: "English" }]} />
+                {unavailableCount ? (
+                  <p className="mt-2 text-xs font-medium text-amber-700">
+                    {unavailableCount} question{unavailableCount === 1 ? " is" : "s are"} not available in {lang === "english" ? "English" : "Bengali"} and will print as “Translation unavailable”. Remove or replace them.
+                  </p>
+                ) : null}
+              </div>
               <Toggle label="Answer key" description="Append an answer page at the end" checked={showKey} onChange={setShowKey} />
             </div>
           </Card>
@@ -331,7 +389,7 @@ export default function PaperBuilder({ preloadedQuestions, initialTitle, embedde
         </div>
 
         <div ref={paperRef} className="min-w-0 overflow-x-auto rounded-xl bg-slate-100 p-3 sm:p-6">
-          <Paper info={info} sections={sections} showKey={showKey} />
+          <Paper info={info} sections={sections} showKey={showKey} lang={lang} />
         </div>
       </div>
 

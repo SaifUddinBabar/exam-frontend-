@@ -42,21 +42,14 @@ const StudentBatches = lazy(() => import("./student/StudentBatches"));
 const BattleLobby = lazy(() => import("./student/battle/BattleLobby"));
 const BattleMatch = lazy(() => import("./student/battle/BattleMatch"));
 const LeaguePage = lazy(() => import("./student/league/LeaguePage"));
+const TournamentPage = lazy(() => import("./student/battle/TournamentPage"));
 
 // =========================
 // LAZY-LOADED SUPER ADMIN & COACHING (PRESERVED)
 // =========================
-const AdminApp = lazy(() => import("./admin/AdminApp"));
-const AdminDashboard = lazy(() => import("./admin/AdminDashboard"));
-const AdminSettings = lazy(() => import("./admin/AdminSettings"));
-const Billing = lazy(() => import("./admin/Billing"));
-const Exams = lazy(() => import("./admin/Exams"));
-const OrganizationAdmins = lazy(() => import("./admin/OrganizationAdmins"));
-const Organizations = lazy(() => import("./admin/Organizations"));
-const QuestionBank = lazy(() => import("./admin/QuestionBank"));
-const Students = lazy(() => import("./admin/Students"));
+const AdminPortal = lazy(() => import("./portal/AdminPortal"));
 const Builder = lazy(() => import("./admin/Builder"));
-const OrganizationApp = lazy(() => import("./organization/OrganizationApp"));
+const OrgPortal = lazy(() => import("./portal/OrgPortal"));
 
 // =========================
 // LAZY-LOADED TEACHER DASHBOARD
@@ -330,6 +323,14 @@ export default function App() {
           }
         />
         <Route
+          path="/tournament"
+          element={
+            <ProtectedRoute allowedRoles={["student"]}>
+              <TournamentPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/league"
           element={
             <ProtectedRoute allowedRoles={["student", "tutor", "teacher", "org_admin", "super_admin"]}>
@@ -351,7 +352,7 @@ export default function App() {
           path="/organization/*"
           element={
             <ProtectedRoute allowedRoles={["org_admin", "super_admin"]}>
-              <OrganizationApp />
+              <OrgPortal />
             </ProtectedRoute>
           }
         />
@@ -384,14 +385,6 @@ export default function App() {
             SUPER ADMIN PORTAL (PRESERVED)
         ===================================== */}
         <Route
-          path="/admin"
-          element={
-            <ProtectedRoute allowedRoles={["super_admin"]}>
-              <AdminApp />
-            </ProtectedRoute>
-          }
-        />
-        <Route
           path="/admin/builder"
           element={
             <ProtectedRoute allowedRoles={["super_admin"]}>
@@ -400,66 +393,10 @@ export default function App() {
           }
         />
         <Route
-          path="/admin/dashboard"
+          path="/admin/*"
           element={
             <ProtectedRoute allowedRoles={["super_admin"]}>
-              <AdminDashboard />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/organizations"
-          element={
-            <ProtectedRoute allowedRoles={["super_admin"]}>
-              <Organizations />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/organization-admins"
-          element={
-            <ProtectedRoute allowedRoles={["super_admin"]}>
-              <OrganizationAdmins />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/students"
-          element={
-            <ProtectedRoute allowedRoles={["super_admin"]}>
-              <Students />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/exams"
-          element={
-            <ProtectedRoute allowedRoles={["super_admin"]}>
-              <Exams />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/question-bank"
-          element={
-            <ProtectedRoute allowedRoles={["super_admin"]}>
-              <QuestionBank />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/billing"
-          element={
-            <ProtectedRoute allowedRoles={["super_admin"]}>
-              <Billing />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin/settings"
-          element={
-            <ProtectedRoute allowedRoles={["super_admin"]}>
-              <AdminSettings />
+              <AdminPortal />
             </ProtectedRoute>
           }
         />

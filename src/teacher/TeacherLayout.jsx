@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import Icon from "./components/Icon";
+import ExaminoLogo from "../components/ExaminoLogo";
 import { Avatar, Dropdown, IconButton, MenuItem, SoonBadge, ToastProvider } from "./components/ui";
 import { useTeacherData } from "./teacherData";
 import { ALL_NAV, NAV_FOOTER, NAV_SECTIONS, matchNav } from "./nav";
@@ -10,23 +11,7 @@ import { signOutUser } from "../firebase/firebase";
 const cx = (...c) => c.filter(Boolean).join(" ");
 
 function Logo({ collapsed }) {
-  return (
-    <Link to="/teacher" className="flex items-center gap-2.5 rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60">
-      <svg width="32" height="32" viewBox="0 0 48 48" aria-hidden="true" className="shrink-0">
-        <rect width="48" height="48" rx="12" fill="#FFFFFF" />
-        <path d="M15 14h18M15 24h9M15 34h18M15 14v20" fill="none" stroke="#101B35" strokeWidth="4" strokeLinecap="round" />
-        <circle cx="32" cy="24" r="4" fill="#F59E0B" />
-      </svg>
-      {!collapsed ? (
-        <span className="flex flex-col leading-tight">
-          <span className="text-[17px] font-bold tracking-tight text-white">Examino</span>
-          <span className="text-[11px] font-medium text-slate-400">Teacher workspace</span>
-        </span>
-      ) : (
-        <span className="sr-only">Examino teacher workspace</span>
-      )}
-    </Link>
-  );
+  return <ExaminoLogo light to="/teacher" size="sm" subtitle="Teacher workspace" compact={collapsed} />;
 }
 
 function NavItem({ item, collapsed, onNavigate }) {

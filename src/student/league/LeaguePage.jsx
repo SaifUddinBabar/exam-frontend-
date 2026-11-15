@@ -175,7 +175,7 @@ export default function LeaguePage() {
             {rules.data ? (
               <ul className="space-y-1.5">
                 <li>
-                  Battle XP: win {rules.data.xp.battleWin}, draw {rules.data.xp.battleDraw}, loss {rules.data.xp.battleLoss} (if you answered), +{rules.data.xp.battlePerCorrect} per correct answer.
+                  Battle XP: win {rules.data.xp.battleWin} (with at least one correct answer), draw {rules.data.xp.battleDraw}, loss {rules.data.xp.battleLoss} (if you answered), +{rules.data.xp.battlePerCorrect} per correct answer. A player who loses connection for about 40 seconds forfeits.
                 </li>
                 <li>Exam XP: +{rules.data.xp.examPerCorrect} per correct answer on your first attempt.</li>
                 <li>

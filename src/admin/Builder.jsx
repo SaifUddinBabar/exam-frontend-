@@ -156,7 +156,7 @@ const GlobalStyles = () => (
     .btn-danger:hover { background: #fee2e2; border-color: rgba(220,38,38,0.35); transform: translateY(-1px); }
 
     .btn-purple {
-      background: linear-gradient(135deg,#7c3aed,#5b21b6); color: #fff;
+      background: linear-gradient(135deg,#2563EB,#5b21b6); color: #fff;
       box-shadow: 0 2px 10px rgba(124,58,237,0.3), inset 0 1px 0 rgba(255,255,255,0.12);
     }
     .btn-purple:hover { box-shadow: 0 4px 18px rgba(124,58,237,0.4); transform: translateY(-1px); }
@@ -188,7 +188,7 @@ const GlobalStyles = () => (
     .badge-red    { background: var(--red-bg); color: var(--red); border: 1px solid rgba(220,38,38,0.15); }
     .badge-amber  { background: var(--amber-bg); color: var(--amber); border: 1px solid rgba(217,119,6,0.2); }
     .badge-slate  { background: var(--bg-2); color: var(--ink-3); border: 1px solid var(--line-2); }
-    .badge-purple { background: #f5f3ff; color: #6d28d9; border: 1px solid rgba(124,58,237,0.2); }
+    .badge-purple { background: #EFF6FF; color: #1D4ED8; border: 1px solid rgba(124,58,237,0.2); }
 
     /* ── Tab ── */
     .tab-btn {
@@ -932,7 +932,7 @@ const downloadPDF = async () => {
                 <h1 style={{ color:"white", fontWeight:"bold", fontSize: pdfCompact?"14px":"22px", margin:0 }}>{examData.subject}</h1>
               </div>
               <h2 style={{ fontWeight:"bold", fontSize: pdfCompact?"13px":"19px", margin:"0 0 4px" }}>{examData.academy}</h2>
-              <p style={{ color:"#374151", margin:"0 0 10px", fontSize: pdfCompact?"10px":"13px" }}>{examData.title}</p>
+              <p style={{ color:"#334155", margin:"0 0 10px", fontSize: pdfCompact?"10px":"13px" }}>{examData.title}</p>
               <div style={{ display:"flex", justifyContent:"space-between", borderTop:"1px solid #ccc", paddingTop:8, fontSize: pdfCompact?"9px":"12px" }}>
                 <span>সময়: {examData.duration} মিনিট</span>
                 <span>পূর্ণমান: {examData.marks}</span>
